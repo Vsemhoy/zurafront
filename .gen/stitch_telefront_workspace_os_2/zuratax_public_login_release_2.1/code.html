@@ -1,0 +1,95 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"secondary":"#005cbb","module-exploiter":"#b91c1c","on-secondary-container":"#00326b","background":"#fcf8fa","inverse-surface":"#303032","tertiary-container":"#271901","module-booker":"#6366f1","tertiary-fixed-dim":"#dec29a","on-tertiary-fixed-variant":"#574425","primary":"#000000","module-tracker":"#06b6d4","secondary-container":"#5d9aff","outline":"#76777d","tertiary":"#000000","module-stuffer":"#f43f5e","on-primary-container":"#7c839b","on-error":"#ffffff","on-background":"#1b1b1d","error":"#ba1a1a","on-surface":"#1b1b1d","primary-container":"#131b2e","surface":"#fcf8fa","module-eventor":"#f59e0b","module-reporter":"#7c3aed","on-primary-fixed-variant":"#3f465c","inverse-on-surface":"#f3f0f2","on-error-container":"#93000a","on-tertiary":"#ffffff","module-tasker":"#0f62c3","surface-container-low":"#f6f3f5","scope-personal":"#ec4899","surface-variant":"#e4e2e4","surface-tint":"#565e74","surface-bright":"#fcf8fa","error-container":"#ffdad6","on-secondary-fixed-variant":"#00458f","on-primary":"#ffffff","on-tertiary-container":"#98805d","scope-work":"#3b82f6","scope-home":"#10b981","scope-sideproject":"#8b5cf6","surface-container":"#f0edef","primary-fixed-dim":"#bec6e0","secondary-fixed":"#d7e2ff","on-tertiary-fixed":"#271901","tertiary-fixed":"#fcdeb5","module-contactor":"#14b8a6","on-secondary-fixed":"#001b3f","secondary-fixed-dim":"#abc7ff","surface-dim":"#dcd9db","primary-fixed":"#dae2fd","surface-container-lowest":"#ffffff","module-ledger":"#10b981","on-primary-fixed":"#131b2e","surface-container-highest":"#e4e2e4","on-surface-variant":"#45464d","inverse-primary":"#bec6e0","module-factor":"#8b5cf6","outline-variant":"#c6c6cd","on-secondary":"#ffffff","surface-container-high":"#eae7e9"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"gutter":"16px","row-height-dense":"32px","sidebar-width":"220px","margin-page":"24px","header-height":"48px","unit":"4px"},"fontFamily":{"headline-md":["Inter"],"data-mono":["JetBrains Mono"],"body-sm":["Inter"],"title-sm":["Inter"],"body-base":["Inter"],"display-lg":["Inter"],"label-caps":["Inter"]},"fontSize":{"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"data-mono":["12px",{"lineHeight":"16px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"title-sm":["15px",{"lineHeight":"20px","fontWeight":"600"}],"body-base":["14px",{"lineHeight":"20px","fontWeight":"400"}],"display-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-caps":["10px",{"lineHeight":"12px","letterSpacing":"0.08em","fontWeight":"700"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-background font-body-base text-on-surface"><main class="min-h-screen flex items-center justify-center p-gutter"><div class="flex flex-col w-full h-full lg:flex-row min-h-[calc(100vh-theme(spacing.gutter)*2)]">
+<div class="flex flex-col justify-between w-full lg:w-1/2 p-8 lg:p-12 bg-surface">
+<div class="flex items-center justify-between w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary font-display-lg text-lg leading-none shrink-0 shadow-sm">Z</div>
+<span class="font-headline-md text-primary tracking-tight">Zuratax</span>
+</div>
+<div class="relative">
+<select class="appearance-none bg-surface-container hover:bg-surface-container-high transition-colors text-on-surface font-label-caps uppercase px-4 py-2 pr-8 rounded-full outline-none focus:ring-2 focus:ring-secondary/50 cursor-pointer shadow-sm text-xs">
+<option>EN</option>
+<option>RU</option>
+<option>ZH</option>
+</select>
+<span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface/50 text-[18px]">expand_more</span>
+</div>
+</div>
+<div class="flex-1 flex flex-col justify-center max-w-[380px] w-full mx-auto my-12 lg:my-0">
+<h1 class="font-display-lg text-primary text-4xl mb-2">Welcome back</h1>
+<p class="font-body-base text-on-surface-variant mb-10">Log in to your workspace to continue.</p>
+<form class="flex flex-col gap-5">
+<div class="flex flex-col gap-1.5">
+<label class="font-title-sm text-on-surface text-sm">Email or Username</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface/40 text-[18px]">person</span>
+<input class="w-full h-row-height-dense bg-surface-container-low border-none rounded px-10 font-body-base text-on-surface placeholder:text-on-surface/40 outline-none focus:ring-2 focus:ring-secondary focus:bg-surface transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" placeholder="name@company.com" type="text"/>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex justify-between items-center">
+<label class="font-title-sm text-on-surface text-sm">Password</label>
+<a class="font-body-sm text-secondary hover:text-secondary-container transition-colors text-xs font-medium" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface/40 text-[18px]">lock</span>
+<input class="w-full h-row-height-dense bg-surface-container-low border-none rounded px-10 font-body-base text-on-surface placeholder:text-on-surface/40 outline-none focus:ring-2 focus:ring-secondary focus:bg-surface transition-all shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]" placeholder="••••••••" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface/40 hover:text-on-surface transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</div>
+<button class="mt-2 w-full h-[40px] bg-secondary hover:bg-secondary-container text-on-secondary font-title-sm rounded shadow-sm hover:shadow transition-all flex items-center justify-center gap-2" type="button">
+          Log In
+          <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</form>
+<div class="mt-8 flex items-center gap-2 px-3 py-2 bg-module-ledger/10 rounded-lg w-fit">
+<span class="w-2 h-2 rounded-full bg-module-ledger animate-pulse"></span>
+<span class="font-body-sm text-module-ledger font-medium">All systems operational</span>
+</div>
+</div>
+<div class="flex flex-wrap items-center gap-x-6 gap-y-2 font-data-mono text-on-surface/60 text-xs">
+<a class="hover:text-primary transition-colors" href="#">Features</a>
+<a class="hover:text-primary transition-colors" href="#">Changelog</a>
+<a class="hover:text-primary transition-colors" href="#">Documentation</a>
+<a class="hover:text-primary transition-colors" href="#">GitHub</a>
+<a class="hover:text-primary transition-colors" href="#">Self-hosting</a>
+<span class="ml-auto opacity-50">© 2024 Zuratax</span>
+</div>
+</div>
+<div class="hidden lg:block w-1/2 relative overflow-hidden rounded-2xl bg-surface-container-low m-2 shadow-sm border border-black/5">
+<div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida/AEtjO1UP2wMxM4DmIyQr2oDT-f8wylERYNnBE1QXUT7J8dB6J6mMW1jOHF6NLfhK-3MpvlYKy1ORgAStBxHnsyQf0adzxrc3mqq32GUQ1n96c_bvAmqdU__xd-bBjUqtli2rDdqa--1azaDHlUaTLR0Z28hLD7VGOymz2XsUDpqQ28UK3Wac7klvrhE-XE4wpP7V-E_v_-2YtNJ1sUeU1y5vC2mx6MFoknt2_TiPfWLI9hHI7AyCc4Q6NqVHQg');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-surface-container-lowest/80 to-transparent"></div>
+<div class="absolute inset-0 bg-gradient-to-r from-surface-container-lowest/50 to-transparent"></div>
+<div class="absolute bottom-12 left-12 right-12 max-w-md backdrop-blur-xl bg-surface/80 rounded-2xl p-8 shadow-xl border border-white/20 transform translate-y-0 transition-transform duration-500 hover:-translate-y-2">
+<div class="flex items-center gap-3 mb-4">
+<span class="px-2.5 py-1 bg-module-booker/10 text-module-booker font-label-caps rounded-full tracking-widest text-[10px]">VERSION 2.1</span>
+<div class="h-[1px] flex-1 bg-gradient-to-r from-module-booker/20 to-transparent"></div>
+</div>
+<h2 class="font-display-lg text-primary text-3xl mb-3 leading-tight">Putting everything<br/>in its place.</h2>
+<p class="font-body-base text-on-surface-variant mb-6 line-clamp-3">
+        Our clever new operational mascot helps you categorize and track tasks faster than ever. Smart folders, automated tagging, and a mischievous but highly organized assistant.
+      </p>
+<div class="grid grid-cols-2 gap-4 mb-8">
+<div class="flex flex-col gap-1">
+<span class="font-title-sm text-primary flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-module-ledger">check_circle</span> Auto-tagging</span>
+<span class="font-body-sm text-on-surface-variant text-xs">AI-driven categorization</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="font-title-sm text-primary flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-module-tracker">folder_open</span> Smart Folders</span>
+<span class="font-body-sm text-on-surface-variant text-xs">Dynamic routing rules</span>
+</div>
+</div>
+<div class="flex items-center gap-4 pt-4 border-t border-black/5">
+<a class="font-title-sm text-secondary hover:text-secondary-container transition-colors flex items-center gap-1" href="#">
+          Read what's new <span class="material-symbols-outlined text-[18px]">arrow_outward</span>
+</a>
+<a class="font-title-sm text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1 ml-auto" href="#">
+          Deploy your own <span class="material-symbols-outlined text-[18px]">terminal</span>
+</a>
+</div>
+</div>
+</div>
+</div></main></body></html>

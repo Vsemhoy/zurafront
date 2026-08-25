@@ -1,0 +1,266 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "secondary": "#005cbb", "module-exploiter": "#b91c1c", "on-secondary-container": "#00326b", "background": "#fcf8fa", "inverse-surface": "#303032", "tertiary-container": "#271901", "module-booker": "#6366f1", "tertiary-fixed-dim": "#dec29a", "on-tertiary-fixed-variant": "#574425", "primary": "#000000", "module-tracker": "#06b6d4", "secondary-container": "#5d9aff", "outline": "#76777d", "tertiary": "#000000", "module-stuffer": "#f43f5e", "on-primary-container": "#7c839b", "on-error": "#ffffff", "on-background": "#1b1b1d", "error": "#ba1a1a", "on-surface": "#1b1b1d", "primary-container": "#131b2e", "surface": "#fcf8fa", "module-eventor": "#f59e0b", "module-reporter": "#7c3aed", "on-primary-fixed-variant": "#3f465c", "inverse-on-surface": "#f3f0f2", "on-error-container": "#93000a", "on-tertiary": "#ffffff", "module-tasker": "#0f62c3", "surface-container-low": "#f6f3f5", "scope-personal": "#ec4899", "surface-variant": "#e4e2e4", "surface-tint": "#565e74", "surface-bright": "#fcf8fa", "error-container": "#ffdad6", "on-secondary-fixed-variant": "#00458f", "on-primary": "#ffffff", "on-tertiary-container": "#98805d", "scope-work": "#3b82f6", "scope-home": "#10b981", "scope-sideproject": "#8b5cf6", "surface-container": "#f0edef", "primary-fixed-dim": "#bec6e0", "secondary-fixed": "#d7e2ff", "on-tertiary-fixed": "#271901", "tertiary-fixed": "#fcdeb5", "module-contactor": "#14b8a6", "on-secondary-fixed": "#001b3f", "secondary-fixed-dim": "#abc7ff", "surface-dim": "#dcd9db", "primary-fixed": "#dae2fd", "surface-container-lowest": "#ffffff", "module-ledger": "#10b981", "on-primary-fixed": "#131b2e", "surface-container-highest": "#e4e2e4", "on-surface-variant": "#45464d", "inverse-primary": "#bec6e0", "module-factor": "#8b5cf6", "outline-variant": "#c6c6cd", "on-secondary": "#ffffff", "surface-container-high": "#eae7e9" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "gutter": "16px", "row-height-dense": "32px", "sidebar-width": "220px", "margin-page": "24px", "header-height": "48px", "unit": "4px" }, "fontFamily": { "headline-md": ["Inter"], "data-mono": ["JetBrains Mono"], "body-sm": ["Inter"], "title-sm": ["Inter"], "body-base": ["Inter"], "display-lg": ["Inter"], "label-caps": ["Inter"] }, "fontSize": { "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "data-mono": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }], "title-sm": ["15px", { "lineHeight": "20px", "fontWeight": "600" }], "body-base": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "label-caps": ["10px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "700" }] } } } };</script></head><body class="bg-background pt-safe pb-safe"><main class="relative w-full min-h-screen"><div class="flex flex-col w-full relative min-h-screen">
+<!-- Decorative Background Layer -->
+<div class="absolute inset-0 pointer-events-none overflow-hidden">
+<div class="absolute -top-[20%] -right-[10%] w-[600px] h-[600px] rounded-full bg-module-tracker opacity-[0.03] blur-[100px]"></div>
+<div class="absolute top-[40%] -left-[10%] w-[500px] h-[500px] rounded-full bg-module-factor opacity-[0.02] blur-[80px]"></div>
+</div>
+<div class="flex-1 w-full max-w-[1440px] mx-auto p-margin-page grid grid-cols-1 xl:grid-cols-[1fr_sidebar-width] gap-gutter relative z-10">
+<!-- Main Content Area -->
+<div class="flex flex-col gap-gutter">
+<!-- Header Section -->
+<header class="flex flex-col gap-unit mb-8">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-widest flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-module-ledger animate-pulse"></span>
+              系统运行正常
+            </span>
+<h1 class="font-display-lg text-display-lg text-on-background mt-2">
+              早上好, <span class="text-module-tracker">Alex</span>
+</h1>
+</div>
+<button class="h-10 px-6 rounded-full bg-primary text-on-primary font-title-sm text-title-sm shadow-md hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+            新建任务
+          </button>
+</div>
+</header>
+<!-- KPI Grid -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- KPI 1 -->
+<div class="bg-surface-container rounded-xl p-5 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px] text-module-exploiter">warning</span>
+</div>
+<h3 class="font-title-sm text-title-sm text-on-surface-variant">逾期</h3>
+<div class="mt-4 flex items-end gap-3">
+<span class="font-data-mono text-[32px] leading-none text-module-exploiter font-semibold">03</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant mb-1">/ 12 total</span>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-primary-container rounded-xl p-5 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px] text-on-primary-container">trending_up</span>
+</div>
+<h3 class="font-title-sm text-title-sm text-on-primary-container">今日已记录</h3>
+<div class="mt-4 flex items-end gap-3">
+<span class="font-data-mono text-[32px] leading-none text-on-primary font-semibold">1,248</span>
+<span class="font-body-sm text-body-sm text-module-ledger mb-1 flex items-center">
+<span class="material-symbols-outlined text-[14px]">arrow_upward</span> 14%
+            </span>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-surface-container rounded-xl p-5 shadow-sm relative overflow-hidden group hover:shadow-md transition-shadow">
+<div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+<span class="material-symbols-outlined text-[64px] text-module-tracker">account_balance_wallet</span>
+</div>
+<h3 class="font-title-sm text-title-sm text-on-surface-variant">进行中的项目组合</h3>
+<div class="mt-4 flex items-end gap-3">
+<span class="font-data-mono text-[32px] leading-none text-on-surface font-semibold">08</span>
+</div>
+</div>
+</section>
+<!-- Task High-Density Grid -->
+<section class="mt-8">
+<div class="flex items-center justify-between mb-4">
+<h2 class="font-headline-md text-headline-md text-on-background">轨迹</h2>
+<div class="flex gap-2">
+<button class="w-8 h-8 rounded-md bg-surface-container-high flex items-center justify-center hover:bg-surface-variant transition-colors text-on-surface">
+<span class="material-symbols-outlined text-[18px]">filter_list</span>
+</button>
+<button class="w-8 h-8 rounded-md bg-surface-container-high flex items-center justify-center hover:bg-surface-variant transition-colors text-on-surface">
+<span class="material-symbols-outlined text-[18px]">more_horiz</span>
+</button>
+</div>
+</div>
+<div class="bg-surface-container rounded-xl shadow-sm overflow-hidden">
+<!-- Table Header -->
+<div class="grid grid-cols-[40px_1fr_120px_100px_80px] gap-4 px-4 py-3 bg-surface-container-high border-b border-surface-variant items-center">
+<div class="text-center"></div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">Task / Entity</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant">Scope</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant text-right">Value</div>
+<div class="font-label-caps text-label-caps text-on-surface-variant text-center">Actions</div>
+</div>
+<!-- Task Rows -->
+<div class="flex flex-col">
+<!-- Row 1 -->
+<div class="group grid grid-cols-[40px_1fr_120px_100px_80px] gap-4 px-4 h-row-height-dense items-center hover:bg-surface-container-highest transition-colors cursor-pointer border-b border-surface-variant/50 last:border-0">
+<div class="flex items-center justify-center">
+<span class="w-2 h-2 rounded-full bg-module-tracker"></span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface truncate">
+                Q3 Compliance Audit - Nexus Corp
+              </div>
+<div>
+<span class="px-2 py-0.5 rounded-full bg-scope-work/10 text-scope-work font-label-caps text-[9px] tracking-wider">WORK</span>
+</div>
+<div class="font-data-mono text-data-mono text-on-surface-variant text-right">
+                $42,500
+              </div>
+<div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="text-on-surface-variant hover:text-module-exploiter transition-colors"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<!-- Row 2 -->
+<div class="group grid grid-cols-[40px_1fr_120px_100px_80px] gap-4 px-4 h-row-height-dense items-center hover:bg-surface-container-highest transition-colors cursor-pointer border-b border-surface-variant/50 last:border-0">
+<div class="flex items-center justify-center">
+<span class="w-2 h-2 rounded-full bg-module-exploiter"></span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface truncate">
+                Tax Filing Extension - Horizon Ltd
+              </div>
+<div>
+<span class="px-2 py-0.5 rounded-full bg-scope-work/10 text-scope-work font-label-caps text-[9px] tracking-wider">WORK</span>
+</div>
+<div class="font-data-mono text-data-mono text-on-surface-variant text-right">
+                $12,000
+              </div>
+<div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="text-on-surface-variant hover:text-module-exploiter transition-colors"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<!-- Row 3 -->
+<div class="group grid grid-cols-[40px_1fr_120px_100px_80px] gap-4 px-4 h-row-height-dense items-center hover:bg-surface-container-highest transition-colors cursor-pointer border-b border-surface-variant/50 last:border-0">
+<div class="flex items-center justify-center">
+<span class="w-2 h-2 rounded-full bg-scope-personal"></span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface truncate">
+                Quarterly Review - Personal Prop
+              </div>
+<div>
+<span class="px-2 py-0.5 rounded-full bg-scope-personal/10 text-scope-personal font-label-caps text-[9px] tracking-wider">PERSONAL</span>
+</div>
+<div class="font-data-mono text-data-mono text-on-surface-variant text-right">
+                $3,450
+              </div>
+<div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="text-on-surface-variant hover:text-module-exploiter transition-colors"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+<!-- Row 4 -->
+<div class="group grid grid-cols-[40px_1fr_120px_100px_80px] gap-4 px-4 h-row-height-dense items-center hover:bg-surface-container-highest transition-colors cursor-pointer border-b border-surface-variant/50 last:border-0">
+<div class="flex items-center justify-center">
+<span class="w-2 h-2 rounded-full bg-module-tracker"></span>
+</div>
+<div class="font-body-sm text-body-sm text-on-surface truncate">
+                Entity Structuring - Vanguard Group
+              </div>
+<div>
+<span class="px-2 py-0.5 rounded-full bg-scope-sideproject/10 text-scope-sideproject font-label-caps text-[9px] tracking-wider">SIDE PROJECT</span>
+</div>
+<div class="font-data-mono text-data-mono text-on-surface-variant text-right">
+                $89,000
+              </div>
+<div class="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined text-[16px]">edit</span></button>
+<button class="text-on-surface-variant hover:text-module-exploiter transition-colors"><span class="material-symbols-outlined text-[16px]">delete</span></button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Visual Element -->
+<section class="mt-8 flex gap-gutter">
+<div class="flex-1 bg-surface-container rounded-xl shadow-sm p-6 flex flex-col justify-between overflow-hidden relative group">
+<div class="z-10 relative">
+<h3 class="font-headline-md text-headline-md text-on-surface">Global Allocation</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-2 max-w-sm">Asset distribution across international entities. Review compliance markers.</p>
+</div>
+<!-- Decorative Map Visualization -->
+<div class="absolute -bottom-10 -right-10 w-[400px] h-[300px] opacity-40 group-hover:opacity-60 transition-opacity duration-700">
+<svg class="w-full h-full text-module-tracker" fill="none" viewbox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+<path class="animate-[dash_5s_linear_infinite]" d="M50 150 Q 150 50, 250 150 T 450 150" fill="none" stroke="currentColor" stroke-dasharray="10 10" stroke-width="2"></path>
+<circle cx="50" cy="150" fill="currentColor" r="4"></circle>
+<circle class="animate-ping origin-center" cx="250" cy="150" fill="currentColor" r="6"></circle>
+<circle cx="250" cy="150" fill="currentColor" r="4"></circle>
+</svg>
+</div>
+<style>
+                 @keyframes dash {
+                    to { stroke-dashoffset: -20; }
+                 }
+             </style>
+</div>
+<div class="w-1/3 bg-module-factor rounded-xl shadow-sm p-6 text-on-primary flex flex-col relative overflow-hidden group">
+<div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+<h3 class="font-title-sm text-title-sm opacity-80 mb-2 uppercase tracking-wider">Assistant</h3>
+<p class="font-headline-md text-headline-md leading-tight mb-6">"You have 3 compliance deadlines approaching this week."</p>
+<div class="mt-auto flex justify-between items-end relative z-10">
+<button class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-md transition-colors text-sm font-semibold backdrop-blur-sm">
+                      Review Now
+                  </button>
+</div>
+<!-- Mascot Intervention -->
+<div class="absolute -bottom-8 -right-4 w-32 h-32 opacity-90 group-hover:-translate-y-4 transition-transform duration-500 ease-out" data-alt="A small, cute 3D clay-style mascot character resembling a wise owl wearing tiny reading glasses, peeking up from the bottom right corner, softly lit in a studio setting, matte texture, minimal background." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDEgyvZMdWh7qiS9O50agnRX2UiN-oDI5ZYzKXpVRdeMWwPEie54GjuVzAHvE03gyAjFvmGiwdreWH2oz5gtNSx_rAYpxZugtIndXdXUhevlLgheLaipU90pJ6qvDGxe79ifPgso9pdlt0o8yMwo7raPOV0lFnUjTI71siJESuIfHZGzFDL9-YCNyqC-l7iZ_lBFu1mgzzyaY7zUMi8Cc_vaNNPUvuTqWeLWM10diN9x8mJ-BwjrGyN')">
+</div>
+</div>
+</section>
+</div>
+<!-- Inspector / Sidebar (Right) -->
+<aside class="hidden xl:flex flex-col gap-gutter">
+<!-- User Profile Snippet -->
+<div class="bg-surface-container rounded-xl p-4 shadow-sm flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center font-title-sm font-semibold">
+          AL
+        </div>
+<div>
+<div class="font-title-sm text-title-sm text-on-surface">Alex Lee</div>
+<div class="font-data-mono text-data-mono text-on-surface-variant text-[11px]">Senior Associate</div>
+</div>
+</div>
+<!-- Scope PIN Grid -->
+<div class="bg-surface-container rounded-xl p-4 shadow-sm flex flex-col gap-3">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-1">Quick Scope</h3>
+<div class="grid grid-cols-2 gap-2">
+<button class="bg-surface h-10 rounded-md shadow-sm border-l-2 border-scope-work flex items-center justify-center font-title-sm text-title-sm text-on-surface hover:ring-2 ring-secondary transition-all">WORK</button>
+<button class="bg-surface h-10 rounded-md shadow-sm border-l-2 border-scope-personal flex items-center justify-center font-title-sm text-title-sm text-on-surface hover:ring-2 ring-secondary transition-all">PERS</button>
+<button class="bg-surface h-10 rounded-md shadow-sm border-l-2 border-scope-sideproject flex items-center justify-center font-title-sm text-title-sm text-on-surface hover:ring-2 ring-secondary transition-all">SIDE</button>
+<button class="bg-surface h-10 rounded-md shadow-sm border-l-2 border-outline-variant flex items-center justify-center font-title-sm text-title-sm text-on-surface-variant hover:ring-2 ring-secondary transition-all opacity-50 cursor-not-allowed">LOCK</button>
+</div>
+</div>
+<!-- Activity Feed -->
+<div class="bg-surface-container rounded-xl p-4 shadow-sm flex-1 flex flex-col">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant mb-4">Recent Activity</h3>
+<div class="flex flex-col gap-4 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-surface-variant">
+<!-- Feed Item -->
+<div class="flex gap-3 relative z-10">
+<div class="w-6 h-6 rounded-full bg-module-ledger text-on-primary flex items-center justify-center shrink-0 border-2 border-surface-container">
+<span class="material-symbols-outlined text-[12px]">check</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface">Audit report approved</span>
+<span class="font-data-mono text-[10px] text-on-surface-variant">10 mins ago</span>
+</div>
+</div>
+<!-- Feed Item -->
+<div class="flex gap-3 relative z-10">
+<div class="w-6 h-6 rounded-full bg-module-tracker text-on-primary flex items-center justify-center shrink-0 border-2 border-surface-container">
+<span class="material-symbols-outlined text-[12px]">upload</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface">Documents uploaded</span>
+<span class="font-data-mono text-[10px] text-on-surface-variant">1 hr ago</span>
+</div>
+</div>
+<!-- Feed Item -->
+<div class="flex gap-3 relative z-10">
+<div class="w-6 h-6 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center shrink-0 border-2 border-surface-container">
+<span class="material-symbols-outlined text-[12px]">chat</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm text-on-surface text-opacity-70">Comment on Nexus Corp</span>
+<span class="font-data-mono text-[10px] text-on-surface-variant">Yesterday</span>
+</div>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</div></main></body></html>

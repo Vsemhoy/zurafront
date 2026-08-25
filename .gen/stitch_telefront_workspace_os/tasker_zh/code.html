@@ -1,0 +1,174 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"secondary":"#005cbb","module-exploiter":"#b91c1c","on-secondary-container":"#00326b","background":"#fcf8fa","inverse-surface":"#303032","tertiary-container":"#271901","module-booker":"#6366f1","tertiary-fixed-dim":"#dec29a","on-tertiary-fixed-variant":"#574425","primary":"#000000","module-tracker":"#06b6d4","secondary-container":"#5d9aff","outline":"#76777d","tertiary":"#000000","module-stuffer":"#f43f5e","on-primary-container":"#7c839b","on-error":"#ffffff","on-background":"#1b1b1d","error":"#ba1a1a","on-surface":"#1b1b1d","primary-container":"#131b2e","surface":"#fcf8fa","module-eventor":"#f59e0b","module-reporter":"#7c3aed","on-primary-fixed-variant":"#3f465c","inverse-on-surface":"#f3f0f2","on-error-container":"#93000a","on-tertiary":"#ffffff","module-tasker":"#0f62c3","surface-container-low":"#f6f3f5","scope-personal":"#ec4899","surface-variant":"#e4e2e4","surface-tint":"#565e74","surface-bright":"#fcf8fa","error-container":"#ffdad6","on-secondary-fixed-variant":"#00458f","on-primary":"#ffffff","on-tertiary-container":"#98805d","scope-work":"#3b82f6","scope-home":"#10b981","scope-sideproject":"#8b5cf6","surface-container":"#f0edef","primary-fixed-dim":"#bec6e0","secondary-fixed":"#d7e2ff","on-tertiary-fixed":"#271901","tertiary-fixed":"#fcdeb5","module-contactor":"#14b8a6","on-secondary-fixed":"#001b3f","secondary-fixed-dim":"#abc7ff","surface-dim":"#dcd9db","primary-fixed":"#dae2fd","surface-container-lowest":"#ffffff","module-ledger":"#10b981","on-primary-fixed":"#131b2e","surface-container-highest":"#e4e2e4","on-surface-variant":"#45464d","inverse-primary":"#bec6e0","module-factor":"#8b5cf6","outline-variant":"#c6c6cd","on-secondary":"#ffffff","surface-container-high":"#eae7e9"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"gutter":"16px","row-height-dense":"32px","sidebar-width":"220px","margin-page":"24px","header-height":"48px","unit":"4px"},"fontFamily":{"headline-md":["Inter"],"data-mono":["JetBrains Mono"],"body-sm":["Inter"],"title-sm":["Inter"],"body-base":["Inter"],"display-lg":["Inter"],"label-caps":["Inter"]},"fontSize":{"headline-md":["20px",{"lineHeight":"28px","letterSpacing":"-0.01em","fontWeight":"600"}],"data-mono":["12px",{"lineHeight":"16px","fontWeight":"400"}],"body-sm":["13px",{"lineHeight":"18px","fontWeight":"400"}],"title-sm":["15px",{"lineHeight":"20px","fontWeight":"600"}],"body-base":["14px",{"lineHeight":"20px","fontWeight":"400"}],"display-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-caps":["10px",{"lineHeight":"12px","letterSpacing":"0.08em","fontWeight":"700"}]}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/></head><body class="bg-background font-body-base text-on-surface"><main class="min-h-screen flex items-center justify-center p-gutter"><div class="flex flex-col w-full">
+<!-- Workspace Header -->
+<header class="flex items-center justify-between pb-6">
+<div class="flex items-center gap-6">
+<h1 class="font-headline-md text-headline-md text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-module-tasker" style="font-variation-settings: 'FILL' 1;">task_alt</span>
+        我的任务
+      </h1>
+<!-- Scope / Filter Switcher -->
+<nav class="flex items-center gap-1 bg-surface-container p-1 rounded-lg shadow-sm">
+<button class="bg-surface px-4 py-1.5 rounded-md shadow-sm font-title-sm text-title-sm text-module-tasker">
+          今天
+        </button>
+<button class="px-4 py-1.5 rounded-md font-title-sm text-title-sm text-on-surface-variant hover:bg-surface-container-high transition-colors">
+          即将到来
+        </button>
+<button class="px-4 py-1.5 rounded-md font-title-sm text-title-sm text-on-surface-variant hover:bg-surface-container-high transition-colors flex items-center gap-1">
+          已阻止
+          <span class="font-data-mono text-data-mono bg-error-container text-on-error-container px-1.5 py-0.5 rounded-full">1</span>
+</button>
+</nav>
+</div>
+<button class="bg-module-tasker text-on-primary font-title-sm text-title-sm px-4 py-2 rounded-lg shadow-md hover:shadow-lg transition-shadow flex items-center gap-2">
+<span class="material-symbols-outlined">add</span>
+      新任务
+    </button>
+</header>
+<!-- Three-Column Kanban Board -->
+<div class="flex w-full gap-gutter items-start">
+<!-- Column 1: Today -->
+<section class="flex-1 flex flex-col gap-3 bg-surface-container-low rounded-xl p-4 shadow-sm min-w-0">
+<header class="flex items-center justify-between mb-2">
+<h2 class="font-title-sm text-title-sm text-on-surface">今天</h2>
+<span class="font-data-mono text-data-mono bg-surface-container-highest text-on-surface-variant px-2 py-1 rounded-full">3</span>
+</header>
+<!-- Task Card 1 -->
+<article class="bg-surface rounded-lg p-3 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
+<div class="pl-2 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<h3 class="font-body-base text-body-base text-on-surface truncate pr-2">Review Q3 Financial Disclosures</h3>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 cursor-pointer text-[18px]">more_horiz</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">描述: Verify all operational expense anomalies against the new compliance ledger.</p>
+<div class="flex items-center justify-between mt-2 pt-2 bg-surface-container-lowest/50 rounded">
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps bg-error-container text-on-error-container px-2 py-1 rounded">优先级: HIGH</span>
+<span class="font-label-caps text-label-caps bg-surface-container-high text-on-surface-variant px-2 py-1 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">account_tree</span>
+                子任务: 2/5
+              </span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-1.5">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-data-mono text-[10px]">JD</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">受托人</span>
+</div>
+<span class="font-data-mono text-data-mono text-error flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+              截止日期: 14:00
+            </span>
+</div>
+</div>
+</article>
+<!-- Task Card 2 -->
+<article class="bg-surface rounded-lg p-3 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-module-eventor"></div>
+<div class="pl-2 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<h3 class="font-body-base text-body-base text-on-surface truncate pr-2">Client Onboarding: Apex Corp</h3>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 cursor-pointer text-[18px]">more_horiz</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 bg-surface-container-lowest/50 rounded">
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps bg-tertiary-fixed text-on-tertiary-fixed px-2 py-1 rounded">优先级: MED</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex items-center gap-1.5">
+<div class="w-6 h-6 rounded-full bg-module-tracker text-on-primary flex items-center justify-center font-data-mono text-[10px]">AL</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant">受托人</span>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+              截止日期: 今天
+            </span>
+</div>
+</div>
+</article>
+</section>
+<!-- Column 2: In Progress -->
+<section class="flex-1 flex flex-col gap-3 bg-surface-container-low rounded-xl p-4 shadow-sm min-w-0">
+<header class="flex items-center justify-between mb-2">
+<h2 class="font-title-sm text-title-sm text-on-surface flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-module-tasker animate-pulse"></span>
+          进行中
+        </h2>
+<span class="font-data-mono text-data-mono bg-surface-container-highest text-on-surface-variant px-2 py-1 rounded-full">1</span>
+</header>
+<!-- Task Card 3 -->
+<article class="bg-surface rounded-lg p-3 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-module-tasker"></div>
+<div class="pl-2 flex flex-col gap-2">
+<div class="flex justify-between items-start">
+<h3 class="font-body-base text-body-base text-on-surface truncate pr-2">Automate Payroll Ingestion Pipeline</h3>
+<span class="material-symbols-outlined text-on-surface-variant opacity-0 group-hover:opacity-100 cursor-pointer text-[18px]">more_horiz</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant line-clamp-2">活动: Script deployment failing on validation node 3. Debugging.</p>
+<!-- Progress indicator -->
+<div class="w-full bg-surface-container-high rounded-full h-1.5 mt-2">
+<div class="bg-module-tasker h-1.5 rounded-full w-[65%]"></div>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 bg-surface-container-lowest/50 rounded">
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-label-caps bg-surface-container-high text-on-surface-variant px-2 py-1 rounded">优先级: LOW</span>
+</div>
+</div>
+<div class="flex items-center justify-between mt-1">
+<div class="flex flex-row -space-x-2">
+<img class="w-6 h-6 rounded-full shadow-sm object-cover bg-primary-fixed" data-alt="3D clay-style avatar of a confident professional with round glasses, soft matte lighting, studio environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCHBBxcvnatlndiisdrW7kADZpnzU1nO3H6CIJbKsREIlN3oh71Hq1AyGnJ2-flhdp0MpJXfY-BL9MnUx9kp5P2K1t-T_s95wCMbxsf3hlqshAPFbKUXExs7MRAuhSG-nG77tpbJmEUSiXegimgF8K5Q8uXBJ19JY6TrVxmS6GLM0p3SeCoX7ywPsSu4L3CfFyA-RKoddif68uICOnm3ni-5LHqCkMiX6wyq_Wq6HzaZgAohpMkyPy7"/>
+<img class="w-6 h-6 rounded-full shadow-sm object-cover bg-tertiary-fixed" data-alt="3D clay-style avatar of an engineer with a yellow beanie, soft matte lighting, studio environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZ4M47q3s1_DFHtJyyES7ggT-EplxLZm-4-4Vn3hd0IucSYJeHd997-hBtxuc8YdwRYwmg8lTAVc95xGU0uExgcH-68IRyNCZruUU_sWZjFcYZWWjUDg66lFsg-jr-qrWHOHL56ypIy4fPbBWbn8zuGXSn0a1ymqJguIq2-UrJgFN6sffRKdqM9BCQnQBqRU_vhup6LXf2RIfJtF7aylvVxiu3cx7GDIsPcgB-4wVqP4HbsY7vyjtw"/>
+</div>
+<span class="font-data-mono text-data-mono text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+              截止日期: Nov 12
+            </span>
+</div>
+</div>
+</article>
+<!-- Decorative Mischievous Mascot for empty space -->
+<div class="mt-8 flex justify-center opacity-80">
+<img class="w-32 h-32 object-contain" data-alt="A mischievous 3D clay-style matte mascot character, resembling a clever fox in a small suit, holding a wrench, peeking out from behind a blank canvas. Studio lighting, subtle shadows, corporate modern aesthetic with a playful twist, set against a transparent or neutral slate background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB0YSFaKbvUmbj0yPDf6b9aUhibiJwjYxiQxNEsLq9zDrdtO_pcx0ti2Oc4G0_G0V3RD0Ps0QHi-HwXq8AsWsFKuXW0lKzdZ6zSMbJpMf2weP2cROFnFEctj1_aDxtiARiTaLuXKfZ7QpS2DgIe9n2Yp6ktkqcmcf5ZmAd4T--AvU1gGYO77TxD6pUbhsbPrCe8j06ASUrzCCy_amQU4fipqUcZkM71UAYUAxHheqUBsyMPgLAznTTz"/>
+</div>
+</section>
+<!-- Column 3: Done -->
+<section class="flex-1 flex flex-col gap-3 bg-surface-container-low rounded-xl p-4 shadow-sm min-w-0 opacity-80">
+<header class="flex items-center justify-between mb-2">
+<h2 class="font-title-sm text-title-sm text-on-surface">已完成</h2>
+<span class="font-data-mono text-data-mono bg-surface-container-highest text-on-surface-variant px-2 py-1 rounded-full">2</span>
+</header>
+<!-- Task Card 4 -->
+<article class="bg-surface rounded-lg p-3 shadow-sm relative overflow-hidden group">
+<div class="absolute inset-0 bg-surface/50 z-10 pointer-events-none"></div>
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-module-ledger"></div>
+<div class="pl-2 flex flex-col gap-2 relative z-0">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-module-ledger text-[18px]">check_circle</span>
+<h3 class="font-body-base text-body-base text-on-surface-variant line-through truncate pr-2">Update Compliance SLA</h3>
+</div>
+<div class="flex items-center justify-between mt-1 pl-6">
+<span class="font-data-mono text-data-mono text-on-surface-variant">截止日期: Oct 20</span>
+</div>
+</div>
+</article>
+<!-- Task Card 5 -->
+<article class="bg-surface rounded-lg p-3 shadow-sm relative overflow-hidden group">
+<div class="absolute inset-0 bg-surface/50 z-10 pointer-events-none"></div>
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-module-ledger"></div>
+<div class="pl-2 flex flex-col gap-2 relative z-0">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-module-ledger text-[18px]">check_circle</span>
+<h3 class="font-body-base text-body-base text-on-surface-variant line-through truncate pr-2">Weekly Sync Preparation</h3>
+</div>
+<div class="flex items-center justify-between mt-1 pl-6">
+<span class="font-data-mono text-data-mono text-on-surface-variant">截止日期: Oct 21</span>
+</div>
+</div>
+</article>
+</section>
+</div>
+</div></main></body></html>

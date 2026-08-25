@@ -1,0 +1,124 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono:wght@400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "secondary": "#005cbb", "module-exploiter": "#b91c1c", "on-secondary-container": "#00326b", "background": "#fcf8fa", "inverse-surface": "#303032", "tertiary-container": "#271901", "module-booker": "#6366f1", "tertiary-fixed-dim": "#dec29a", "on-tertiary-fixed-variant": "#574425", "primary": "#000000", "module-tracker": "#06b6d4", "secondary-container": "#5d9aff", "outline": "#76777d", "tertiary": "#000000", "module-stuffer": "#f43f5e", "on-primary-container": "#7c839b", "on-error": "#ffffff", "on-background": "#1b1b1d", "error": "#ba1a1a", "on-surface": "#1b1b1d", "primary-container": "#131b2e", "surface": "#fcf8fa", "module-eventor": "#f59e0b", "module-reporter": "#7c3aed", "on-primary-fixed-variant": "#3f465c", "inverse-on-surface": "#f3f0f2", "on-error-container": "#93000a", "on-tertiary": "#ffffff", "module-tasker": "#0f62c3", "surface-container-low": "#f6f3f5", "scope-personal": "#ec4899", "surface-variant": "#e4e2e4", "surface-tint": "#565e74", "surface-bright": "#fcf8fa", "error-container": "#ffdad6", "on-secondary-fixed-variant": "#00458f", "on-primary": "#ffffff", "on-tertiary-container": "#98805d", "scope-work": "#3b82f6", "scope-home": "#10b981", "scope-sideproject": "#8b5cf6", "surface-container": "#f0edef", "primary-fixed-dim": "#bec6e0", "secondary-fixed": "#d7e2ff", "on-tertiary-fixed": "#271901", "tertiary-fixed": "#fcdeb5", "module-contactor": "#14b8a6", "on-secondary-fixed": "#001b3f", "secondary-fixed-dim": "#abc7ff", "surface-dim": "#dcd9db", "primary-fixed": "#dae2fd", "surface-container-lowest": "#ffffff", "module-ledger": "#10b981", "on-primary-fixed": "#131b2e", "surface-container-highest": "#e4e2e4", "on-surface-variant": "#45464d", "inverse-primary": "#bec6e0", "module-factor": "#8b5cf6", "outline-variant": "#c6c6cd", "on-secondary": "#ffffff", "surface-container-high": "#eae7e9" }, "borderRadius": { "DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem" }, "spacing": { "gutter": "16px", "row-height-dense": "32px", "sidebar-width": "220px", "margin-page": "24px", "header-height": "48px", "unit": "4px" }, "fontFamily": { "headline-md": ["Inter"], "data-mono": ["JetBrains Mono"], "body-sm": ["Inter"], "title-sm": ["Inter"], "body-base": ["Inter"], "display-lg": ["Inter"], "label-caps": ["Inter"] }, "fontSize": { "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600" }], "data-mono": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "body-sm": ["13px", { "lineHeight": "18px", "fontWeight": "400" }], "title-sm": ["15px", { "lineHeight": "20px", "fontWeight": "600" }], "body-base": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "label-caps": ["10px", { "lineHeight": "12px", "letterSpacing": "0.08em", "fontWeight": "700" }] } } } };</script></head><body class="bg-background pt-safe pb-safe"><main class="relative w-full min-h-screen"><div class="flex flex-col w-full h-full p-gutter gap-4 relative">
+<!-- Release Banner -->
+<div class="w-full bg-surface-container rounded-xl shadow-sm border border-surface-variant overflow-hidden flex flex-col transition-all duration-300 relative group" id="releaseBanner">
+<div class="flex items-center justify-between p-3 cursor-pointer z-10 relative bg-surface-container" onclick="toggleBanner()">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2 border-surface flex items-center justify-center bg-surface-container-high relative">
+<img alt="Mascot" class="w-full h-full object-cover relative z-10" src="https://lh3.googleusercontent.com/aida/AEtjO1UP2wMxM4DmIyQr2oDT-f8wylERYNnBE1QXUT7J8dB6J6mMW1jOHF6NLfhK-3MpvlYKy1ORgAStBxHnsyQf0adzxrc3mqq32GUQ1n96c_bvAmqdU__xd-bBjUqtli2rDdqa--1azaDHlUaTLR0Z28hLD7VGOymz2XsUDpqQ28UK3Wac7klvrhE-XE4wpP7V-E_v_-2YtNJ1sUeU1y5vC2mx6MFoknt2_TiPfWLI9hHI7AyCc4Q6NqVHQg"/>
+</div>
+<div>
+<p class="font-title-sm text-title-sm text-on-surface">Release v2.4.1</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-module-ledger animate-pulse"></span>
+                        Performance updates
+                    </p>
+</div>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant transition-transform duration-300" id="bannerChevron">expand_more</span>
+</div>
+<!-- Expanded Content -->
+<div class="h-0 overflow-hidden transition-all duration-300 px-3 bg-surface-container" id="bannerContent">
+<div class="pb-3 border-t border-surface-variant pt-2 flex flex-col gap-2">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-module-tracker mt-0.5">bolt</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Optimized large dataset rendering in grid view.</p>
+</div>
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-module-exploiter mt-0.5">bug_report</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Fixed export timeout issues on filtered views.</p>
+</div>
+<button class="font-title-sm text-title-sm text-secondary hover:text-secondary-container text-left mt-1 w-max transition-colors">View full changelog</button>
+</div>
+</div>
+<!-- Decorative subtle gradient in background -->
+<div class="absolute right-0 top-0 w-32 h-32 bg-gradient-to-bl from-secondary-fixed/20 to-transparent rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+</div>
+<!-- Login Container -->
+<div class="flex-1 flex flex-col justify-center max-w-[400px] w-full mx-auto pb-8">
+<div class="text-center mb-8">
+<h1 class="font-display-lg text-display-lg text-on-background mb-2">Welcome Back</h1>
+<p class="font-body-base text-body-base text-on-surface-variant">Sign in to continue to your workspace.</p>
+</div>
+<form class="flex flex-col gap-4 bg-surface rounded-xl p-5 shadow-sm border border-surface-variant relative z-10" onsubmit="event.preventDefault(); document.getElementById('loadingState').classList.remove('hidden'); document.getElementById('loginBtnText').classList.add('hidden'); setTimeout(() =&gt; { document.getElementById('loadingState').classList.add('hidden'); document.getElementById('loginBtnText').classList.remove('hidden'); }, 1500);">
+<div class="flex flex-col gap-1.5">
+<label class="font-title-sm text-title-sm text-on-surface" for="email">Work Email</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">mail</span>
+<input class="w-full h-[40px] pl-10 pr-3 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-body-base text-body-base focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all placeholder:text-on-surface-variant/50" id="email" placeholder="name@company.com" required="" type="email"/>
+</div>
+</div>
+<div class="flex flex-col gap-1.5 mt-1">
+<div class="flex justify-between items-center">
+<label class="font-title-sm text-title-sm text-on-surface" for="password">Password</label>
+<a class="font-body-sm text-body-sm text-secondary hover:underline" href="#">Forgot?</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px] pointer-events-none">lock</span>
+<input class="w-full h-[40px] pl-10 pr-10 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-body-base text-body-base focus:outline-none focus:ring-2 focus:ring-secondary focus:border-transparent transition-all placeholder:text-on-surface-variant/50" id="password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface flex items-center justify-center h-full focus:outline-none" onclick="togglePassword()" type="button">
+<span class="material-symbols-outlined text-[20px]" id="passwordToggleIcon">visibility_off</span>
+</button>
+</div>
+</div>
+<button class="w-full h-[40px] mt-4 bg-secondary text-on-secondary rounded-lg font-title-sm text-title-sm hover:bg-on-secondary-container transition-colors shadow-sm flex items-center justify-center relative overflow-hidden group" type="submit">
+<span id="loginBtnText">Sign In</span>
+<span class="material-symbols-outlined animate-spin hidden" id="loadingState">progress_activity</span>
+<div class="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
+</button>
+</form>
+</div>
+<!-- Footer Links & Status -->
+<div class="mt-auto flex flex-col items-center gap-4 py-4 border-t border-surface-variant border-opacity-50">
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface transition-colors">
+<span class="material-symbols-outlined text-[18px]">language</span>
+<span class="font-body-sm text-body-sm">EN</span>
+</button>
+<div class="w-px h-4 bg-outline-variant"></div>
+<a class="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface transition-colors" href="#">
+<svg class="w-[18px] h-[18px] fill-current" viewbox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"></path></svg>
+<span class="font-body-sm text-body-sm">GitHub</span>
+</a>
+<div class="w-px h-4 bg-outline-variant"></div>
+<a class="flex items-center gap-1.5 text-on-surface-variant hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">menu_book</span>
+<span class="font-body-sm text-body-sm">Docs</span>
+</a>
+</div>
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-low rounded-full border border-surface-variant shadow-sm">
+<span class="w-2 h-2 rounded-full bg-module-ledger relative">
+<span class="absolute inset-0 rounded-full bg-module-ledger animate-ping opacity-50"></span>
+</span>
+<span class="font-data-mono text-data-mono text-on-surface-variant">All systems operational</span>
+</div>
+</div>
+</div>
+<script>
+    function toggleBanner() {
+        const content = document.getElementById('bannerContent');
+        const chevron = document.getElementById('bannerChevron');
+        const isExpanded = content.style.height && content.style.height !== '0px';
+        
+        if (isExpanded) {
+            content.style.height = '0px';
+            chevron.style.transform = 'rotate(0deg)';
+        } else {
+            content.style.height = content.scrollHeight + 'px';
+            chevron.style.transform = 'rotate(180deg)';
+        }
+    }
+
+    function togglePassword() {
+        const input = document.getElementById('password');
+        const icon = document.getElementById('passwordToggleIcon');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = 'visibility';
+        } else {
+            input.type = 'password';
+            icon.textContent = 'visibility_off';
+        }
+    }
+</script></main></body></html>

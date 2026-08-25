@@ -1,0 +1,88 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={theme:{extend:{"colors":{"primary":"#004a9a","surface":"#f8f9ff","on-surface":"#0b1c30"}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-surface text-on-surface font-body-base h-screen flex items-center justify-center"><div class="flex flex-col w-full h-full p-margin-page bg-background items-center justify-center relative overflow-hidden">
+<!-- Decorative background elements -->
+<div class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-30">
+<div class="w-[600px] h-[600px] bg-scope-personal/5 rounded-full blur-3xl mix-blend-multiply"></div>
+<div class="w-[400px] h-[400px] bg-surface-tint/5 rounded-full blur-2xl absolute top-1/4 left-1/4"></div>
+</div>
+<!-- Main Card -->
+<div class="relative z-10 w-full max-w-md bg-surface-container-lowest rounded-xl shadow-xl flex flex-col items-center p-8 transition-transform duration-300 hover:scale-[1.01]">
+<!-- Icon/Mascot representation -->
+<div class="w-16 h-16 rounded-full bg-scope-personal/10 flex items-center justify-center mb-6 relative">
+<span class="material-symbols-outlined text-display-lg text-scope-personal" style="font-variation-settings: 'FILL' 1;">lock</span>
+<!-- Decorative ring -->
+<div class="absolute inset-0 rounded-full border-2 border-scope-personal/20 animate-[spin_4s_linear_infinite]"></div>
+</div>
+<!-- Header -->
+<div class="text-center mb-8 w-full">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">Введите PIN-код</h2>
+<p class="font-body-base text-body-base text-on-surface-variant max-w-[280px] mx-auto">
+                Личное хранилище защищено приватностью.
+            </p>
+</div>
+<!-- PIN Entry Area -->
+<div class="flex flex-col items-center w-full mb-8">
+<div class="flex gap-gutter mb-4" id="pin-container">
+<!-- Cell 1 (Filled) -->
+<div class="w-12 h-14 bg-surface-container rounded-lg flex items-center justify-center relative shadow-sm">
+<span class="font-data-mono text-headline-md text-on-surface">8</span>
+</div>
+<!-- Cell 2 (Filled) -->
+<div class="w-12 h-14 bg-surface-container rounded-lg flex items-center justify-center relative shadow-sm">
+<span class="font-data-mono text-headline-md text-on-surface">2</span>
+</div>
+<!-- Cell 3 (Filled) -->
+<div class="w-12 h-14 bg-surface-container rounded-lg flex items-center justify-center relative shadow-sm">
+<span class="font-data-mono text-headline-md text-on-surface">4</span>
+</div>
+<!-- Cell 4 (Active/Error) -->
+<div class="w-12 h-14 bg-error-container rounded-lg flex items-center justify-center relative shadow-sm ring-2 ring-error animate-pulse">
+<span class="font-data-mono text-headline-md text-on-error-container">7</span>
+</div>
+</div>
+<!-- Error Message -->
+<div class="flex items-center gap-2 text-error bg-error-container/50 px-3 py-1.5 rounded-full mt-2">
+<span class="material-symbols-outlined text-[16px]">error</span>
+<span class="font-body-sm text-body-sm">Неверный PIN-код. Осталось 2 попытки.</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex flex-col sm:flex-row gap-3 w-full mt-2">
+<button class="flex-1 h-[44px] bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-title-sm text-title-sm rounded-lg transition-colors flex items-center justify-center gap-2">
+                Отмена
+            </button>
+<button class="flex-1 h-[44px] bg-scope-personal hover:bg-scope-personal/90 text-on-primary font-title-sm text-title-sm rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md">
+<span class="material-symbols-outlined text-[18px]">key</span>
+                Разблокировать
+            </button>
+</div>
+<!-- Keyboard Indicator (subtle detail) -->
+<div class="mt-8 pt-4 border-t border-outline-variant/30 w-full flex justify-between items-center px-2">
+<div class="flex items-center gap-2 text-on-surface-variant opacity-70">
+<span class="material-symbols-outlined text-[16px]">keyboard</span>
+<span class="font-label-caps text-label-caps">НАЖМИТЕ ENTER</span>
+</div>
+<div class="w-1.5 h-1.5 rounded-full bg-scope-personal animate-ping"></div>
+</div>
+</div>
+</div>
+<script>
+    // Simple mock interaction for the PIN cells to show active state on click
+    document.addEventListener('DOMContentLoaded', () => {
+        const cells = document.querySelectorAll('#pin-container > div');
+        cells.forEach(cell => {
+            cell.addEventListener('click', () => {
+                // Remove active classes from all
+                cells.forEach(c => {
+                    c.classList.remove('ring-2', 'ring-scope-personal', 'bg-surface-container-high');
+                    // keep error state if it was there for demo purposes, but normally we'd clear it
+                });
+                
+                // Add to clicked
+                if(!cell.classList.contains('ring-error')) {
+                     cell.classList.add('ring-2', 'ring-scope-personal', 'bg-surface-container-high');
+                }
+            });
+        });
+    });
+</script></body></html>

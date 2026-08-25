@@ -1,0 +1,138 @@
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={theme:{extend:{"colors":{"primary":"#004a9a","surface":"#f8f9ff","on-surface":"#0b1c30"}}}}</script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/></head><body class="bg-surface text-on-surface font-body-base h-screen flex items-center justify-center"><div class="flex flex-col w-full h-full relative overflow-hidden bg-background">
+<!-- Ambient Background Decorations -->
+<div class="absolute inset-0 z-0 pointer-events-none opacity-20">
+<div class="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-to-br from-primary-fixed/40 to-transparent rounded-full blur-[100px] transform translate-x-1/3 -translate-y-1/3"></div>
+<div class="absolute bottom-0 left-0 w-[600px] h-[600px] bg-gradient-to-tr from-secondary-fixed/40 to-transparent rounded-full blur-[80px] transform -translate-x-1/3 translate-y-1/3"></div>
+</div>
+<!-- Main Content Container -->
+<div class="relative z-10 flex flex-col lg:flex-row w-full h-full max-w-[1440px] mx-auto">
+<!-- Left Side: Login Panel -->
+<div class="flex flex-col flex-1 px-lg py-xl md:p-2xl lg:p-[48px] justify-between h-full lg:max-w-[500px]">
+<!-- Header / Logo -->
+<div class="flex items-center justify-between mb-2xl">
+<div class="flex items-center gap-sm">
+<img alt="Zuratax Logo" class="w-[32px] h-[32px] object-contain rounded-md" src="https://www.gstatic.com/labs-code/stitch/stitch-placeholder-300x300.svg"/>
+<span class="font-headline-md text-headline-md text-on-surface font-semibold tracking-tight">Zuratax</span>
+</div>
+<!-- Language Selector -->
+<div class="relative group">
+<button class="flex items-center gap-xs px-sm py-xs rounded-full hover:bg-surface-container-high transition-colors duration-200 text-on-surface-variant font-caption-xs text-caption-xs uppercase">
+<span class="material-symbols-outlined text-[16px]">language</span>
+<span>EN</span>
+<span class="material-symbols-outlined text-[14px]">arrow_drop_down</span>
+</button>
+<!-- Dropdown (Hidden by default, shown on hover in real implementation) -->
+<div class="absolute right-0 top-full mt-unit w-[120px] bg-surface-container-lowest rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 overflow-hidden transform origin-top-right group-hover:scale-100 scale-95">
+<div class="flex flex-col py-xs">
+<button class="text-left px-md py-sm hover:bg-surface-container text-on-surface font-body-sm text-body-sm transition-colors flex items-center justify-between w-full">
+                                English
+                                <span class="material-symbols-outlined text-primary text-[16px]">check</span>
+</button>
+<button class="text-left px-md py-sm hover:bg-surface-container text-on-surface-variant font-body-sm text-body-sm transition-colors w-full">Russian</button>
+<button class="text-left px-md py-sm hover:bg-surface-container text-on-surface-variant font-body-sm text-body-sm transition-colors w-full">Simplified Chinese</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Login Form Area -->
+<div class="flex flex-col flex-1 justify-center max-w-[360px] mx-auto w-full mb-2xl">
+<h1 class="font-display-lg text-display-lg text-on-surface mb-lg">Welcome back</h1>
+<p class="font-body-base text-body-base text-on-surface-variant mb-xl">Enter your credentials to access your workspace.</p>
+<form class="flex flex-col gap-lg" onsubmit="event.preventDefault();">
+<!-- Email Field -->
+<div class="flex flex-col gap-xs group">
+<label class="font-caption-xs text-caption-xs text-on-surface-variant uppercase tracking-wider" for="email">Email address</label>
+<div class="relative">
+<span class="absolute left-md top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant/50 text-[18px]">mail</span>
+<input class="w-full h-[40px] pl-[36px] pr-md bg-surface-container-lowest rounded-lg shadow-sm text-on-surface font-body-sm text-body-sm placeholder:text-outline-variant focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all duration-200" id="email" placeholder="name@company.com" required="" type="email"/>
+</div>
+</div>
+<!-- Password Field -->
+<div class="flex flex-col gap-xs group">
+<div class="flex justify-between items-center">
+<label class="font-caption-xs text-caption-xs text-on-surface-variant uppercase tracking-wider" for="password">Password</label>
+<a class="font-caption-xs text-caption-xs text-primary hover:text-primary-container transition-colors" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<span class="absolute left-md top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant/50 text-[18px]">lock</span>
+<input class="w-full h-[40px] pl-[36px] pr-md bg-surface-container-lowest rounded-lg shadow-sm text-on-surface font-body-sm text-body-sm placeholder:text-outline-variant focus:outline-none focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all duration-200" id="password" placeholder="••••••••" required="" type="password"/>
+<button class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant/50 hover:text-on-surface transition-colors" onclick="const p=document.getElementById('password'); p.type=p.type==='password'?'text':'password'; this.querySelector('span').textContent=p.type==='password'?'visibility':'visibility_off';" type="button">
+<span class="material-symbols-outlined text-[18px]">visibility</span>
+</button>
+</div>
+</div>
+<!-- Submit -->
+<button class="w-full h-[40px] bg-primary hover:bg-primary-container text-on-primary font-title-sm text-title-sm rounded-lg shadow-md hover:shadow-lg transition-all duration-300 transform active:scale-[0.98] mt-sm flex items-center justify-center gap-sm" type="submit">
+<span>Log in</span>
+<span class="material-symbols-outlined text-[18px] opacity-0 -ml-sm group-hover:opacity-100 group-hover:ml-0 transition-all duration-300">arrow_forward</span>
+</button>
+</form>
+<!-- Status & Secondary Action -->
+<div class="flex flex-col gap-md mt-xl pt-lg">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-sm bg-surface-container-low px-sm py-xs rounded-full cursor-help group/status">
+<div class="w-[8px] h-[8px] rounded-full bg-[#10B981] animate-pulse"></div>
+<span class="font-caption-xs text-caption-xs text-on-surface-variant group-hover/status:text-on-surface transition-colors">All systems operational</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Links -->
+<div class="flex flex-wrap gap-md font-caption-xs text-caption-xs text-on-surface-variant/70">
+<a class="hover:text-on-surface transition-colors" href="#">Features</a>
+<span class="text-outline-variant">•</span>
+<a class="hover:text-on-surface transition-colors" href="#">Changelog</a>
+<span class="text-outline-variant">•</span>
+<a class="hover:text-on-surface transition-colors" href="#">Documentation</a>
+<span class="text-outline-variant">•</span>
+<a class="hover:text-on-surface transition-colors" href="#">GitHub</a>
+<span class="text-outline-variant">•</span>
+<a class="hover:text-on-surface transition-colors" href="#">Self-hosting</a>
+</div>
+</div>
+<!-- Right Side: Release Banner / Visuals -->
+<div class="hidden lg:flex flex-1 p-2xl h-full relative">
+<div class="absolute inset-0 bg-surface-container m-lg rounded-2xl overflow-hidden shadow-xl group">
+<!-- Image -->
+<div class="absolute inset-0 w-full h-full transform group-hover:scale-105 transition-transform duration-[20s] ease-out">
+<img alt="Zuratax 2.1 Mascot" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAO0iy1lbXCbVOxcJ6o1L2pgYnp1Jib0FrsqMCxHMapEgXe9JDAcv6psqzf4LQUoa4V7fNNsjsVeffAYSNZ8p7Ke0GeTau8K9sQMPhyHbpY7JPTKApqILlPXCw0vJqQmAsCqSHguDu0ZoUsBgc1onkvBuMuEh6AfeP7NN6sDVDZ6Q_nYPRTOBmNY2NluoN7rZARpMEdTvKkCkzDRbWAdgd401Pvg4fe6sXFI74xcYCR-fj-vAgLzp2_"/>
+</div>
+<!-- Gradient Scrim for Text Readability -->
+<div class="absolute inset-0 bg-gradient-to-t from-inverse-surface/90 via-inverse-surface/40 to-transparent"></div>
+<!-- Content Overlay -->
+<div class="absolute bottom-0 left-0 w-full p-2xl flex flex-col gap-md z-10">
+<div class="flex items-center gap-sm mb-xs">
+<span class="px-sm py-xs bg-primary text-on-primary rounded font-badge-caps text-badge-caps uppercase tracking-widest shadow-md">Version 2.1</span>
+<span class="px-sm py-xs bg-surface-container-lowest/20 backdrop-blur-md text-on-primary rounded font-badge-caps text-badge-caps uppercase tracking-widest text-shadow-sm border border-outline-variant/30">Stable Release</span>
+</div>
+<h2 class="font-metric-display text-metric-display text-on-primary max-w-[80%] leading-tight drop-shadow-md">
+                        Putting everything in its place.
+                    </h2>
+<p class="font-body-base text-body-base text-inverse-on-surface max-w-[70%] opacity-90 drop-shadow-sm mt-sm mb-lg">
+                        Zuratax 2.1 brings improved organization tools and a completely new Tasker engine. Designed for speed, built for clarity.
+                    </p>
+<div class="flex items-center gap-md">
+<button class="h-[40px] px-lg bg-surface-container-lowest text-on-surface font-title-sm text-title-sm rounded-lg shadow-lg hover:shadow-xl hover:bg-surface-bright transition-all duration-300 transform active:scale-[0.98] flex items-center gap-sm">
+<span class="material-symbols-outlined text-[20px]">explore</span>
+                            What's new
+                        </button>
+<a class="h-[40px] px-lg bg-inverse-surface/50 backdrop-blur-md text-inverse-on-surface font-title-sm text-title-sm rounded-lg hover:bg-inverse-surface/80 transition-all duration-300 border border-outline-variant/30 flex items-center gap-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+                            Deploy your own
+                        </a>
+</div>
+</div>
+<!-- Decorative Elements -->
+<div class="absolute top-xl right-xl flex flex-col gap-sm">
+<div class="w-[48px] h-[48px] rounded-2xl bg-surface-container-lowest/20 backdrop-blur-md flex items-center justify-center shadow-lg border border-outline-variant/20 transform rotate-12 hover:rotate-0 transition-transform duration-300 cursor-pointer group/icon">
+<span class="material-symbols-outlined text-on-primary text-[24px] group-hover/icon:scale-110 transition-transform">category</span>
+</div>
+<div class="w-[40px] h-[40px] rounded-xl bg-primary/80 backdrop-blur-md flex items-center justify-center shadow-lg border border-primary-fixed/30 transform -rotate-6 hover:rotate-0 transition-transform duration-300 cursor-pointer group/icon">
+<span class="material-symbols-outlined text-on-primary text-[20px] group-hover/icon:scale-110 transition-transform">task_alt</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div></body></html>
