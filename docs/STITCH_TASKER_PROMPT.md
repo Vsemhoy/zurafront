@@ -158,3 +158,127 @@ The final result should feel as immediately understandable as Trello, as fast an
 3. сохранить композицию и показать плотный список;
 4. отдельно проработать состояния преобразования чек-листа в подзадачу и выделения подзадачи;
 5. отдельно попросить responsive tablet/mobile adaptation, не меняя desktop-плотность.
+
+## Второй промпт: инспектор и полноэкранный редактор
+
+Этот промпт отправляется в тот же Stitch-проект после первой генерации.
+
+```text
+Keep the existing Zuratax Tasker layouts. Use the Kanban composition from tasker_ru_3, the list composition from tasker_ru_2, and the right-side inspector composition from tasker_ru_1 as the approved visual foundation.
+
+Do not redesign the board, list, navigation, typography, density, module rail, header or color system. Improve and extend only the task-detail experience described below.
+
+The product is Zuratax. Remove and never use the names Telefront or Teftele. Light theme only. Remove all dark-theme concepts, dark-theme controls and floating timer components. Do not redesign time tracking in this task.
+
+CREATE TWO RELATED TASK-DETAIL STATES
+
+STATE A — COMPACT RIGHT-SIDE INSPECTOR
+Keep the board visible and normally readable behind the inspector. Do not fade or disable the workspace as if a blocking modal were open. The user must retain visual context.
+
+Use task ADM-154, “Подготовить регламент резервного копирования”. Keep the inspector compact and suitable for frequent everyday work.
+
+Header and properties:
+- human-readable key ADM-154 in JetBrains Mono;
+- editable title;
+- status, priority and overflow actions;
+- project “Администрирование”;
+- assignee, start date and deadline;
+- responsibility area;
+- quiet compensation eligibility/approval metadata;
+- watchers and labels;
+- a clear action “Открыть полный редактор”.
+
+DESCRIPTION / RESULT SWITCHER
+The task has two separate rich-text fields: description and result.
+
+Create a compact two-position icon switcher beside the content-area heading. It should feel like a small slider or segmented icon control:
+- the first icon represents “Описание”;
+- the second icon represents “Результат”;
+- clicking an icon slides/replaces the content in the same area without changing the inspector layout;
+- show a clear active state and tooltips/accessibility labels, so the meaning never depends on an ambiguous icon alone;
+- description is selected by default;
+- if the task has no result, do not render the result icon at all;
+- do not show an empty disabled result tab.
+
+For this design state, the result exists. Show the result-selected variation with a concise Markdown-rendered completion report, while making it visually obvious how to return to the description. The inspector uses lightweight Markdown display/editing, not a large document editor.
+
+CHECKLISTS
+- Show “Шаги 4/6” separately from subtask progress.
+- Completed items expose exact audit metadata such as “выполнил Иван · сегодня, 10:15”.
+- Items may have an assignee and due date.
+- Include an item overflow menu with “Преобразовать в подзадачу”.
+- Support fast item entry, ordering and hide/show completed items.
+
+TRUE SUBTASKS
+- Add a distinct section “Подзадачи 2/3”.
+- Each subtask is a compact real task row with its own project-style key, title, status, assignee and deadline.
+- Include an overflow action “Выделить в отдельную задачу”.
+- Include “Сделать подзадачей…” where appropriate.
+- Do not visually nest beyond one true subtask level.
+- When all subtasks are done, suggest closing the parent instead of silently doing it.
+- Demonstrate a compact warning/confirmation state for attempting to close the parent while a required subtask remains open.
+
+RELATIONS
+Show compact, readable relation rows for:
+- blocks;
+- blocked by;
+- related;
+- duplicate.
+
+Use realistic examples with human-readable keys, including “Блокирует SKD-83 — Проверить выгрузку СКУД”. Provide a compact add-relation action that searches by task key.
+
+COMMENTS AND AUDIT
+Add a compact tab/segmented switcher “Комментарии / Активность”. The activity view records who changed status, checked or unchecked a checklist item, changed an assignee, extracted a subtask or created a relation, with exact timestamps. Actors may be humans, AI agents or external integrations; distinguish actor type subtly.
+
+STATE B — FULL-PAGE ADVANCED TASK EDITOR
+Design a separate full-page editor opened through “Открыть полный редактор”. It is intended for complex tasks and heavy content work; it must not look like an enlarged modal.
+
+Keep the same Zuratax shell and compact operational density. Use a clear task header with ADM-154, title, status, save state, direct link, close/back action and contextual commands.
+
+Organize the editor with calm, understandable tabs. A strong proposed structure is:
+- Содержание;
+- Работа;
+- Связи;
+- Обсуждение;
+- История.
+
+CONTENT TAB
+- Provide two substantial Markdown editors for “Описание” and “Результат”.
+- These are real full-featured editing areas suitable for long technical documents, lists, tables, code blocks and attachments.
+- Do not place both editors in tiny side-by-side columns. Use tabs, a vertical document flow or another layout that preserves a comfortable writing width.
+- If result is empty, the full editor must still allow creating it; only the compact inspector hides the missing-result icon.
+
+WORK TAB
+- Properties, assignee, dates, responsibility area and compensation metadata.
+- Checklists and true subtasks with the same semantics as the inspector.
+- Reserve a clear future location for task timespans, but do not design a timer and do not make time tracking prominent yet.
+
+CROSS-MODULE LINKS TAB / SECTION
+The task can link to entities from the entire Zuratax workspace through a universal entity-link system. Create an elegant searchable link manager grouped by module:
+- Booker: books and pages;
+- Contactor: contacts;
+- Eventor: events;
+- Factor: facts;
+- Exploiter: managed real-world objects;
+- Stuffer: things and locations.
+
+Show existing linked entities as compact rows or cards with module icon/color, entity type, title, relation and remove/open actions. Provide one universal “Связать сущность” command that lets the user choose a module, search within the active scope and select a relation. Do not create six permanently expanded forms.
+
+DISCUSSION AND HISTORY
+- Provide a comfortable comment thread with mentions and attachments.
+- Keep the immutable activity/audit timeline separate from conversational comments.
+
+DESIGN CONSTRAINTS
+- Light theme only.
+- Russian first, but every control must support English and Simplified Chinese localization.
+- Base text 13–14 px, ordinary controls around 32 px high, strict 4 px spacing grid.
+- No giant headings, oversized cards, excessive whitespace, dashboard KPIs, glassmorphism or marketing-page styling.
+- Preserve the clever corporate Zuratax character.
+- A mascot may appear only in a true empty state and must not consume working space.
+
+Deliver coherent high-fidelity desktop screens for:
+1. inspector with Result selected;
+2. inspector showing checklists, true subtasks and relations;
+3. full-page editor on the Content tab;
+4. full-page editor on the cross-module Links tab.
+```

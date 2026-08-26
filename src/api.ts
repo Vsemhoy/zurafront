@@ -1,5 +1,6 @@
-export type AuthUser = { id: number; name: string; username: string | null; email: string }
-type Resource<T> = { data: T }
+export type AuthUser = { id: string; name: string; username: string | null; email: string }
+export type Resource<T> = { data: T }
+export type ResourceCollection<T> = { data: T[]; meta?: { current_page: number; last_page: number; total: number } }
 
 export class ApiError extends Error {
   readonly status: number
@@ -10,7 +11,7 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
   const response = await fetch(`/api${path}`, {
     ...init,
     credentials: 'include',
@@ -26,9 +27,9 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 export const authApi = {
-  async me(): Promise<AuthUser> { return (await request<Resource<AuthUser>>('/auth/me')).data },
+  async me(): Promise<AuthUser> { return (await apiRequest<Resource<AuthUser>>('/auth/me')).data },
   async login(identity: string, password: string): Promise<AuthUser> {
-    return (await request<Resource<AuthUser>>('/auth/login', { method: 'POST', body: JSON.stringify({ identity, password }) })).data
+    return (await apiRequest<Resource<AuthUser>>('/auth/login', { method: 'POST', body: JSON.stringify({ identity, password }) })).data
   },
-  logout(): Promise<void> { return request('/auth/logout', { method: 'POST', body: '{}' }) },
+  logout(): Promise<void> { return apiRequest('/auth/logout', { method: 'POST', body: '{}' }) },
 }
