@@ -130,7 +130,7 @@ The palette shifts from pale blue tones to a **Neutral Slate/Gray** foundation t
 
 ### Surface Strategy
 - **Light Mode:** Canvas uses a neutral off-white/slate (`#f8fafc`). Cards are pure white with a 1px hairline border (`#e2e8f0`).
-- **Dark Mode:** Canvas uses a deep slate (`#0f172a`). Cards use a slightly elevated slate (`#1e293b`) with high-contrast text and vibrant module accents.
+- **Theme policy:** Zuratax is intentionally light-only. Do not design, implement, preview, or reserve UI controls for a dark theme.
 
 ### Module & Scope Accents
 Color is used as a primary navigational anchor. Each module (Ledger, Tasker, etc.) owns a specific hue used for its primary action buttons, active states, and header accents. **Scopes** (Work, Personal, etc.) are represented via subtle contextual cues: thin 2px left-hand borders on cards or small, low-saturation pills.
@@ -157,7 +157,7 @@ Zuratax uses **Tonal Layering** and **Subtle Shadows** to define hierarchy witho
 
 - **Surface Tiers:** Background (Level 0), Content Cards (Level 1), and Overlays/Modals (Level 2).
 - **Shadows:** Level 1 uses a subtle 1px border only. Level 2 (Popovers) uses a highly diffused, low-opacity shadow (8% opacity) tinted with the base slate color to create a "floating" effect.
-- **Contrast:** In dark mode, depth is primarily conveyed through slight shifts in slate lightness rather than shadow, ensuring high-contrast readability.
+- **Contrast:** Depth is conveyed through neutral surface tiers, thin borders, and restrained low-opacity shadows while preserving high readability in the light-only interface.
 
 ## Shapes
 The shape language is **Soft and Disciplined**. A 4px (`sm`) radius is standard for functional components like buttons and input fields to maintain a professional, tool-like feel. Larger containers like cards use an 8px (`md`) radius. 
