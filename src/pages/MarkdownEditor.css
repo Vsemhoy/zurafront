@@ -1,0 +1,60 @@
+.compact-md {
+    position: relative;
+    min-height: 160px;
+    border-bottom: 1px solid #e0e5ed;
+}
+
+.md-toolbar-trigger {
+    position: absolute;
+    z-index: 3;
+    right: 2px;
+    top: -37px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 0;
+    background: transparent;
+    color: #657187;
+    padding: 0 7px;
+    border-radius: 4px;
+    font-size: 11px;
+}
+
+.md-toolbar-trigger:hover,
+.md-toolbar-trigger[aria-pressed='true'] {
+    background: #edf2f8;
+    color: #075aaf;
+}
+
+.compact-md .mdxeditor-toolbar { display: none; }
+.compact-md--toolbar .mdxeditor-toolbar {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border: 0;
+    border-bottom: 1px solid #e1e6ed;
+    border-radius: 0;
+    background: #f7f9fc;
+    padding: 4px;
+}
+
+.compact-md [class*='contentEditable'] {
+    min-height: 150px;
+    padding: 12px 4px;
+    font: 14px/1.55 Inter, sans-serif;
+}
+
+.compact-md [class*='rootContentEditableWrapper'] { padding: 0; }
+.compact-md p { margin: 6px 0; }
+.compact-md h1 { font-size: 22px; }
+.compact-md h2 { font-size: 18px; }
+.compact-md h3 { font-size: 15px; }
+.compact-md--full { min-height: 460px; border: 1px solid #dfe4ec; border-radius: 7px; background: #fff; }
+.compact-md--full .md-toolbar-trigger { top: -39px; }
+.compact-md--full [class*='contentEditable'] { min-height: 440px; padding: 22px 28px; font-size: 15px; line-height: 1.65; }
+
+@media (max-width: 680px) {
+    .md-toolbar-trigger span { display: none; }
+}

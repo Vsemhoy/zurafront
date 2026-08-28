@@ -1,0 +1,82 @@
+.inspector-header > div {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.detach-task {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: #edf2f8;
+  color: #315678;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11px;
+}
+.open-editor { display:flex; align-items:center; gap:5px; border:0; background:transparent; color:#315678; padding:6px 8px; font-size:11px; }
+
+.checklist > div > label { align-items: flex-start; }
+.checklist > div > label > span { flex: 1; }
+.convert-item {
+  opacity: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #607086;
+  border-radius: 4px;
+  padding: 4px;
+}
+.checklist > div > label:hover .convert-item,
+.convert-item:focus-visible { opacity: 1; }
+.convert-item:hover { background: #e9eff7; color: #075aaf; }
+
+.subtasks {
+  margin-top: 18px;
+  border-top: 1px solid #e0e5ed;
+  padding-top: 14px;
+}
+.subtasks > header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+}
+.subtasks > header span { display: flex; align-items: center; gap: 7px; }
+.subtasks > div { display: grid; margin-top: 8px; }
+.subtasks > div > button {
+  display: grid;
+  grid-template-columns: 70px minmax(0, 1fr) 90px;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  border: 0;
+  border-bottom: 1px solid #e8ebf0;
+  background: transparent;
+  padding: 5px 3px;
+  text-align: left;
+}
+.subtasks > div > button:hover { background: #f5f8fc; }
+.subtasks code { color: #1355a5; font: 10px 'JetBrains Mono'; }
+.subtasks strong { overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.subtasks > div > button span { color: #697589; font-size: 10px; text-align: right; }
+.subtasks form {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  border: 1px solid #d7dde7;
+  border-radius: 5px;
+  padding: 0 8px;
+}
+.subtasks form input { min-width: 0; flex: 1; border: 0; outline: 0; padding: 8px 0; }
+.subtasks form button { border: 0; background: transparent; color: #075aaf; }
+
+@media (max-width: 680px) {
+  .detach-task { font-size: 0; }
+  .open-editor { font-size: 0; }
+  .subtasks > div > button { grid-template-columns: 62px minmax(0, 1fr); }
+  .subtasks > div > button span { display: none; }
+}

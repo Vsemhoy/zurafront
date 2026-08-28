@@ -1,0 +1,8 @@
+.task-card[draggable='true'] { cursor: grab; }
+.task-card[draggable='true']:active { cursor: grabbing; }
+.task-card[draggable='true']:hover { transform: translateY(-1px); }
+.task-card--blocked { cursor: not-allowed; }
+.task-column:has(.task-card:active) { outline: 1px dashed #8db4e8; outline-offset: -4px; }
+.content-switch .add-result { margin-left: auto; color: #697589; font-size: 11px; }
+.content-switch .add-result:hover { color: #075aaf; background: #edf2f8; }
+.md-loading { min-height: 160px; display: grid; place-items: center; color: #778195; font-size: 12px; }

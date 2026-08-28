@@ -1,0 +1,92 @@
+.relations-panel {
+  margin-top: 18px;
+  border-top: 1px solid #e0e5ed;
+  padding-top: 14px;
+}
+.relations-panel > header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+}
+.relations-panel > header span { display: flex; align-items: center; gap: 7px; }
+.relation-list { display: grid; margin-top: 8px; }
+.relation-list article {
+  display: grid;
+  grid-template-columns: 125px 70px minmax(0, 1fr) 26px;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  border-bottom: 1px solid #e8ebf0;
+  font-size: 11px;
+}
+.relation-list article > span { color: #697589; }
+.relation-list code { color: #1355a5; font: 10px 'JetBrains Mono'; }
+.relation-list strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.relation-list article > button {
+  opacity: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #8b5260;
+  padding: 4px;
+}
+.relation-list article:hover > button,
+.relation-list article > button:focus-visible { opacity: 1; }
+.add-relation {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  border: 0;
+  background: transparent;
+  color: #075aaf;
+  padding: 5px 2px;
+}
+.relation-create { margin-top: 9px; }
+.relation-create > div:first-child {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) 30px;
+  align-items: center;
+  gap: 6px;
+}
+.relation-create select,
+.relation-create input {
+  min-width: 0;
+  height: 32px;
+  border: 1px solid #ccd4df;
+  border-radius: 4px;
+  background: #fff;
+  padding: 0 7px;
+  font: inherit;
+}
+.relation-results {
+  display: grid;
+  max-height: 180px;
+  overflow: auto;
+  margin-top: 5px;
+  border: 1px solid #dfe4ec;
+  border-radius: 5px;
+  background: #fff;
+  box-shadow: 0 8px 24px #14213b12;
+}
+.relation-results > button {
+  display: grid;
+  grid-template-columns: 75px minmax(0, 1fr);
+  gap: 8px;
+  border: 0;
+  border-bottom: 1px solid #edf0f4;
+  background: transparent;
+  padding: 8px;
+  text-align: left;
+}
+.relation-results > button:hover { background: #eef4fc; }
+.relation-results code { color: #1355a5; font: 10px 'JetBrains Mono'; }
+.relation-results small { padding: 9px; color: #727c8c; }
+
+@media (max-width: 680px) {
+  .relation-list article { grid-template-columns: 100px 65px minmax(0, 1fr) 24px; }
+  .relation-create > div:first-child { grid-template-columns: 1fr 30px; }
+  .relation-create select { grid-column: 1 / -1; }
+}

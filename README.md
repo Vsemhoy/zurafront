@@ -1,6 +1,6 @@
 # Zuratax Frontend
 
-Рабочий интерфейс Zuratax на React, TypeScript и Vite.
+Рабочий интерфейс Zuratax на React, JavaScript и Vite.
 
 ## Локальный запуск
 

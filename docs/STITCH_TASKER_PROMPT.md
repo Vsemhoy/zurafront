@@ -112,6 +112,15 @@ RELATIONS AND DEPENDENCIES
 - Visualize these as compact readable rows with keys and titles, for example “Блокирует SKD-83 — Проверить выгрузку СКУД”.
 - Avoid diagram-heavy presentation inside the task card.
 
+BLOCKER EPISODES
+- A blocked task must expose an auditable blocker episode, not only a red status badge.
+- Show the blocker reason, what concrete action is required, who or which external role/department is responsible, who recorded it, when it started and how long it has remained active.
+- Use a realistic example: the assignee must fix a 1C bug but cannot receive administrative access under the company hierarchy; no 1C developer exists; the system administrator is the only access holder. The required resolution is access or action by an authorized specialist.
+- Provide explicit “Установить блокировку” and “Снять блокировку” actions. Resolving requires a short resolution note and exact audit timestamp.
+- Allow an optional next-review date without implying that the blocker resolves automatically.
+- Keep previous blocker episodes in history when the same task is blocked again.
+- Make the information suitable for a monthly report that distinguishes active work from externally blocked waiting time.
+
 COMPENSATION CONTEXT
 - A task may belong to a responsibility area and may be eligible for compensation review.
 - Checklist items never earn points.
@@ -226,6 +235,9 @@ Show compact, readable relation rows for:
 - duplicate.
 
 Use realistic examples with human-readable keys, including “Блокирует SKD-83 — Проверить выгрузку СКУД”. Provide a compact add-relation action that searches by task key.
+
+BLOCKER DETAILS
+Add a compact but explicit blocker panel for a currently blocked task. It must show reason, required resolution, responsible user or external organizational role, blocked-by actor, blocked-at timestamp, current duration and optional next review date. Include the realistic 1C administrative-access scenario. Demonstrate both the active state and the “Снять блокировку” flow with a required resolution note. This is operational evidence for monthly reporting, not a decorative warning banner.
 
 COMMENTS AND AUDIT
 Add a compact tab/segmented switcher “Комментарии / Активность”. The activity view records who changed status, checked or unchecked a checklist item, changed an assignee, extracted a subtask or created a relation, with exact timestamps. Actors may be humans, AI agents or external integrations; distinguish actor type subtly.
