@@ -17,4 +17,6 @@ export const bookApi = {
     acquireEditing: (scopeId, bookId, pageId) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/editing`, json('POST', {}))),
     releaseEditing: (scopeId, bookId, pageId) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/editing`, json('DELETE', {}))),
     cancelEditing: (scopeId, bookId, pageId) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/editing/cancel`, json('POST', {}))),
+    pageVersions: (scopeId, bookId, pageId) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/versions`)),
+    pageVersion: (scopeId, bookId, pageId, versionId) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/versions/${versionId}`)),
 };
