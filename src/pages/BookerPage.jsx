@@ -50,7 +50,7 @@ export function BookerPage() {
     useEffect(() => { if (!blockId || !loadedPageId) return; const frame = window.requestAnimationFrame(() => document.getElementById(`block-${blockId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })); return () => window.cancelAnimationFrame(frame); }, [blockId, versionId, loadedPageId, loadedGroupCount]);
     return <main className="booker-page">
         <BookerNavigation spaces={spaces} books={books} activeBook={activeBook} pages={pages} pageId={activePageId} setBookId={selectBook} setPageId={selectPage} setForm={setForm} scopeId={activeScope?.id} refreshBooks={refreshBooks}/>
-        <section className="booker-content">{!bookId && <BookerWelcome/>}{activeBook && !activePageId && <BookCover scopeId={activeScope.id} book={activeBook} spaces={spaces} scopes={scopes} projects={projects} selectScope={selectScope} refresh={refreshBooks}/>} {isLoading && <div className="booker-empty">Загружаю страницу…</div>}{page && <BookPage scopeId={activeScope.id} bookId={bookId} page={page} refresh={refreshPage}/>}</section>
+        <section className="booker-content">{!bookId && <BookerWelcome/>}{activeBook && !activePageId && <><BookCover scopeId={activeScope.id} book={activeBook} spaces={spaces} scopes={scopes} projects={projects} selectScope={selectScope} refresh={refreshBooks}/><BookDeleteButton scopeId={activeScope.id} book={activeBook} onDeleted={() => { refreshBooks(); navigate('/books'); }}/></>} {isLoading && <div className="booker-empty">Загружаю страницу…</div>}{page && <BookPage scopeId={activeScope.id} bookId={bookId} page={page} refresh={refreshPage}/>}</section>
         <PageStructure scopeId={activeScope?.id} bookId={bookId} pageId={activePageId} page={page} editingBy={page?.editing_by} groups={page?.groups ?? []} refresh={refreshPage}/>
         {form && <CreateBookerEntity form={form} setForm={setForm} scopeId={activeScope.id} bookId={bookId} spaces={spaces} scopes={scopes} pages={pages} onCreated={(entity, targetScopeId) => { if (form.type === 'space') queryClient.invalidateQueries({ queryKey: ['book-spaces', activeScope.id] }); if (form.type === 'book') { if (targetScopeId !== activeScope.id) selectScope(targetScopeId); else { refreshBooks(); selectBook(entity.id); } } if (form.type === 'page') { refreshPages(); selectPage(entity.id); } setForm(null); }}/>} 
     </main>;
@@ -63,6 +63,11 @@ function BookerNavigation({ spaces, books, activeBook, pages, pageId, setBookId,
 }
 
 function BookRow({ book, onClick }) { return <button onClick={onClick}><span>{book.title}</span><small>{book.pages_count}</small></button>; }
+
+function BookDeleteButton({ scopeId, book, onDeleted }) {
+    const remove = useMutation({ mutationFn: () => bookApi.deleteBook(scopeId, book.id), onSuccess: onDeleted });
+    return <div className="booker-delete-book"><button disabled={remove.isPending} onClick={() => window.confirm(`Удалить книгу «${book.title}»? Она исчезнет из Booker, но её данные останутся доступными для восстановления.`) && remove.mutate()}><IconTrash size={14}/>{remove.isPending ? 'Удаляю…' : 'Удалить книгу'}</button>{remove.error && <small>{remove.error.message}</small>}</div>;
+}
 
 function BookCover({ scopeId, book, spaces, scopes, projects, selectScope, refresh }) {
     const [editing, setEditing] = useState(false); const [draft, setDraft] = useState(() => bookDraft(book));

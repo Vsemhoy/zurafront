@@ -22,6 +22,9 @@ export const taskApi = {
       })
     ).data;
   },
+  remove(scopeId, taskId) {
+    return apiRequest(`/scopes/${scopeId}/tasks/${taskId}`, { method: "DELETE" });
+  },
   async move(scopeId, taskId, status, targetIndex) {
     return (
       await apiRequest(`/scopes/${scopeId}/tasks/${taskId}/move`, {

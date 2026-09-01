@@ -10,6 +10,7 @@ import {
   IconLink,
   IconMessage,
   IconTargetArrow,
+  IconTrash,
 } from "@tabler/icons-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
@@ -94,6 +95,14 @@ export function TaskEditorPage() {
     mutationFn: () => taskApi.detach(activeScope.id, taskId),
     onSuccess: refresh,
   });
+  const removeTask = useMutation({
+    mutationFn: () => taskApi.remove(activeScope.id, taskId),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
+      navigate("/tasks");
+    },
+  });
   const sendComment = useMutation({
     mutationFn: () => taskApi.createComment(activeScope.id, taskId, comment),
     onSuccess: () => {
@@ -136,6 +145,15 @@ export function TaskEditorPage() {
             Выделить в задачу
           </button>
         )}
+        <button
+          className="editor-delete"
+          disabled={removeTask.isPending}
+          onClick={() => {
+            if (window.confirm(`Удалить ${task.task_key} · ${task.title}?`)) removeTask.mutate();
+          }}
+        >
+          <IconTrash size={16}/>{removeTask.isPending ? "Удаляю…" : "Удалить"}
+        </button>
         <code>{task.task_key}</code>
         <input
           value={task.title}
@@ -147,11 +165,13 @@ export function TaskEditorPage() {
           }
           onBlur={(event) => save.mutate({ title: event.target.value })}
         />
-        <span className={`save-state ${save.isError ? "error" : ""}`}>
+        <span className={`save-state ${save.isError || removeTask.isError ? "error" : ""}`}>
           {save.isPending
             ? "Сохраняю…"
-            : save.isError
-              ? save.error.message
+            : removeTask.isError
+              ? removeTask.error.message
+              : save.isError
+                ? save.error.message
               : "Сохранено"}
         </span>
       </header>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconCopy, IconKey, IconPlus, IconRobot, IconSearch, IconUser, IconUserCog, IconUsers, IconX } from '@tabler/icons-react';
+import { IconCopy, IconKey, IconPlus, IconRobot, IconSearch, IconTrash, IconUser, IconUserCog, IconUsers, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { contractorApi } from '../entities/contractor/api';
@@ -12,8 +12,8 @@ import './ContractorAccountTools.css';
 const typeLabels = { real: 'Реальный', virtual: 'Виртуальный', agent: 'Агент' };
 const statusLabels = { active: 'Активен', blocked: 'Заблокирован', dormant: 'Спит' };
 const abilityLabels = {
-  'contractor.manage': 'Управлять Contractor', 'agent.manage_own': 'Управлять своими агентами', 'task.view': 'Смотреть задачи', 'task.create': 'Создавать задачи',
-  'task.update': 'Изменять задачи', 'task.assign': 'Назначать исполнителей', 'book.view': 'Смотреть Booker', 'book.create': 'Создавать книги', 'book.update': 'Редактировать Booker', 'report.view': 'Смотреть отчёты', 'report.write': 'Писать отчёты',
+  'contractor.manage': 'Управлять Contractor', 'contractor.delete': 'Удалять контракторов', 'agent.manage_own': 'Управлять своими агентами', 'task.view': 'Смотреть задачи', 'task.create': 'Создавать задачи',
+  'task.update': 'Изменять задачи', 'task.delete': 'Удалять задачи', 'task.assign': 'Назначать исполнителей', 'project.delete': 'Удалять проекты', 'book.view': 'Смотреть Booker', 'book.create': 'Создавать книги', 'book.update': 'Редактировать Booker', 'book.delete': 'Удалять книги', 'report.view': 'Смотреть отчёты', 'report.write': 'Писать отчёты',
 };
 const rolePresets = {
   owner: Object.keys(abilityLabels),
@@ -40,6 +40,7 @@ function TypeIcon({ type, size = 18 }) {
 
 export function ContractorPage() {
   const { activeScope } = useWorkspace();
+  const currentUser = useAuth((state) => state.user);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
@@ -72,7 +73,14 @@ export function ContractorPage() {
     )}
     {selectedContractor && activeScope && <><div className="contractor-backdrop" onClick={() => setSelectedId(null)}/><ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onClose={() => setSelectedId(null)} onChanged={refresh}/></>}
     {selectedContractor && selectedContractor.type !== 'agent' && activeScope && <ContractorAccountTools scopeId={activeScope.id} contractor={selectedContractor} onChanged={refresh}/>}
+    {selectedContractor && selectedContractor.id !== currentUser?.id && activeScope && <ContractorDeleteButton scopeId={activeScope.id} contractor={selectedContractor} onDeleted={() => { setSelectedId(null); refresh(); }}/>}
   </main>;
+}
+
+function ContractorDeleteButton({ scopeId, contractor, onDeleted }) {
+  const remove = useMutation({ mutationFn: () => contractorApi.remove(scopeId, contractor.id), onSuccess: onDeleted });
+  const confirmDelete = () => { if (window.confirm(`Удалить «${contractor.name}»? Аккаунт будет заблокирован, токены отозваны, назначения сняты.`)) remove.mutate(); };
+  return <div className="contractor-delete"><button disabled={remove.isPending} onClick={confirmDelete}><IconTrash size={16}/>{remove.isPending ? 'Удаляю…' : 'Удалить контрактора'}</button>{remove.error && <small>{remove.error.message}</small>}</div>;
 }
 
 function ContractorAccountTools({ scopeId, contractor, onChanged }) {

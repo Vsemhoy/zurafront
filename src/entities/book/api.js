@@ -7,6 +7,7 @@ export const bookApi = {
     books: (scopeId) => data(apiRequest(`/scopes/${scopeId}/books`)),
     createBook: (scopeId, payload) => data(apiRequest(`/scopes/${scopeId}/books`, json('POST', payload))),
     updateBook: (scopeId, bookId, payload) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}`, json('PATCH', payload))),
+    deleteBook: (scopeId, bookId) => apiRequest(`/scopes/${scopeId}/books/${bookId}`, { method: 'DELETE' }),
     pages: (scopeId, bookId) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages`)),
     createPage: (scopeId, bookId, payload) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages`, json('POST', payload))),
     page: (scopeId, bookId, pageId) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}`)),

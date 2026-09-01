@@ -37,3 +37,4 @@
     }
     .contractor-account-tools::before { grid-column: auto; }
 }
+.contractor-delete{position:fixed;right:18px;bottom:42px;z-index:43;display:flex;align-items:center;gap:8px}.contractor-delete button{display:flex;align-items:center;gap:7px;border:1px solid #fecaca;background:#fff1f2;color:#be123c;padding:8px 12px;cursor:pointer}.contractor-delete small{color:#be123c;background:#fff;padding:6px}

@@ -1014,6 +1014,14 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
     mutationFn: () => taskApi.detach(scopeId, taskId),
     onSuccess: refresh,
   });
+  const removeTask = useMutation({
+    mutationFn: () => taskApi.remove(scopeId, taskId),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["tasks", scopeId] });
+      onClose();
+    },
+  });
   if (isLoading)
     return (
       <aside className="task-inspector">
@@ -1057,11 +1065,27 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
               Выделить в задачу
             </button>
           )}
+          <button
+            type="button"
+            className="delete-task"
+            title="Удалить задачу"
+            disabled={removeTask.isPending}
+            onClick={() =>
+              window.confirm(
+                `Удалить задачу ${task.task_key}? Она исчезнет из рабочих списков.`,
+              ) && removeTask.mutate()
+            }
+          >
+            <IconTrash size={16} />
+          </button>
           <button className="icon-button" onClick={onClose}>
             <IconX size={19} />
           </button>
         </div>
       </header>
+      {removeTask.error && (
+        <p className="form-error">{removeTask.error.message}</p>
+      )}
       <input
         className="inspector-title"
         value={task.title}

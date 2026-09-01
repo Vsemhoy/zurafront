@@ -10,6 +10,7 @@ export const contractorApi = {
   async addScopes(scopeId, contractorId, scopeIds) { return (await apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/scopes`, { method: 'POST', body: JSON.stringify({ scope_ids: scopeIds }) })).data; },
   async issueToken(scopeId, contractorId, payload) { return (await apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/tokens`, { method: 'POST', body: JSON.stringify(payload) })).data; },
   revokeToken(scopeId, contractorId, tokenId) { return apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/tokens/${tokenId}`, { method: 'DELETE' }); },
+  remove(scopeId, contractorId) { return apiRequest(`/scopes/${scopeId}/contractors/${contractorId}`, { method: 'DELETE' }); },
   startActing(scopeId, contractorId) { return apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/act`, { method: 'POST', body: '{}' }); },
   stopActing() { return apiRequest('/contractors/acting', { method: 'DELETE' }); },
 };
