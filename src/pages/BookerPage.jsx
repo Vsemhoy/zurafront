@@ -4,12 +4,13 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { IconArrowLeft, IconBook2, IconBraces, IconChevronDown, IconChevronRight, IconEdit, IconFilePlus, IconFolder, IconGripVertical, IconHistory, IconHome, IconLayoutSidebarRight, IconLock, IconPlus, IconSettings } from '@tabler/icons-react';
+import { IconArrowLeft, IconBook2, IconBraces, IconChevronDown, IconChevronRight, IconEdit, IconFilePlus, IconFolder, IconGripVertical, IconHistory, IconHome, IconLayoutSidebarRight, IconLock, IconPlus, IconSettings, IconTrash } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { bookApi } from '../entities/book/api';
 import { projectApi } from '../entities/project/api';
 import { scopeApi } from '../entities/scope/api';
+import CompactMarkdownEditor from '../shared/ui/CompactMarkdownEditor';
 import './BookerPage.css';
 import './BookerCover.css';
 import './BookerBlocks.css';
@@ -21,6 +22,7 @@ import './BookerStructureDnd.css';
 import './BookerSticky.css';
 import './BookerExcalidraw.css';
 import './BookerHistory.css';
+import './BookerStructuredEditors.css';
 
 const BLOCK_TYPES = [['markdown', 'Текст'], ['callout', 'Врезка'], ['code', 'Код'], ['checklist', 'Чеклист'], ['table', 'Таблица'], ['svg', 'SVG'], ['excalidraw', 'Схема'], ['embed', 'Встраивание'], ['divider', 'Разделитель']];
 let ExcalidrawComponent = null; let exportExcalidrawToSvg = null;
@@ -134,7 +136,19 @@ function DataBlockEditorModal({ scopeId, bookId, pageId, group, refresh, onClose
     const cancel = () => save.mutate(original.current, { onSuccess: () => { refresh(); onClose(); } });
     const close = () => save.mutate(value, { onSuccess: () => { refresh(); onClose(); } });
     const setField = (field, next) => setValue((current) => ({ ...current, [field]: next }));
-    return <div className="block-editor-backdrop" onMouseDown={close}><section className="block-editor-modal" onMouseDown={(event) => event.stopPropagation()}><header><div><small>{BLOCK_TYPES.find(([type]) => type === group.type)?.[1] ?? group.type}</small><h2>Редактирование блока</h2></div><span>{save.isPending ? 'Сохраняю…' : save.isSuccess ? 'Сохранено' : 'Автосохранение'}</span></header><div className="block-editor-content">{isMarkdown ? <textarea className="block-editor-main" value={value} onChange={(event) => setValue(event.target.value)} placeholder="Markdown…"/> : group.type === 'svg' ? <SvgFields value={value} setValue={setValue} setField={setField}/> : <JsonFields value={value} setValue={setValue}/>}</div><footer><button className="cancel" onClick={cancel}>Отменить изменения</button><button className="primary" onClick={close}>Закрыть редактор</button></footer></section></div>;
+    return <div className="block-editor-backdrop" onMouseDown={close}><section className="block-editor-modal" onMouseDown={(event) => event.stopPropagation()}><header><div><small>{BLOCK_TYPES.find(([type]) => type === group.type)?.[1] ?? group.type}</small><h2>Редактирование блока</h2></div><span>{save.isPending ? 'Сохраняю…' : save.isSuccess ? 'Сохранено' : 'Автосохранение'}</span></header><div className="block-editor-content">{isMarkdown ? <CompactMarkdownEditor value={value} onChange={setValue} placeholder="Текст страницы в Markdown…" toolbarInitiallyOpen variant="full"/> : group.type === 'svg' ? <SvgFields value={value} setValue={setValue} setField={setField}/> : ['callout', 'checklist', 'code', 'embed'].includes(group.type) ? <StructuredBlockFields type={group.type} value={value} setField={setField}/> : <JsonFields value={value} setValue={setValue}/>}</div><footer><button className="cancel" onClick={cancel}>Отменить изменения</button><button className="primary" onClick={close}>Закрыть редактор</button></footer></section></div>;
+}
+
+function StructuredBlockFields({ type, value, setField }) {
+    if (type === 'code') return <div className="booker-data-fields"><div className="booker-field-row"><label>Подпись<input value={value.caption ?? ''} onChange={(event) => setField('caption', event.target.value)}/></label><label>Язык<input value={value.language ?? ''} placeholder="javascript, php, sql…" onChange={(event) => setField('language', event.target.value)}/></label></div><label className="booker-field-grow">Код<textarea className="booker-code-field" value={value.code ?? ''} spellCheck="false" onChange={(event) => setField('code', event.target.value)}/></label></div>;
+    if (type === 'callout') return <div className="booker-data-fields"><div className="booker-field-row"><label>Заголовок<input value={value.title ?? ''} onChange={(event) => setField('title', event.target.value)}/></label><label>Тон<select value={value.tone ?? 'info'} onChange={(event) => setField('tone', event.target.value)}><option value="info">Информация</option><option value="success">Успех</option><option value="warning">Предупреждение</option><option value="danger">Опасность</option></select></label></div><label className="booker-field-grow">Текст<textarea value={value.text ?? ''} onChange={(event) => setField('text', event.target.value)}/></label></div>;
+    if (type === 'embed') return <div className="booker-data-fields"><label>Заголовок<input value={value.title ?? ''} onChange={(event) => setField('title', event.target.value)}/></label><label>Ссылка<input type="url" value={value.url ?? ''} placeholder="https://…" onChange={(event) => setField('url', event.target.value)}/></label><label className="booker-field-grow">Описание<textarea value={value.description ?? ''} onChange={(event) => setField('description', event.target.value)}/></label></div>;
+    return <ChecklistFields items={Array.isArray(value.items) ? value.items : []} onChange={(items) => setField('items', items)}/>;
+}
+
+function ChecklistFields({ items, onChange }) {
+    const update = (index, field, next) => onChange(items.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: next } : item));
+    return <div className="booker-checklist-editor"><header><strong>Пункты чеклиста</strong><button type="button" onClick={() => onChange([...items, { text: '', checked: false }])}><IconPlus size={14}/>Добавить пункт</button></header><div>{items.map((item, index) => <div className="booker-checklist-editor-row" key={index}><input type="checkbox" checked={Boolean(item.checked)} onChange={(event) => update(index, 'checked', event.target.checked)}/><input autoFocus={items.length === 1 && !item.text} value={item.text ?? ''} placeholder="Что нужно сделать?" onChange={(event) => update(index, 'text', event.target.value)}/><button type="button" title="Удалить пункт" onClick={() => onChange(items.filter((_, itemIndex) => itemIndex !== index))}><IconTrash size={14}/></button></div>)}</div>{items.length === 0 && <p>Пока пусто. Добавьте первый пункт.</p>}</div>;
 }
 
 function SvgFields({ value, setValue, setField }) { return <div className="svg-block-editor"><div className="svg-source-tabs">{['url', 'inline', 'file'].map((source) => <button key={source} className={value.source === source ? 'active' : ''} onClick={() => setField('source', source)}>{source === 'url' ? 'URL' : source === 'inline' ? 'Inline' : 'Файл'}</button>)}</div>{value.source === 'url' && <label>SVG URL<input value={value.url ?? ''} placeholder="https://…/diagram.svg" onChange={(event) => setField('url', event.target.value)}/></label>}{value.source === 'inline' && <label>SVG-код<textarea rows="12" value={value.svg_text ?? ''} placeholder={'<svg viewBox="0 0 100 100">…</svg>'} onChange={(event) => setField('svg_text', event.target.value)}/></label>}{value.source === 'file' && <label>SVG-файл<input type="file" accept=".svg,image/svg+xml" onChange={async (event) => { const file = event.target.files?.[0]; if (!file) return; setValue({ ...value, source: 'file', svg_text: await file.text(), file_name: file.name }); }}/>{value.file_name && <small>Загружен: {value.file_name}</small>}</label>}<label>Подпись<input value={value.caption ?? ''} onChange={(event) => setField('caption', event.target.value)}/></label><div className="svg-size-fields"><label>Макс. ширина<input value={value.max_width ?? ''} placeholder="100%, 720px, 48rem" onChange={(event) => setField('max_width', event.target.value)}/></label><label>Макс. высота<input value={value.max_height ?? ''} placeholder="620px, 70vh, auto" onChange={(event) => setField('max_height', event.target.value)}/></label></div></div>; }

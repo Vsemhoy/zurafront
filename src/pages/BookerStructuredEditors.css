@@ -1,0 +1,137 @@
+.block-editor-modal .compact-md--full {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.block-editor-modal .compact-md--full .md-toolbar-trigger {
+    position: static;
+    align-self: flex-end;
+    order: -1;
+    margin-bottom: 4px;
+}
+
+.block-editor-modal .compact-md--full > .mdxeditor {
+    min-height: 0;
+    flex: 1;
+    overflow: auto;
+}
+
+.block-editor-modal .compact-md--full [class*='contentEditable'] { min-height: 390px; }
+
+.booker-data-fields {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+}
+
+.booker-data-fields label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    color: #596577;
+    font-size: 11px;
+    font-weight: 650;
+}
+
+.booker-data-fields input,
+.booker-data-fields select,
+.booker-data-fields textarea {
+    width: 100%;
+    border: 1px solid #cbd4df;
+    border-radius: 5px;
+    background: #fff;
+    padding: 8px 9px;
+    color: #172033;
+    font: 13px/1.5 Inter, sans-serif;
+    outline: 0;
+}
+
+.booker-data-fields input,
+.booker-data-fields select {
+    height: 35px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.booker-data-fields input:focus,
+.booker-data-fields select:focus,
+.booker-data-fields textarea:focus,
+.booker-checklist-editor-row > input:focus {
+    border-color: #4388d4;
+    box-shadow: 0 0 0 2px #4388d422;
+}
+
+.booker-field-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(180px, .45fr);
+    gap: 12px;
+}
+
+.booker-field-grow { min-height: 0; flex: 1; }
+.booker-field-grow textarea { height: 100%; min-height: 260px; resize: none; }
+
+.booker-code-field {
+    background: #172033 !important;
+    color: #e9eef6 !important;
+    font-family: 'JetBrains Mono', Consolas, monospace !important;
+    tab-size: 4;
+}
+
+.booker-checklist-editor { display: flex; flex-direction: column; gap: 12px; }
+.booker-checklist-editor > header { display: flex; align-items: center; justify-content: space-between; }
+.booker-checklist-editor > header strong { font-size: 12px; }
+
+.booker-checklist-editor button {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    border: 0;
+    border-radius: 5px;
+    background: #eaf2fc;
+    padding: 7px 9px;
+    color: #075aaf;
+    font-size: 11px;
+}
+
+.booker-checklist-editor > div { display: grid; gap: 6px; }
+
+.booker-checklist-editor-row {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr) 30px;
+    align-items: center;
+    gap: 7px;
+}
+
+.booker-checklist-editor-row > input[type='checkbox'] { width: 15px; height: 15px; }
+
+.booker-checklist-editor-row > input[type='text'] {
+    height: 35px;
+    border: 1px solid #cbd4df;
+    border-radius: 5px;
+    padding: 0 9px;
+    font: 13px Inter, sans-serif;
+    outline: 0;
+}
+
+.booker-checklist-editor-row > button {
+    height: 30px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    padding: 0;
+    color: #a23b36;
+}
+
+.booker-checklist-editor > p {
+    margin: 20px 0;
+    color: #7a8595;
+    text-align: center;
+    font-size: 11px;
+}
+
+@media (max-width: 680px) {
+    .booker-field-row { grid-template-columns: 1fr; }
+}
