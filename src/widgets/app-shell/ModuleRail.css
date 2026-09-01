@@ -1,0 +1,37 @@
+.module-rail > a {
+    position: relative;
+    color: var(--module-color);
+    transition: color .14s ease, background-color .14s ease, transform .14s ease;
+}
+
+.module-rail > a:hover {
+    background: var(--module-tint);
+    color: var(--module-color);
+    transform: translateY(-1px);
+}
+
+.module-rail > a.active {
+    background: var(--module-tint);
+    color: var(--module-color);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--module-color) 16%, transparent);
+}
+
+.module-rail > a.active::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    width: 3px;
+    height: 20px;
+    border-radius: 0 3px 3px 0;
+    background: var(--module-color);
+}
+
+@media (max-width: 680px) {
+    .module-rail > a.active::before {
+        inset: auto auto -7px 50%;
+        width: 20px;
+        height: 3px;
+        transform: translateX(-50%);
+        border-radius: 3px 3px 0 0;
+    }
+}

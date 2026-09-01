@@ -8,8 +8,22 @@ import { scopeApi } from '../../entities/scope/api';
 import { contractorApi } from '../../entities/contractor/api';
 import { Brand } from '../../shared/ui/Brand';
 import { LanguageMenu } from '../../shared/ui/LanguageMenu';
+import './ModuleRail.css';
 const modules = [
-    ['/', 'Home', IconHome, true], ['/tasks', 'Tasker', IconChecklist], ['/planner', 'Planner', IconCalendarStats], ['/projects', 'Projector', IconFolder], ['/contractors', 'Contractor', IconUsers], ['/ledger', 'Ledger', IconWallet], ['/events', 'Eventor', IconCalendarEvent], ['/factor', 'Factor', IconBuildingFactory2], ['/contacts', 'Contactor', IconUser], ['/books', 'Booker', IconBook2], ['/stuffer', 'Stuffer', IconBriefcase2], ['/exploiter', 'Exploiter', IconRocket], ['/tracker', 'Tracker', IconMapPin], ['/reports', 'Reporter', IconFileText],
+    ['/', 'Home', IconHome, true, '#6d28d9', '#ede9fe'],
+    ['/tasks', 'Tasker', IconChecklist, false, '#1d4ed8', '#dbeafe'],
+    ['/planner', 'Planner', IconCalendarStats, false, '#0f766e', '#ccfbf1'],
+    ['/projects', 'Projector', IconFolder, false, '#be185d', '#fce7f3'],
+    ['/contractors', 'Contractor', IconUsers, false, '#7c3aed', '#ede9fe'],
+    ['/ledger', 'Ledger', IconWallet, false, '#2d9e6b', '#d5f7df'],
+    ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
+    ['/factor', 'Factor', IconBuildingFactory2, false, '#2b6cb0', '#ebf4ff'],
+    ['/contacts', 'Contactor', IconUser, false, '#4c5fd5', '#e8ecff'],
+    ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
+    ['/stuffer', 'Stuffer', IconBriefcase2, false, '#b45309', '#fef3c7'],
+    ['/exploiter', 'Exploiter', IconRocket, false, '#92400e', '#fde8a8'],
+    ['/tracker', 'Tracker', IconMapPin, false, '#c2410c', '#ffedd5'],
+    ['/reports', 'Reporter', IconFileText, false, '#475569', '#e2e8f0'],
 ];
 function ScopeMenu({ scopes, active, onSelect, onClose }) {
     const queryClient = useQueryClient();
@@ -30,5 +44,5 @@ export function AppShell() {
     const activeScope = scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)
         localStorage.setItem('zuratax-active-scope', activeScope.id); }, [activeScope]);
-    return <div className="app-shell"><aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end]) => <NavLink key={to} to={to} end={end} title={label} className={({ isActive }) => isActive ? 'active' : ''}><Icon size={21}/></NavLink>)}</aside><header className="app-header"><button className="scope-pill" onClick={() => setScopeOpen(true)}><i />{activeScope?.name ?? 'Скоуп не выбран'}<IconChevronDown size={16}/></button>{user?.acting_as && <div className="persona-chip"><IconUser size={15}/><span>От имени <strong>{user.acting_as.name}</strong></span><button title="Вернуться к себе" disabled={stopActing.isPending} onClick={() => stopActing.mutate()}><IconX size={14}/></button></div>}<label className="command-search"><IconSearch size={19}/><input placeholder={t('search')}/></label><div className="header-actions"><button aria-label="Create"><IconPlus /></button><button aria-label="Notifications"><IconBell /></button><LanguageMenu /><button className="avatar" onClick={() => void logout()} title={user?.name}>{user?.name.slice(0, 2).toUpperCase()}</button></div></header><Outlet context={{ activeScope }}/>{scopeOpen && <ScopeMenu scopes={scopes} active={activeScope} onSelect={(scope) => setActiveScopeId(scope.id)} onClose={() => setScopeOpen(false)}/>}<footer className="status-bar"><span><i />{t('status')}</span><span>Zuratax v2.1</span></footer></div>;
+    return <div className="app-shell"><aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end, color, tint]) => <NavLink key={to} to={to} end={end} title={label} aria-label={label} style={{ '--module-color': color, '--module-tint': tint }} className={({ isActive }) => isActive ? 'active' : ''}><Icon size={21}/></NavLink>)}</aside><header className="app-header"><button className="scope-pill" onClick={() => setScopeOpen(true)}><i />{activeScope?.name ?? 'Скоуп не выбран'}<IconChevronDown size={16}/></button>{user?.acting_as && <div className="persona-chip"><IconUser size={15}/><span>От имени <strong>{user.acting_as.name}</strong></span><button title="Вернуться к себе" disabled={stopActing.isPending} onClick={() => stopActing.mutate()}><IconX size={14}/></button></div>}<label className="command-search"><IconSearch size={19}/><input placeholder={t('search')}/></label><div className="header-actions"><button aria-label="Create"><IconPlus /></button><button aria-label="Notifications"><IconBell /></button><LanguageMenu /><button className="avatar" onClick={() => void logout()} title={user?.name}>{user?.name.slice(0, 2).toUpperCase()}</button></div></header><Outlet context={{ activeScope }}/>{scopeOpen && <ScopeMenu scopes={scopes} active={activeScope} onSelect={(scope) => setActiveScopeId(scope.id)} onClose={() => setScopeOpen(false)}/>}<footer className="status-bar"><span><i />{t('status')}</span><span>Zuratax v2.1</span></footer></div>;
 }
