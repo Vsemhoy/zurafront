@@ -2,8 +2,8 @@ import { lazy, Suspense, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconArrowLeft,
+  IconArrowUpRight,
   IconBriefcase,
-  IconCheck,
   IconFileDescription,
   IconHistory,
   IconLink,
@@ -15,6 +15,12 @@ import { useWorkspace } from "../app/workspace";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
 import { priorityLabel } from "../entities/task/model";
+import {
+  BlockerPanel,
+  RelationsPanel,
+  SubtasksPanel,
+  TaskChecklistPanel,
+} from "./TaskMechanics";
 import "./TaskEditorPage.css";
 
 const MarkdownEditor = lazy(() => import("../shared/ui/CompactMarkdownEditor"));
@@ -33,6 +39,7 @@ export function TaskEditorPage() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState("content");
   const [document, setDocument] = useState("description");
+  const [creatingResult, setCreatingResult] = useState(false);
   const [comment, setComment] = useState("");
   const queryKey = ["task", activeScope?.id, taskId];
   const {
@@ -48,11 +55,6 @@ export function TaskEditorPage() {
     queryKey: ["projects", activeScope?.id],
     queryFn: () => projectApi.list(activeScope.id),
     enabled: Boolean(activeScope),
-  });
-  const { data: relations = [] } = useQuery({
-    queryKey: ["task-relations", activeScope?.id, taskId],
-    queryFn: () => taskApi.relations(activeScope.id, taskId),
-    enabled: Boolean(activeScope && task),
   });
   const commentsKey = ["task-comments", activeScope?.id, taskId];
   const { data: comments = [], isLoading: commentsLoading } = useQuery({
@@ -71,6 +73,14 @@ export function TaskEditorPage() {
       queryClient.setQueryData(queryKey, updated);
       queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
     },
+  });
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey });
+    queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
+  };
+  const detach = useMutation({
+    mutationFn: () => taskApi.detach(activeScope.id, taskId),
+    onSuccess: refresh,
   });
   const sendComment = useMutation({
     mutationFn: () => taskApi.createComment(activeScope.id, taskId, comment),
@@ -91,10 +101,9 @@ export function TaskEditorPage() {
         {error?.message ?? "Задача не найдена"}
       </main>
     );
-  const checklist = task.checklist_items ?? [];
-  const subtasks = task.children ?? [];
-  const blockers = task.blockers ?? [];
-  const activeBlocker = blockers.find((blocker) => !blocker.resolved_at);
+  const hasStoredResult = Boolean(task.result?.trim());
+  const hasResult = hasStoredResult || creatingResult;
+  const activeDocument = document === "result" && hasResult ? "result" : "description";
 
   return (
     <main className="task-editor-page">
@@ -105,6 +114,16 @@ export function TaskEditorPage() {
         >
           <IconArrowLeft size={18} />К задаче
         </button>
+        {task.parent_id && (
+          <button
+            className="editor-detach"
+            onClick={() => detach.mutate()}
+            disabled={detach.isPending}
+          >
+            <IconArrowUpRight size={17} />
+            Выделить в задачу
+          </button>
+        )}
         <code>{task.task_key}</code>
         <input
           value={task.title}
@@ -141,19 +160,31 @@ export function TaskEditorPage() {
         <section className="editor-content">
           <div className="document-switch">
             <button
-              className={document === "description" ? "active" : ""}
+              className={activeDocument === "description" ? "active" : ""}
               onClick={() => setDocument("description")}
             >
               <IconFileDescription size={17} />
               Описание
             </button>
-            <button
-              className={document === "result" ? "active" : ""}
-              onClick={() => setDocument("result")}
-            >
-              <IconTargetArrow size={17} />
-              Результат
-            </button>
+            {hasResult ? (
+              <button
+                className={activeDocument === "result" ? "active" : ""}
+                onClick={() => setDocument("result")}
+              >
+                <IconTargetArrow size={17} />
+                Результат
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setCreatingResult(true);
+                  setDocument("result");
+                }}
+              >
+                <IconTargetArrow size={17} />
+                Добавить результат
+              </button>
+            )}
           </div>
           <Suspense
             fallback={
@@ -161,15 +192,22 @@ export function TaskEditorPage() {
             }
           >
             <MarkdownEditor
-              key={document}
+              key={activeDocument}
               variant="full"
-              value={task[document]}
+              value={task[activeDocument]}
+              hideToolbarTrigger={!hasResult}
               placeholder={
-                document === "description"
+                activeDocument === "description"
                   ? "Подробно опишите задачу, контекст и ограничения…"
                   : "Зафиксируйте фактический результат работы…"
               }
-              onSave={(markdown) => save.mutate({ [document]: markdown })}
+              onSave={(markdown) => {
+                save.mutate({ [activeDocument]: markdown });
+                if (activeDocument === "result" && !markdown) {
+                  setCreatingResult(false);
+                  setDocument("description");
+                }
+              }}
             />
           </Suspense>
         </section>
@@ -187,6 +225,7 @@ export function TaskEditorPage() {
                   save.mutate({ status: event.target.value })
                 }
               >
+                <option value="scheduled">Запланировано</option>
                 <option value="todo">К выполнению</option>
                 <option value="in_progress">В работе</option>
                 {task.status === "blocked" && (
@@ -194,6 +233,7 @@ export function TaskEditorPage() {
                 )}
                 <option value="review">На проверке</option>
                 <option value="done">Готово</option>
+                <option value="cancelled">Удалено</option>
               </select>
             </label>
             <label>
@@ -228,69 +268,35 @@ export function TaskEditorPage() {
               </select>
             </label>
           </div>
-          {activeBlocker && (
-            <article className="editor-blocker">
-              <strong>Активная блокировка</strong>
-              <p>{activeBlocker.reason}</p>
-              <small>
-                Для продолжения: {activeBlocker.resolution_required}
-              </small>
-            </article>
-          )}
-          <div className="work-grid">
-            <article>
-              <header>
-                Чек-лист{" "}
-                <small>
-                  {checklist.filter((item) => item.completed_at).length}/
-                  {checklist.length}
-                </small>
-              </header>
-              {checklist.map((item) => (
-                <p key={item.id} className={item.completed_at ? "done" : ""}>
-                  {item.completed_at && <IconCheck size={14} />} {item.title}
-                </p>
-              ))}
-            </article>
-            <article>
-              <header>
-                Подзадачи{" "}
-                <small>
-                  {subtasks.filter((item) => item.status === "done").length}/
-                  {subtasks.length}
-                </small>
-              </header>
-              {subtasks.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => navigate(`/tasks/${item.id}/edit`)}
-                >
-                  <code>{item.task_key}</code>
-                  {item.title}
-                </button>
-              ))}
-            </article>
+          <div className="editor-mechanics-grid">
+            <TaskChecklistPanel
+              task={task}
+              scopeId={activeScope.id}
+              refresh={refresh}
+            />
+            <SubtasksPanel
+              task={task}
+              scopeId={activeScope.id}
+              refresh={refresh}
+            />
           </div>
+          {(detach.error || save.error) && (
+            <p className="form-error">
+              {detach.error?.message ?? save.error?.message}
+            </p>
+          )}
+          <BlockerPanel
+            task={task}
+            scopeId={activeScope.id}
+            taskId={task.id}
+            refresh={refresh}
+          />
         </section>
       )}
 
       {tab === "links" && (
-        <section className="editor-simple">
-          <h2>Связи задачи</h2>
-          {relations.length ? (
-            relations.map((item) => (
-              <article key={item.id}>
-                <span>{item.relation}</span>
-                <code>{item.task?.task_key}</code>
-                <strong>{item.task?.title}</strong>
-              </article>
-            ))
-          ) : (
-            <p>
-              Связей пока нет. Добавить их можно из быстрого инспектора;
-              универсальный менеджер сущностей будет следующим проходом.
-            </p>
-          )}
+        <section className="editor-simple editor-relations">
+          <RelationsPanel task={task} scopeId={activeScope.id} />
         </section>
       )}
       {tab === "discussion" && (

@@ -1,12 +1,22 @@
-import { lazy, Suspense, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconAlertTriangle,
+  IconAdjustmentsHorizontal,
   IconArrowUpRight,
   IconArrowsMaximize,
   IconCheck,
   IconChecklist,
   IconColumns,
+  IconFolder,
+  IconFolders,
   IconEdit,
   IconFileDescription,
   IconList,
@@ -17,6 +27,7 @@ import {
   IconSubtask,
   IconTargetArrow,
   IconTrash,
+  IconChevronDown,
   IconX,
 } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -28,16 +39,249 @@ import "./TaskerPage.css";
 import "./TaskInteractions.css";
 import "./Subtasks.css";
 import "./Relations.css";
+import "./TaskProjects.css";
 const CompactMarkdownEditor = lazy(
   () => import("../shared/ui/CompactMarkdownEditor"),
 );
 
-const columns = [
-  { statuses: ["todo"], label: "К выполнению" },
-  { statuses: ["in_progress", "blocked"], label: "В работе" },
-  { statuses: ["review"], label: "На проверке" },
-  { statuses: ["done"], label: "Готово" },
+const allColumns = [
+  { id: "scheduled", statuses: ["scheduled"], label: "Запланировано" },
+  { id: "todo", statuses: ["todo"], label: "К выполнению" },
+  { id: "in_progress", statuses: ["in_progress"], label: "В работе" },
+  { id: "blocked", statuses: ["blocked"], label: "Заблокировано", creatable: false },
+  { id: "review", statuses: ["review"], label: "На проверке" },
+  { id: "done", statuses: ["done"], label: "Готово" },
+  { id: "cancelled", statuses: ["cancelled"], label: "Удалено" },
 ];
+
+const columnPresets = {
+  main: ["todo", "in_progress", "review", "done"],
+  hidden: ["scheduled", "blocked", "cancelled"],
+};
+
+const availableColumnIds = new Set(allColumns.map((column) => column.id));
+
+function storedColumnIds() {
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem("zuratax:task-columns") ?? "null",
+    );
+    const valid = Array.isArray(stored)
+      ? stored.filter((id) => availableColumnIds.has(id))
+      : [];
+    return valid.length ? valid : columnPresets.main;
+  } catch {
+    return columnPresets.main;
+  }
+}
+
+function matchesColumnPreset(selected, preset) {
+  return (
+    selected.length === preset.length &&
+    preset.every((columnId) => selected.includes(columnId))
+  );
+}
+
+function projectCountLabel(count) {
+  const mod100 = count % 100;
+  const mod10 = count % 10;
+  if (mod100 >= 11 && mod100 <= 14) return `${count} проектов`;
+  if (mod10 === 1) return `${count} проект`;
+  if (mod10 >= 2 && mod10 <= 4) return `${count} проекта`;
+  return `${count} проектов`;
+}
+
+function ProjectRail({
+  projects,
+  selectedIds,
+  taskCounts,
+  onSelectAll,
+  onToggle,
+  onEdit,
+  onColorChange,
+  changingColorId,
+}) {
+  const clickTimer = useRef(null);
+  useEffect(() => () => clearTimeout(clickTimer.current), []);
+
+  const selectProject = (projectId, additive) => {
+    clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(
+      () => onToggle(projectId, additive),
+      220,
+    );
+  };
+
+  const editProject = (project) => {
+    clearTimeout(clickTimer.current);
+    onEdit(project);
+  };
+
+  return (
+    <aside className="task-project-rail" aria-label="Фильтр по проектам">
+      <header>
+        <span>Проекты</span>
+        <small>{projects.length}</small>
+      </header>
+      <button
+        type="button"
+        className={`task-project-all ${selectedIds === null ? "active" : ""}`}
+        onClick={onSelectAll}
+      >
+        <IconFolders size={16} />
+        <span>Все проекты</span>
+        <small>{taskCounts.all}</small>
+      </button>
+      <div className="task-project-list">
+        {projects.map((project) => {
+          const active = selectedIds === null || selectedIds.has(project.id);
+          return (
+            <div
+              className={`task-project-item ${active ? "active" : ""}`}
+              key={project.id}
+            >
+              <button
+                type="button"
+                title="Клик — выбрать один, Shift+клик — добавить или исключить, двойной — редактировать"
+                onClick={(event) =>
+                  selectProject(project.id, event.shiftKey)
+                }
+                onDoubleClick={() => editProject(project)}
+              >
+                <i style={{ backgroundColor: project.color ?? "#2668D8" }} />
+                <span>
+                  <strong>{project.title}</strong>
+                  <small>{project.key}</small>
+                </span>
+                <b>{taskCounts[project.id] ?? 0}</b>
+              </button>
+              <label
+                className="task-project-color"
+                title={`Цвет проекта ${project.title}`}
+              >
+                <input
+                  type="color"
+                  value={project.color ?? "#2668D8"}
+                  disabled={changingColorId === project.id}
+                  onChange={(event) =>
+                    onColorChange(project.id, event.target.value)
+                  }
+                />
+              </label>
+            </div>
+          );
+        })}
+      </div>
+      {projects.length === 0 && (
+        <p>Создайте первый проект — он станет проектом по умолчанию.</p>
+      )}
+    </aside>
+  );
+}
+
+function ProjectEditorDialog({ scopeId, project, onClose }) {
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    title: project.title,
+    description: project.description ?? "",
+    status: project.status ?? "planning",
+    priority: project.priority ?? 2,
+    color: project.color ?? "#2668D8",
+    sort_order: project.sort_order ?? 0,
+  });
+  const save = useMutation({
+    mutationFn: () =>
+      projectApi.update(scopeId, project.id, {
+        ...form,
+        priority: Number(form.priority),
+        sort_order: Number(form.sort_order),
+        description: form.description || null,
+        color: form.color.toUpperCase(),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects", scopeId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", scopeId] });
+      onClose();
+    },
+  });
+  const set = (key) => (event) =>
+    setForm((current) => ({ ...current, [key]: event.target.value }));
+
+  return (
+    <div className="task-modal-backdrop" onMouseDown={onClose}>
+      <form
+        className="task-modal project-editor-modal"
+        onMouseDown={(event) => event.stopPropagation()}
+        onSubmit={(event) => {
+          event.preventDefault();
+          save.mutate();
+        }}
+      >
+        <header>
+          <div>
+            <small>Проект {project.key}</small>
+            <h2>Редактор проекта</h2>
+          </div>
+          <button type="button" className="icon-button" onClick={onClose}>
+            <IconX size={18} />
+          </button>
+        </header>
+        <label>
+          Название
+          <input autoFocus required value={form.title} onChange={set("title")} />
+        </label>
+        <div className="project-editor-grid">
+          <label>
+            Статус
+            <select value={form.status} onChange={set("status")}>
+              <option value="planning">Планируется</option>
+              <option value="active">Активный</option>
+              <option value="on_hold">На паузе</option>
+              <option value="completed">Завершён</option>
+              <option value="archived">Архивный</option>
+            </select>
+          </label>
+          <label>
+            Приоритет
+            <select value={form.priority} onChange={set("priority")}>
+              {[1, 2, 3, 4, 5].map((priority) => (
+                <option key={priority} value={priority}>
+                  {priorityLabel(priority)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Порядок
+            <input
+              type="number"
+              min="0"
+              value={form.sort_order}
+              onChange={set("sort_order")}
+            />
+          </label>
+          <label>
+            Цвет ярлыка
+            <input type="color" value={form.color} onChange={set("color")} />
+          </label>
+        </div>
+        <label>
+          Описание
+          <textarea rows="5" value={form.description} onChange={set("description")} />
+        </label>
+        {save.error && <p className="form-error">{save.error.message}</p>}
+        <footer>
+          <button type="button" className="secondary-button" onClick={onClose}>
+            Отмена
+          </button>
+          <button className="primary-button" disabled={save.isPending}>
+            {save.isPending ? "Сохраняю…" : "Сохранить"}
+          </button>
+        </footer>
+      </form>
+    </div>
+  );
+}
 
 function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
   const blocked = task.status === "blocked";
@@ -47,6 +291,7 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
       tabIndex={0}
       draggable={!blocked}
       className={`task-card ${blocked ? "task-card--blocked" : ""}`}
+      style={{ "--task-project-color": task.project?.color ?? "#2668D8" }}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/task-id", task.id);
@@ -109,15 +354,25 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
   );
 }
 
-function CreateDialog({ scopeId, projects, initialStatus, onClose }) {
+function CreateDialog({
+  scopeId,
+  projects,
+  defaultProjectId,
+  initialStatus,
+  onClose,
+}) {
   const queryClient = useQueryClient();
   const [mode, setMode] = useState("task");
   const [form, setForm] = useState({
     title: "",
     key: "",
-    project_id: "",
+    project_id:
+      defaultProjectId !== undefined
+        ? defaultProjectId
+        : projects[0]?.id ?? "",
     priority: 3,
     description: "",
+    color: "#2668D8",
   });
   const mutation = useMutation({
     mutationFn: () =>
@@ -129,7 +384,11 @@ function CreateDialog({ scopeId, projects, initialStatus, onClose }) {
             status: initialStatus,
             description: form.description || null,
           })
-        : projectApi.create(scopeId, { title: form.title, key: form.key }),
+        : projectApi.create(scopeId, {
+            title: form.title,
+            key: form.key,
+            color: form.color,
+          }),
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: [mode === "task" ? "tasks" : "projects", scopeId],
@@ -183,25 +442,31 @@ function CreateDialog({ scopeId, projects, initialStatus, onClose }) {
           />
         </label>
         {mode === "project" ? (
-          <label>
-            Литерал проекта
-            <input
-              required
-              minLength={2}
-              value={form.key}
-              onChange={(event) =>
-                setForm((value) => ({
-                  ...value,
-                  key: event.target.value
-                    .toUpperCase()
-                    .replace(/[^A-Z0-9]/g, "")
-                    .slice(0, 10),
-                }))
-              }
-              placeholder="ADM"
-            />
-            <small>Из него получатся ключи вроде ADM-154</small>
-          </label>
+          <div className="form-row project-create-fields">
+            <label>
+              Литерал проекта
+              <input
+                required
+                minLength={2}
+                value={form.key}
+                onChange={(event) =>
+                  setForm((value) => ({
+                    ...value,
+                    key: event.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, "")
+                      .slice(0, 10),
+                  }))
+                }
+                placeholder="ADM"
+              />
+              <small>Из него получатся ключи вроде ADM-154</small>
+            </label>
+            <label>
+              Цвет ярлыка
+              <input type="color" value={form.color} onChange={set("color")} />
+            </label>
+          </div>
         ) : (
           <>
             <div className="form-row">
@@ -768,6 +1033,7 @@ function TaskInspector({ scopeId, taskId, projects, onClose }) {
             disabled={task.status === "blocked"}
             onChange={(event) => save.mutate({ status: event.target.value })}
           >
+            <option value="scheduled">Запланировано</option>
             <option value="todo">К выполнению</option>
             <option value="in_progress">В работе</option>
             {task.status === "blocked" && (
@@ -775,6 +1041,7 @@ function TaskInspector({ scopeId, taskId, projects, onClose }) {
             )}
             <option value="review">На проверке</option>
             <option value="done">Готово</option>
+            <option value="cancelled">Удалено</option>
           </select>
         </label>
         <label>
@@ -809,12 +1076,6 @@ function TaskInspector({ scopeId, taskId, projects, onClose }) {
           </select>
         </label>
       </div>
-      <BlockerPanel
-        task={task}
-        scopeId={scopeId}
-        taskId={taskId}
-        refresh={refresh}
-      />
       <nav className="content-switch">
         <button
           className={activePane === "description" ? "active" : ""}
@@ -937,6 +1198,12 @@ function TaskInspector({ scopeId, taskId, projects, onClose }) {
         </p>
       )}
       {save.error && <p className="form-error">{save.error.message}</p>}
+      <BlockerPanel
+        task={task}
+        scopeId={scopeId}
+        taskId={taskId}
+        refresh={refresh}
+      />
     </aside>
   );
 }
@@ -948,7 +1215,32 @@ export function TaskerPage() {
   const navigate = useNavigate();
   const [view, setView] = useState("board");
   const [create, setCreate] = useState(null);
+  const [editingProjectId, setEditingProjectId] = useState(null);
   const [search, setSearch] = useState("");
+  const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
+  const [visibleColumnIds, setVisibleColumnIds] = useState(storedColumnIds);
+  const [projectRailOpen, setProjectRailOpen] = useState(
+    () => localStorage.getItem("zuratax:task-project-rail") !== "closed",
+  );
+  const [projectSelection, setProjectSelection] = useState({
+    scopeId: null,
+    ids: null,
+  });
+  const selectedProjectIds =
+    projectSelection.scopeId === activeScope?.id ? projectSelection.ids : null;
+  const setSelectedProjectIds = (nextValue) => {
+    setProjectSelection((current) => {
+      const currentIds =
+        current.scopeId === activeScope?.id ? current.ids : null;
+      return {
+        scopeId: activeScope?.id ?? null,
+        ids:
+          typeof nextValue === "function"
+            ? nextValue(currentIds)
+            : nextValue,
+      };
+    });
+  };
   const {
     data: tasks = [],
     isLoading,
@@ -958,10 +1250,65 @@ export function TaskerPage() {
     queryFn: () => taskApi.list(activeScope.id),
     enabled: Boolean(activeScope),
   });
-  const { data: projects = [] } = useQuery({
+  const { data: projectData = [] } = useQuery({
     queryKey: ["projects", activeScope?.id],
     queryFn: () => projectApi.list(activeScope.id),
     enabled: Boolean(activeScope),
+  });
+  const projects = useMemo(
+    () =>
+      [...projectData].sort(
+        (left, right) =>
+          (left.sort_order ?? 0) - (right.sort_order ?? 0) ||
+          left.title.localeCompare(right.title),
+      ),
+    [projectData],
+  );
+  useEffect(() => {
+    localStorage.setItem(
+      "zuratax:task-project-rail",
+      projectRailOpen ? "open" : "closed",
+    );
+  }, [projectRailOpen]);
+  useEffect(() => {
+    localStorage.setItem(
+      "zuratax:task-columns",
+      JSON.stringify(visibleColumnIds),
+    );
+  }, [visibleColumnIds]);
+  const visibleColumns = useMemo(
+    () => allColumns.filter((column) => visibleColumnIds.includes(column.id)),
+    [visibleColumnIds],
+  );
+  const toggleColumn = (columnId) => {
+    setVisibleColumnIds((current) => {
+      if (current.includes(columnId)) {
+        return current.length === 1
+          ? current
+          : current.filter((id) => id !== columnId);
+      }
+      return [...current, columnId];
+    });
+  };
+  const colorProject = useMutation({
+    mutationFn: ({ projectId, color }) =>
+      projectApi.update(activeScope.id, projectId, { color }),
+    onSuccess: (updatedProject) => {
+      queryClient.setQueryData(
+        ["projects", activeScope.id],
+        (current = []) =>
+          current.map((project) =>
+            project.id === updatedProject.id ? updatedProject : project,
+          ),
+      );
+      queryClient.setQueryData(["tasks", activeScope.id], (current = []) =>
+        current.map((task) =>
+          task.project?.id === updatedProject.id
+            ? { ...task, project: { ...task.project, color: updatedProject.color } }
+            : task,
+        ),
+      );
+    },
   });
   const moveTask = useMutation({
     mutationFn: ({ taskId: movedTaskId, status, targetIndex }) =>
@@ -998,20 +1345,81 @@ export function TaskerPage() {
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] }),
   });
-  const filtered = tasks.filter((task) =>
-    `${task.task_key} ${task.title}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
+  const taskCounts = useMemo(() => {
+    const counts = { all: tasks.length };
+    tasks.forEach((task) => {
+      const projectId = task.project_id ?? task.project?.id;
+      if (projectId) counts[projectId] = (counts[projectId] ?? 0) + 1;
+    });
+    return counts;
+  }, [tasks]);
+  const filtered = tasks.filter((task) => {
+    const projectId = task.project_id ?? task.project?.id;
+    const selected =
+      selectedProjectIds === null ||
+      (selectedProjectIds.size === 0
+        ? !projectId
+        : selectedProjectIds.has(projectId));
+    return (
+      selected &&
+      `${task.task_key} ${task.title}`
+        .toLowerCase()
+        .includes(search.toLowerCase())
+    );
+  });
+  const selectionLabel =
+    selectedProjectIds === null
+      ? "Все проекты"
+      : selectedProjectIds.size === 0
+        ? "Без проекта"
+      : selectedProjectIds.size === 1
+        ? projects.find((project) => selectedProjectIds.has(project.id))
+            ?.title ?? "Проект"
+        : projectCountLabel(selectedProjectIds.size);
+  const toggleProject = (projectId, additive = false) => {
+    setSelectedProjectIds((current) => {
+      if (!additive) return new Set([projectId]);
+      const next =
+        current === null
+          ? new Set(projects.map((project) => project.id))
+          : new Set(current);
+      if (next.has(projectId)) {
+        next.delete(projectId);
+      } else {
+        next.add(projectId);
+      }
+      return next;
+    });
+  };
+  const defaultProjectId =
+    selectedProjectIds === null
+      ? projects[0]?.id ?? ""
+      : selectedProjectIds.size === 0
+        ? ""
+        : projects.find((project) => selectedProjectIds.has(project.id))?.id ??
+          "";
   const open = (task) => navigate(`/tasks/${task.id}`);
   const move = (movedTaskId, status, targetIndex) => {
     if (movedTaskId)
       moveTask.mutate({ taskId: movedTaskId, status, targetIndex });
   };
+  const editingProject = projects.find(
+    (project) => project.id === editingProjectId,
+  );
   return (
     <main className="tasker-page">
       <header className="tasker-toolbar">
-        <h1>Задачи</h1>
+        <button
+          type="button"
+          className={`tasker-project-trigger ${projectRailOpen ? "open" : ""}`}
+          onClick={() => setProjectRailOpen((open) => !open)}
+          aria-expanded={projectRailOpen}
+          title={projectRailOpen ? "Скрыть проекты" : "Показать проекты"}
+        >
+          <IconFolder size={18} />
+          <span>{selectionLabel}</span>
+          <IconChevronDown size={15} />
+        </button>
         <div className="view-switch">
           <button
             className={view === "board" ? "active" : ""}
@@ -1026,7 +1434,57 @@ export function TaskerPage() {
             <IconList size={17} />
           </button>
         </div>
-        <span className="project-count">Проектов: {projects.length}</span>
+        <div className="column-picker">
+          <button
+            type="button"
+            className={columnsMenuOpen ? "active" : ""}
+            onClick={() => setColumnsMenuOpen((open) => !open)}
+            aria-expanded={columnsMenuOpen}
+          >
+            <IconAdjustmentsHorizontal size={16} />
+            Колонки
+          </button>
+          {columnsMenuOpen && (
+            <div className="column-picker-menu">
+              <header>Набор колонок</header>
+              <div className="column-presets">
+                <button
+                  className={
+                    matchesColumnPreset(visibleColumnIds, columnPresets.main)
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() => setVisibleColumnIds(columnPresets.main)}
+                >
+                  Основные
+                </button>
+                <button
+                  className={
+                    matchesColumnPreset(visibleColumnIds, columnPresets.hidden)
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() => setVisibleColumnIds(columnPresets.hidden)}
+                >
+                  Скрытые
+                </button>
+              </div>
+              <div className="column-options">
+                {allColumns.map((column) => (
+                  <label key={column.id}>
+                    <input
+                      type="checkbox"
+                      checked={visibleColumnIds.includes(column.id)}
+                      onChange={() => toggleColumn(column.id)}
+                    />
+                    <span>{column.label}</span>
+                  </label>
+                ))}
+              </div>
+              <small>Выбор сохраняется в этом браузере</small>
+            </div>
+          )}
+        </div>
         <label className="task-search">
           <IconSearch size={17} />
           <input
@@ -1043,16 +1501,35 @@ export function TaskerPage() {
           Новая задача
         </button>
       </header>
-      {!activeScope && (
-        <div className="tasker-state">Создайте или выберите скоуп.</div>
-      )}
-      {isLoading && <div className="tasker-state">Загружаю задачи…</div>}
-      {error && (
-        <div className="tasker-state tasker-state--error">{error.message}</div>
-      )}
-      {activeScope && !isLoading && !error && view === "board" && (
-        <section className="task-board">
-          {columns.map((column) => {
+      <div className={`tasker-workspace ${projectRailOpen ? "rail-open" : ""}`}>
+        {projectRailOpen && activeScope && (
+          <ProjectRail
+            projects={projects}
+            selectedIds={selectedProjectIds}
+            taskCounts={taskCounts}
+            onSelectAll={() => setSelectedProjectIds(null)}
+            onToggle={toggleProject}
+            onEdit={(project) => setEditingProjectId(project.id)}
+            onColorChange={(projectId, color) =>
+              colorProject.mutate({ projectId, color: color.toUpperCase() })
+            }
+            changingColorId={colorProject.variables?.projectId}
+          />
+        )}
+        <div className="tasker-content">
+          {!activeScope && (
+            <div className="tasker-state">Создайте или выберите скоуп.</div>
+          )}
+          {isLoading && <div className="tasker-state">Загружаю задачи…</div>}
+          {error && (
+            <div className="tasker-state tasker-state--error">{error.message}</div>
+          )}
+          {activeScope && !isLoading && !error && view === "board" && (
+        <section
+          className="task-board"
+          style={{ "--task-column-count": visibleColumns.length }}
+        >
+          {visibleColumns.map((column) => {
             const status = column.statuses[0];
             const items = filtered
               .filter((task) => column.statuses.includes(task.status))
@@ -1064,9 +1541,20 @@ export function TaskerPage() {
               <section
                 className="task-column"
                 key={column.label}
-                onDragOver={(event) => event.preventDefault()}
+                onDoubleClick={(event) => {
+                  if (
+                    column.creatable === false ||
+                    event.target.closest(".task-card, button, header")
+                  )
+                    return;
+                  setCreate({ status });
+                }}
+                onDragOver={(event) => {
+                  if (column.id !== "blocked") event.preventDefault();
+                }}
                 onDrop={(event) => {
                   event.preventDefault();
+                  if (column.id === "blocked") return;
                   move(
                     event.dataTransfer.getData("text/task-id"),
                     status,
@@ -1095,16 +1583,18 @@ export function TaskerPage() {
                     />
                   ))}
                 </div>
-                <button onClick={() => setCreate({ status })}>
-                  <IconPlus size={16} />
-                  Добавить
-                </button>
+                {column.creatable !== false && (
+                  <button onClick={() => setCreate({ status })}>
+                    <IconPlus size={16} />
+                    Добавить
+                  </button>
+                )}
               </section>
             );
           })}
         </section>
-      )}
-      {activeScope && !isLoading && !error && view === "list" && (
+          )}
+          {activeScope && !isLoading && !error && view === "list" && (
         <section className="task-list">
           <header>
             <span>Статус</span>
@@ -1117,14 +1607,19 @@ export function TaskerPage() {
           {filtered.map((task) => (
             <button key={task.id} onClick={() => open(task)}>
               <span>
-                {columns.find((column) => column.statuses.includes(task.status))
+                {allColumns.find((column) => column.statuses.includes(task.status))
                   ?.label ?? task.status}
               </span>
               <strong>
                 <code>{taskReference(task)}</code>
                 {task.title}
               </strong>
-              <span>{task.project?.title ?? "—"}</span>
+              <span className="task-list-project">
+                {task.project && (
+                  <i style={{ backgroundColor: task.project.color ?? "#2668D8" }} />
+                )}
+                {task.project?.title ?? "—"}
+              </span>
               <span>{task.assignee?.name ?? "Не назначен"}</span>
               <span>{priorityLabel(task.priority)}</span>
               <time>
@@ -1133,15 +1628,25 @@ export function TaskerPage() {
             </button>
           ))}
         </section>
-      )}
+          )}
+        </div>
+      </div>
       {create && activeScope && (
         <CreateDialog
           scopeId={activeScope.id}
           projects={projects}
+          defaultProjectId={defaultProjectId}
           initialStatus={create.status}
           onClose={() => setCreate(null)}
         />
       )}{" "}
+      {editingProject && activeScope && (
+        <ProjectEditorDialog
+          scopeId={activeScope.id}
+          project={editingProject}
+          onClose={() => setEditingProjectId(null)}
+        />
+      )}
       {taskId && activeScope && (
         <>
           <div
