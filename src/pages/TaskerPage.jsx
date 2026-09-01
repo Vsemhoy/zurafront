@@ -7,6 +7,7 @@ import {
   IconCheck,
   IconChecklist,
   IconColumns,
+  IconEdit,
   IconFileDescription,
   IconList,
   IconLink,
@@ -38,10 +39,12 @@ const columns = [
   { statuses: ["done"], label: "Готово" },
 ];
 
-function TaskCard({ task, status, index, onOpen, onMove }) {
+function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
   const blocked = task.status === "blocked";
   return (
-    <button
+    <article
+      role="button"
+      tabIndex={0}
       draggable={!blocked}
       className={`task-card ${blocked ? "task-card--blocked" : ""}`}
       onDragStart={(event) => {
@@ -57,14 +60,41 @@ function TaskCard({ task, status, index, onOpen, onMove }) {
         onMove(event.dataTransfer.getData("text/task-id"), status, index);
       }}
       onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
     >
       <header>
         <code>{taskReference(task)}</code>
-        {task.assignee && (
-          <span title={task.assignee.name}>
-            {task.assignee.name.slice(0, 1)}
-          </span>
-        )}
+        <div className="task-card-actions">
+          {task.assignee && (
+            <span title={task.assignee.name}>
+              {task.assignee.name.slice(0, 1)}
+            </span>
+          )}
+          <button
+            type="button"
+            draggable="false"
+            className="task-card-edit"
+            title="Открыть полный редактор"
+            aria-label={`Открыть ${taskReference(task)} в полном редакторе`}
+            onMouseDown={(event) => event.stopPropagation()}
+            onDragStart={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onKeyDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onEdit();
+            }}
+          >
+            <IconEdit size={14} />
+          </button>
+        </div>
       </header>
       <strong>{task.title}</strong>
       <footer>
@@ -75,7 +105,7 @@ function TaskCard({ task, status, index, onOpen, onMove }) {
           <time>{new Date(task.due_at).toLocaleDateString()}</time>
         )}
       </footer>
-    </button>
+    </article>
   );
 }
 
@@ -696,11 +726,13 @@ function TaskInspector({ scopeId, taskId, projects, onClose }) {
         <code>{task.task_key}</code>
         <div>
           <button
+            type="button"
             className="open-editor"
+            title="Открыть задачу в полноэкранном редакторе"
             onClick={() => navigate(`/tasks/${task.id}/edit`)}
           >
             <IconArrowsMaximize size={16} />
-            Полный редактор
+            Открыть полный редактор
           </button>
           {task.parent_id && (
             <button
@@ -1059,6 +1091,7 @@ export function TaskerPage() {
                       }
                       onMove={move}
                       onOpen={() => open(task)}
+                      onEdit={() => navigate(`/tasks/${task.id}/edit`)}
                     />
                   ))}
                 </div>

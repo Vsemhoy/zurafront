@@ -6,3 +6,9 @@
 .content-switch .add-result { margin-left: auto; color: #697589; font-size: 11px; }
 .content-switch .add-result:hover { color: #075aaf; background: #edf2f8; }
 .md-loading { min-height: 160px; display: grid; place-items: center; color: #778195; font-size: 12px; }
+.task-card:focus-visible { outline: 2px solid #83b7ef; outline-offset: 2px; }
+.task-card-actions { display: flex; align-items: center; gap: 5px; }
+.task-card-edit { width: 24px; height: 24px; display: grid; place-items: center; border: 0; border-radius: 4px; background: transparent; color: #64748a; opacity: .55; }
+.task-card:hover .task-card-edit,.task-card-edit:focus-visible { opacity: 1; }
+.task-card-edit:hover { background: #e8f0fb; color: #075aaf; }
+.task-card-edit:focus-visible { outline: 2px solid #83b7ef; outline-offset: 1px; }
