@@ -1,0 +1,24 @@
+.contractor-agent-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.contractor-instruction-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  margin-top: 9px;
+  border: 1px solid #008779;
+  background: #eaf7f4;
+  color: #006f64;
+  padding: 0 9px;
+}
+
+.contractor-instruction-button:disabled {
+  border-color: #d5dce5;
+  background: #f3f5f7;
+  color: #9aa4b2;
+}

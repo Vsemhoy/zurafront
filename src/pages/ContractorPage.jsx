@@ -9,12 +9,30 @@ import './ContractorPage.css';
 import './ContractorModalFix.css';
 import './ContractorAccountTools.css';
 import './ContractorTable.css';
+import './ContractorAgentInstruction.css';
 
 const typeLabels = { real: 'Реальный', virtual: 'Виртуальный', agent: 'Агент' };
-const statusLabels = { active: 'Активен', blocked: 'Заблокирован', dormant: 'Спит' };
+const statusLabels = {
+  active: 'Активен',
+  blocked: 'Заблокирован',
+  dormant: 'Спит',
+};
 const abilityLabels = {
-  'contractor.manage': 'Управлять Contractor', 'contractor.delete': 'Удалять контракторов', 'agent.manage_own': 'Управлять своими агентами', 'task.view': 'Смотреть задачи', 'task.create': 'Создавать задачи',
-  'task.update': 'Изменять задачи', 'task.delete': 'Удалять задачи', 'task.assign': 'Назначать исполнителей', 'project.delete': 'Удалять проекты', 'book.view': 'Смотреть Booker', 'book.create': 'Создавать книги', 'book.update': 'Редактировать Booker', 'book.delete': 'Удалять книги', 'report.view': 'Смотреть отчёты', 'report.write': 'Писать отчёты',
+  'contractor.manage': 'Управлять Contractor',
+  'contractor.delete': 'Удалять контракторов',
+  'agent.manage_own': 'Управлять своими агентами',
+  'task.view': 'Смотреть задачи',
+  'task.create': 'Создавать задачи',
+  'task.update': 'Изменять задачи',
+  'task.delete': 'Удалять задачи',
+  'task.assign': 'Назначать исполнителей',
+  'project.delete': 'Удалять проекты',
+  'book.view': 'Смотреть Booker',
+  'book.create': 'Создавать книги',
+  'book.update': 'Редактировать Booker',
+  'book.delete': 'Удалять книги',
+  'report.view': 'Смотреть отчёты',
+  'report.write': 'Писать отчёты',
 };
 const rolePresets = {
   owner: Object.keys(abilityLabels),
@@ -37,14 +55,42 @@ function permissionsWithBookAccess(permissions, mode) {
 
 function explicitPermissions(contractor) {
   const deny = contractor.permissions?.deny ?? [];
-  const explicit = contractor.permissions?.allow?.includes('*') ? Object.keys(abilityLabels) : contractor.permissions?.allow ?? [];
-  return { allow: [...new Set([...(rolePresets[contractor.role] ?? []), ...explicit])].filter((ability) => !deny.includes(ability)), deny };
+  const explicit = contractor.permissions?.allow?.includes('*') ? Object.keys(abilityLabels) : (contractor.permissions?.allow ?? []);
+  return {
+    allow: [...new Set([...(rolePresets[contractor.role] ?? []), ...explicit])].filter((ability) => !deny.includes(ability)),
+    deny,
+  };
+}
+
+function buildAgentInstruction(token) {
+  const baseUrl = window.location.origin;
+  const specificationUrl = `${baseUrl}/api/agent/spec`;
+
+  return `# Подключение к Zuratax Agent API
+
+Ты работаешь как агент Zuratax. Используй этот доступ только в пределах выданных скоупов, проектов и capabilities.
+
+Base URL: ${baseUrl}
+Актуальная спецификация: GET ${specificationUrl}
+Authorization: Bearer ${token}
+
+Первым действием получи актуальную инструкцию:
+
+curl --fail-with-body --silent --show-error \\
+  -H "Authorization: Bearer ${token}" \\
+  -H "Accept: text/markdown" \\
+  "${specificationUrl}"
+
+Затем проверь учётку через GET ${baseUrl}/api/agent/me и получи личную очередь через GET ${baseUrl}/api/agent/tasks.
+
+Для JSON-запросов отправляй Accept: application/json, а для POST/PATCH ещё Content-Type: application/json. Никогда не помещай ключ в URL, код, коммиты, комментарии, логи или сообщения. При 401 считай ключ отозванным, при 403 не обходи границу доступа, при 422 исправь payload по ответу API. Актуальная спецификация по ссылке выше всегда главнее этой стартовой инструкции.
+`;
 }
 
 function TypeIcon({ type, size = 18 }) {
-  if (type === 'agent') return <IconRobot size={size}/>;
-  if (type === 'virtual') return <IconUserCog size={size}/>;
-  return <IconUser size={size}/>;
+  if (type === 'agent') return <IconRobot size={size} />;
+  if (type === 'virtual') return <IconUserCog size={size} />;
+  return <IconUser size={size} />;
 }
 
 export function ContractorPage() {
@@ -56,105 +102,778 @@ export function ContractorPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [creating, setCreating] = useState(false);
   const key = ['contractors', activeScope?.id];
-  const { data: options } = useQuery({ queryKey: ['contractor-options', activeScope?.id], queryFn: () => contractorApi.options(activeScope.id), enabled: Boolean(activeScope) });
-  const { data: contractors = [], isLoading, error } = useQuery({ queryKey: key, queryFn: () => contractorApi.list(activeScope.id), enabled: Boolean(activeScope) });
+  const { data: options } = useQuery({
+    queryKey: ['contractor-options', activeScope?.id],
+    queryFn: () => contractorApi.options(activeScope.id),
+    enabled: Boolean(activeScope),
+  });
+  const {
+    data: contractors = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: key,
+    queryFn: () => contractorApi.list(activeScope.id),
+    enabled: Boolean(activeScope),
+  });
   const filtered = contractors.filter((item) => (type === 'all' || item.type === type) && `${item.name} ${item.email ?? ''} ${item.username ?? ''}`.toLowerCase().includes(search.toLowerCase()));
   const selectedContractor = contractors.find((item) => item.id === selectedId) ?? null;
   const counts = useMemo(() => Object.fromEntries(['real', 'virtual', 'agent'].map((item) => [item, contractors.filter((contractor) => contractor.type === item).length])), [contractors]);
-  const refresh = () => Promise.all([
-    queryClient.invalidateQueries({ queryKey: key }),
-    queryClient.invalidateQueries({ queryKey: ['contractors-assignable', activeScope?.id] }),
-    queryClient.invalidateQueries({ queryKey: ['task-assignable', activeScope?.id] }),
-    queryClient.invalidateQueries({ queryKey: ['kpi-stats', activeScope?.id] }),
-    queryClient.invalidateQueries({ queryKey: ['dashboard', activeScope?.id] }),
-  ]);
+  const refresh = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: key }),
+      queryClient.invalidateQueries({
+        queryKey: ['contractors-assignable', activeScope?.id],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['task-assignable', activeScope?.id],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['kpi-stats', activeScope?.id],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ['dashboard', activeScope?.id],
+      }),
+    ]);
 
-  return <main className="contractor-page">
-    <header className="contractor-toolbar"><div><IconUsers size={20}/><h1>{options?.can_manage_all === false ? 'Мои агенты' : 'Contractor'}</h1><small>{contractors.length} акторов</small></div><label><IconSearch size={17}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти актора…"/></label><button disabled={!options} onClick={() => setCreating(true)}><IconPlus size={17}/>{options?.can_manage_all === false ? 'Новый агент' : 'Новый актор'}</button></header>
-    <div className="contractor-layout"><aside className="contractor-filters"><strong>Типы</strong>{(options?.can_manage_all === false ? [['agent', 'Агенты', counts.agent]] : [['all', 'Все', contractors.length], ['real', 'Реальные', counts.real], ['virtual', 'Виртуальные', counts.virtual], ['agent', 'Агенты', counts.agent]]).map(([value, label, count]) => <button key={value} className={type === value || (options?.can_manage_all === false && type === 'all') ? 'active' : ''} onClick={() => setType(value)}><span>{label}</span><i>{count}</i></button>)}</aside>
-      <section className="contractor-content">{!activeScope && <div className="contractor-state">Выберите скоуп.</div>}{isLoading && <div className="contractor-state">Загружаю акторов…</div>}{error && <div className="contractor-state contractor-error">{error.message}</div>}<div className="contractor-table"><div className="contractor-table-head"><span>Человек</span><span>Тип</span><span>Статус</span><span>Исполнитель</span><span>Проекты</span></div>{filtered.map((contractor) => <button key={contractor.id} className={`contractor-row contractor-card--${contractor.type}`} onClick={() => setSelectedId(contractor.id)}><span className="contractor-person"><i className="contractor-avatar"><TypeIcon type={contractor.type}/></i><span><strong>{contractor.name}</strong><small>{contractor.position || contractor.email || 'Без должности'}</small></span></span><span>{typeLabels[contractor.type]}</span><span className={`contractor-status contractor-status--${contractor.status}`}>{statusLabels[contractor.status]}</span><span>{contractor.is_executor ? 'Да' : '—'}</span><span className="contractor-row-access">{contractor.project_access_mode === 'all' ? 'Все' : contractor.project_access_mode === 'none' ? 'Нет' : contractor.projects.length}{contractor.type === 'agent' && <small><IconKey size={12}/>{contractor.tokens?.length ?? 0}</small>}</span></button>)}</div>{!isLoading && filtered.length === 0 && <div className="contractor-state">Никого не нашли.</div>}</section>
-    </div>
-    {creating && activeScope && (
-      <ContractorCreate
-        scopeId={activeScope.id}
-        options={options}
-        onClose={() => setCreating(false)}
-        onCreated={(contractor) => {
-          queryClient.setQueryData(key, (current = []) => [contractor, ...current.filter((item) => item.id !== contractor.id)]);
-          refresh();
-          setCreating(false);
-          setSelectedId(contractor.id);
-        }}
-      />
-    )}
-    {selectedContractor && activeScope && <><div className="contractor-backdrop" onClick={() => setSelectedId(null)}/><div className="contractor-editor-stack">{selectedContractor.type !== 'agent' && <ContractorAccountTools scopeId={activeScope.id} contractor={selectedContractor} onChanged={refresh}/>}<ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onClose={() => setSelectedId(null)} onChanged={refresh}/></div></>}
-    {selectedContractor && selectedContractor.id !== currentUser?.id && activeScope && <ContractorDeleteButton scopeId={activeScope.id} contractor={selectedContractor} onDeleted={() => { setSelectedId(null); refresh(); }}/>}
-  </main>;
+  return (
+    <main className="contractor-page">
+      <header className="contractor-toolbar">
+        <div>
+          <IconUsers size={20} />
+          <h1>{options?.can_manage_all === false ? 'Мои агенты' : 'Contractor'}</h1>
+          <small>{contractors.length} акторов</small>
+        </div>
+        <label>
+          <IconSearch size={17} />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти актора…" />
+        </label>
+        <button disabled={!options} onClick={() => setCreating(true)}>
+          <IconPlus size={17} />
+          {options?.can_manage_all === false ? 'Новый агент' : 'Новый актор'}
+        </button>
+      </header>
+      <div className="contractor-layout">
+        <aside className="contractor-filters">
+          <strong>Типы</strong>
+          {(options?.can_manage_all === false
+            ? [['agent', 'Агенты', counts.agent]]
+            : [
+                ['all', 'Все', contractors.length],
+                ['real', 'Реальные', counts.real],
+                ['virtual', 'Виртуальные', counts.virtual],
+                ['agent', 'Агенты', counts.agent],
+              ]
+          ).map(([value, label, count]) => (
+            <button key={value} className={type === value || (options?.can_manage_all === false && type === 'all') ? 'active' : ''} onClick={() => setType(value)}>
+              <span>{label}</span>
+              <i>{count}</i>
+            </button>
+          ))}
+        </aside>
+        <section className="contractor-content">
+          {!activeScope && <div className="contractor-state">Выберите скоуп.</div>}
+          {isLoading && <div className="contractor-state">Загружаю акторов…</div>}
+          {error && <div className="contractor-state contractor-error">{error.message}</div>}
+          <div className="contractor-table">
+            <div className="contractor-table-head">
+              <span>Человек</span>
+              <span>Тип</span>
+              <span>Статус</span>
+              <span>Исполнитель</span>
+              <span>Проекты</span>
+            </div>
+            {filtered.map((contractor) => (
+              <button key={contractor.id} className={`contractor-row contractor-card--${contractor.type}`} onClick={() => setSelectedId(contractor.id)}>
+                <span className="contractor-person">
+                  <i className="contractor-avatar">
+                    <TypeIcon type={contractor.type} />
+                  </i>
+                  <span>
+                    <strong>{contractor.name}</strong>
+                    <small>{contractor.position || contractor.email || 'Без должности'}</small>
+                  </span>
+                </span>
+                <span>{typeLabels[contractor.type]}</span>
+                <span className={`contractor-status contractor-status--${contractor.status}`}>{statusLabels[contractor.status]}</span>
+                <span>{contractor.is_executor ? 'Да' : '—'}</span>
+                <span className="contractor-row-access">
+                  {contractor.project_access_mode === 'all' ? 'Все' : contractor.project_access_mode === 'none' ? 'Нет' : contractor.projects.length}
+                  {contractor.type === 'agent' && (
+                    <small>
+                      <IconKey size={12} />
+                      {contractor.tokens?.length ?? 0}
+                    </small>
+                  )}
+                </span>
+              </button>
+            ))}
+          </div>
+          {!isLoading && filtered.length === 0 && <div className="contractor-state">Никого не нашли.</div>}
+        </section>
+      </div>
+      {creating && activeScope && (
+        <ContractorCreate
+          scopeId={activeScope.id}
+          options={options}
+          onClose={() => setCreating(false)}
+          onCreated={(contractor) => {
+            queryClient.setQueryData(key, (current = []) => [contractor, ...current.filter((item) => item.id !== contractor.id)]);
+            refresh();
+            setCreating(false);
+            setSelectedId(contractor.id);
+          }}
+        />
+      )}
+      {selectedContractor && activeScope && (
+        <>
+          <div className="contractor-backdrop" onClick={() => setSelectedId(null)} />
+          <div className="contractor-editor-stack">
+            {selectedContractor.type !== 'agent' && <ContractorAccountTools scopeId={activeScope.id} contractor={selectedContractor} onChanged={refresh} />}
+            <ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onClose={() => setSelectedId(null)} onChanged={refresh} />
+          </div>
+        </>
+      )}
+      {selectedContractor && selectedContractor.id !== currentUser?.id && activeScope && (
+        <ContractorDeleteButton
+          scopeId={activeScope.id}
+          contractor={selectedContractor}
+          onDeleted={() => {
+            setSelectedId(null);
+            refresh();
+          }}
+        />
+      )}
+    </main>
+  );
 }
 
 function ContractorDeleteButton({ scopeId, contractor, onDeleted }) {
-  const remove = useMutation({ mutationFn: () => contractorApi.remove(scopeId, contractor.id), onSuccess: onDeleted });
-  const confirmDelete = () => { if (window.confirm(`Удалить «${contractor.name}»? Аккаунт будет заблокирован, токены отозваны, назначения сняты.`)) remove.mutate(); };
-  return <div className="contractor-delete"><button disabled={remove.isPending} onClick={confirmDelete}><IconTrash size={16}/>{remove.isPending ? 'Удаляю…' : 'Удалить контрактора'}</button>{remove.error && <small>{remove.error.message}</small>}</div>;
+  const remove = useMutation({
+    mutationFn: () => contractorApi.remove(scopeId, contractor.id),
+    onSuccess: onDeleted,
+  });
+  const confirmDelete = () => {
+    if (window.confirm(`Удалить «${contractor.name}»? Аккаунт будет заблокирован, токены отозваны, назначения сняты.`)) remove.mutate();
+  };
+  return (
+    <div className="contractor-delete">
+      <button disabled={remove.isPending} onClick={confirmDelete}>
+        <IconTrash size={16} />
+        {remove.isPending ? 'Удаляю…' : 'Удалить контрактора'}
+      </button>
+      {remove.error && <small>{remove.error.message}</small>}
+    </div>
+  );
 }
 
 function ContractorAccountTools({ scopeId, contractor, onChanged }) {
   const [loginOpen, setLoginOpen] = useState(false);
-  const [login, setLogin] = useState({ username: contractor.username ?? '', email: contractor.email ?? '', password: '' });
-  const saveAccess = useMutation({ mutationFn: (bookAccessMode) => contractorApi.updateAccess(scopeId, contractor.id, { role: contractor.role, project_access_mode: contractor.project_access_mode, book_access_mode: bookAccessMode, project_ids: contractor.projects.map((project) => project.id), permissions: permissionsWithBookAccess(contractor.permissions, bookAccessMode), can_act_as: contractor.can_act_as }), onSuccess: onChanged });
-  const saveLogin = useMutation({ mutationFn: () => contractorApi.update(scopeId, contractor.id, { type: 'real', username: login.username || null, email: login.email, password: login.password }), onSuccess: () => { setLoginOpen(false); setLogin((current) => ({ ...current, password: '' })); onChanged(); } });
-  const saveExecutor = useMutation({ mutationFn: (isExecutor) => contractorApi.update(scopeId, contractor.id, { is_executor: isExecutor }), onSuccess: onChanged });
-  return <>
-    <div className="contractor-account-tools">
-      <label>Доступ к Booker<select value={contractor.book_access_mode ?? 'none'} disabled={saveAccess.isPending} onChange={(event) => saveAccess.mutate(event.target.value)}><option value="none">Запретить</option><option value="projects">Только книги доступных проектов</option><option value="all">Все книги скоупа</option></select></label>
-      <label className="contractor-executor-toggle"><input type="checkbox" checked={contractor.is_executor} disabled={saveExecutor.isPending} onChange={(event) => saveExecutor.mutate(event.target.checked)}/><span>Исполнитель</span></label>
-      <button onClick={() => setLoginOpen(true)}>{contractor.type === 'virtual' ? 'Оживить и разрешить вход' : 'Сменить пароль'}</button>
-      {(saveAccess.isPending || saveExecutor.isPending) && <small>сохраняю…</small>}
-    </div>
-    {loginOpen && <div className="contractor-modal-backdrop contractor-login-backdrop" onMouseDown={() => setLoginOpen(false)}><form className="contractor-modal contractor-login-modal" onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); saveLogin.mutate(); }}><header><div><strong>{contractor.type === 'virtual' ? 'Оживить пользователя' : 'Новый пароль'}</strong><small>{contractor.name}</small></div><button type="button" onClick={() => setLoginOpen(false)}><IconX size={18}/></button></header>{contractor.type === 'virtual' && <p className="contractor-hint">Аккаунт станет реальным пользователем и сможет входить через форму авторизации.</p>}<label>Логин<input value={login.username} onChange={(event) => setLogin({ ...login, username: event.target.value })} placeholder="Необязательно"/></label><label>Email<input type="email" required value={login.email} onChange={(event) => setLogin({ ...login, email: event.target.value })}/></label><label>{contractor.type === 'virtual' ? 'Первоначальный пароль' : 'Новый пароль'}<input autoFocus type="password" required minLength="8" value={login.password} onChange={(event) => setLogin({ ...login, password: event.target.value })}/></label>{saveLogin.error && <p className="contractor-error">{saveLogin.error.message}</p>}<footer><button type="button" onClick={() => setLoginOpen(false)}>Отмена</button><button className="contractor-primary" disabled={saveLogin.isPending}>{saveLogin.isPending ? 'Сохраняю…' : contractor.type === 'virtual' ? 'Оживить' : 'Сменить пароль'}</button></footer></form></div>}
-  </>;
+  const [login, setLogin] = useState({
+    username: contractor.username ?? '',
+    email: contractor.email ?? '',
+    password: '',
+  });
+  const saveAccess = useMutation({
+    mutationFn: (bookAccessMode) =>
+      contractorApi.updateAccess(scopeId, contractor.id, {
+        role: contractor.role,
+        project_access_mode: contractor.project_access_mode,
+        book_access_mode: bookAccessMode,
+        project_ids: contractor.projects.map((project) => project.id),
+        permissions: permissionsWithBookAccess(contractor.permissions, bookAccessMode),
+        can_act_as: contractor.can_act_as,
+      }),
+    onSuccess: onChanged,
+  });
+  const saveLogin = useMutation({
+    mutationFn: () =>
+      contractorApi.update(scopeId, contractor.id, {
+        type: 'real',
+        username: login.username || null,
+        email: login.email,
+        password: login.password,
+      }),
+    onSuccess: () => {
+      setLoginOpen(false);
+      setLogin((current) => ({ ...current, password: '' }));
+      onChanged();
+    },
+  });
+  const saveExecutor = useMutation({
+    mutationFn: (isExecutor) => contractorApi.update(scopeId, contractor.id, { is_executor: isExecutor }),
+    onSuccess: onChanged,
+  });
+  return (
+    <>
+      <div className="contractor-account-tools">
+        <label>
+          Доступ к Booker
+          <select value={contractor.book_access_mode ?? 'none'} disabled={saveAccess.isPending} onChange={(event) => saveAccess.mutate(event.target.value)}>
+            <option value="none">Запретить</option>
+            <option value="projects">Только книги доступных проектов</option>
+            <option value="all">Все книги скоупа</option>
+          </select>
+        </label>
+        <label className="contractor-executor-toggle">
+          <input type="checkbox" checked={contractor.is_executor} disabled={saveExecutor.isPending} onChange={(event) => saveExecutor.mutate(event.target.checked)} />
+          <span>Исполнитель</span>
+        </label>
+        <button onClick={() => setLoginOpen(true)}>{contractor.type === 'virtual' ? 'Оживить и разрешить вход' : 'Сменить пароль'}</button>
+        {(saveAccess.isPending || saveExecutor.isPending) && <small>сохраняю…</small>}
+      </div>
+      {loginOpen && (
+        <div className="contractor-modal-backdrop contractor-login-backdrop" onMouseDown={() => setLoginOpen(false)}>
+          <form
+            className="contractor-modal contractor-login-modal"
+            onMouseDown={(event) => event.stopPropagation()}
+            onSubmit={(event) => {
+              event.preventDefault();
+              saveLogin.mutate();
+            }}
+          >
+            <header>
+              <div>
+                <strong>{contractor.type === 'virtual' ? 'Оживить пользователя' : 'Новый пароль'}</strong>
+                <small>{contractor.name}</small>
+              </div>
+              <button type="button" onClick={() => setLoginOpen(false)}>
+                <IconX size={18} />
+              </button>
+            </header>
+            {contractor.type === 'virtual' && <p className="contractor-hint">Аккаунт станет реальным пользователем и сможет входить через форму авторизации.</p>}
+            <label>
+              Логин
+              <input value={login.username} onChange={(event) => setLogin({ ...login, username: event.target.value })} placeholder="Необязательно" />
+            </label>
+            <label>
+              Email
+              <input type="email" required value={login.email} onChange={(event) => setLogin({ ...login, email: event.target.value })} />
+            </label>
+            <label>
+              {contractor.type === 'virtual' ? 'Первоначальный пароль' : 'Новый пароль'}
+              <input autoFocus type="password" required minLength="8" value={login.password} onChange={(event) => setLogin({ ...login, password: event.target.value })} />
+            </label>
+            {saveLogin.error && <p className="contractor-error">{saveLogin.error.message}</p>}
+            <footer>
+              <button type="button" onClick={() => setLoginOpen(false)}>
+                Отмена
+              </button>
+              <button className="contractor-primary" disabled={saveLogin.isPending}>
+                {saveLogin.isPending ? 'Сохраняю…' : contractor.type === 'virtual' ? 'Оживить' : 'Сменить пароль'}
+              </button>
+            </footer>
+          </form>
+        </div>
+      )}
+    </>
+  );
 }
 
 function ContractorCreate({ scopeId, options, onClose, onCreated }) {
   const canManageAll = options?.can_manage_all !== false;
   const defaultRole = canManageAll ? 'member' : 'observer';
-  const [form, setForm] = useState({ name: '', position: '', type: canManageAll ? 'virtual' : 'agent', is_executor: canManageAll, role: defaultRole, project_access_mode: 'none', book_access_mode: 'none', permissions: permissionsForRole(defaultRole), project_ids: [], can_act_as: canManageAll });
-  const create = useMutation({ mutationFn: () => contractorApi.create(scopeId, { ...form, permissions: permissionsWithBookAccess(form.permissions, form.book_access_mode) }), onSuccess: onCreated });
+  const [form, setForm] = useState({
+    name: '',
+    position: '',
+    type: canManageAll ? 'virtual' : 'agent',
+    is_executor: canManageAll,
+    role: defaultRole,
+    project_access_mode: 'none',
+    book_access_mode: 'none',
+    permissions: permissionsForRole(defaultRole),
+    project_ids: [],
+    can_act_as: canManageAll,
+  });
+  const create = useMutation({
+    mutationFn: () =>
+      contractorApi.create(scopeId, {
+        ...form,
+        permissions: permissionsWithBookAccess(form.permissions, form.book_access_mode),
+      }),
+    onSuccess: onCreated,
+  });
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
-  const changeType = (event) => { const next = event.target.value; setForm((current) => ({ ...current, type: next, is_executor: next !== 'agent', can_act_as: next === 'virtual' })); };
-  return <div className="contractor-modal-backdrop" onMouseDown={onClose}><form className="contractor-modal" onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
-    <header><div><strong>{canManageAll ? 'Новый актор' : 'Новый агент'}</strong><small>Добавится в текущий скоуп</small></div><button type="button" onClick={onClose}><IconX size={18}/></button></header>
-    <label>Имя<input autoFocus required value={form.name} onChange={set('name')} placeholder="Имя коллеги или агента"/></label>
-    <label>Должность<input value={form.position} onChange={set('position')} placeholder="Системный администратор"/></label>
-    <div className="contractor-form-row"><label>Тип<select value={form.type} disabled={!canManageAll} onChange={changeType}>{(options?.types ?? Object.keys(typeLabels)).map((value) => <option key={value} value={value}>{typeLabels[value]}</option>)}</select></label><label>Роль<select value={form.role} disabled={!canManageAll} onChange={(event) => { const role = event.target.value; setForm((current) => ({ ...current, role, permissions: permissionsForRole(role) })); }}><option value="member">Участник</option><option value="observer">Наблюдатель</option><option value="admin">Администратор</option></select></label></div>
-    {form.type !== 'agent' && <label className="contractor-checkbox"><input type="checkbox" checked={form.is_executor} onChange={(event) => setForm((current) => ({ ...current, is_executor: event.target.checked }))}/>Исполнитель — показывать в назначениях и KPI</label>}
-    {form.type === 'real' && <><label>Email<input type="email" required value={form.email ?? ''} onChange={set('email')}/></label><label>Временный пароль<input type="password" required minLength="8" value={form.password ?? ''} onChange={set('password')}/></label></>}
-    <p className="contractor-hint">{canManageAll ? 'Роль сразу применит стандартный набор возможностей. После создания его можно точечно изменить в редакторе.' : 'Агент принадлежит вам и не сможет получить больше прав и проектов, чем есть у вашей учётки.'}</p>{create.error && <p className="contractor-error">{create.error.message}</p>}<footer><button type="button" onClick={onClose}>Отмена</button><button className="contractor-primary" disabled={create.isPending}>Создать</button></footer>
-  </form></div>;
+  const changeType = (event) => {
+    const next = event.target.value;
+    setForm((current) => ({
+      ...current,
+      type: next,
+      is_executor: next !== 'agent',
+      can_act_as: next === 'virtual',
+    }));
+  };
+  return (
+    <div className="contractor-modal-backdrop" onMouseDown={onClose}>
+      <form
+        className="contractor-modal"
+        onMouseDown={(event) => event.stopPropagation()}
+        onSubmit={(event) => {
+          event.preventDefault();
+          create.mutate();
+        }}
+      >
+        <header>
+          <div>
+            <strong>{canManageAll ? 'Новый актор' : 'Новый агент'}</strong>
+            <small>Добавится в текущий скоуп</small>
+          </div>
+          <button type="button" onClick={onClose}>
+            <IconX size={18} />
+          </button>
+        </header>
+        <label>
+          Имя
+          <input autoFocus required value={form.name} onChange={set('name')} placeholder="Имя коллеги или агента" />
+        </label>
+        <label>
+          Должность
+          <input value={form.position} onChange={set('position')} placeholder="Системный администратор" />
+        </label>
+        <div className="contractor-form-row">
+          <label>
+            Тип
+            <select value={form.type} disabled={!canManageAll} onChange={changeType}>
+              {(options?.types ?? Object.keys(typeLabels)).map((value) => (
+                <option key={value} value={value}>
+                  {typeLabels[value]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Роль
+            <select
+              value={form.role}
+              disabled={!canManageAll}
+              onChange={(event) => {
+                const role = event.target.value;
+                setForm((current) => ({
+                  ...current,
+                  role,
+                  permissions: permissionsForRole(role),
+                }));
+              }}
+            >
+              <option value="member">Участник</option>
+              <option value="observer">Наблюдатель</option>
+              <option value="admin">Администратор</option>
+            </select>
+          </label>
+        </div>
+        {form.type !== 'agent' && (
+          <label className="contractor-checkbox">
+            <input
+              type="checkbox"
+              checked={form.is_executor}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  is_executor: event.target.checked,
+                }))
+              }
+            />
+            Исполнитель — показывать в назначениях и KPI
+          </label>
+        )}
+        {form.type === 'real' && (
+          <>
+            <label>
+              Email
+              <input type="email" required value={form.email ?? ''} onChange={set('email')} />
+            </label>
+            <label>
+              Временный пароль
+              <input type="password" required minLength="8" value={form.password ?? ''} onChange={set('password')} />
+            </label>
+          </>
+        )}
+        <p className="contractor-hint">{canManageAll ? 'Роль сразу применит стандартный набор возможностей. После создания его можно точечно изменить в редакторе.' : 'Агент принадлежит вам и не сможет получить больше прав и проектов, чем есть у вашей учётки.'}</p>
+        {create.error && <p className="contractor-error">{create.error.message}</p>}
+        <footer>
+          <button type="button" onClick={onClose}>
+            Отмена
+          </button>
+          <button className="contractor-primary" disabled={create.isPending}>
+            Создать
+          </button>
+        </footer>
+      </form>
+    </div>
+  );
 }
 
 function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const { check } = useAuth();
   const queryClient = useQueryClient();
   const [plainToken, setPlainToken] = useState(null);
-  const { data: projects = [] } = useQuery({ queryKey: ['projects', scopeId], queryFn: () => projectApi.list(scopeId) });
-  const { data: options } = useQuery({ queryKey: ['contractor-options', scopeId], queryFn: () => contractorApi.options(scopeId) });
-  const [form, setForm] = useState(() => contractor ? ({ name: contractor.name, position: contractor.position ?? '', type: contractor.type, status: contractor.status, email: contractor.email ?? '', username: contractor.username ?? '', role: contractor.role, project_access_mode: contractor.project_access_mode, book_access_mode: contractor.book_access_mode ?? 'none', project_ids: contractor.projects.map((project) => project.id), scope_ids: [], permissions: explicitPermissions(contractor), can_act_as: contractor.can_act_as }) : null);
+  const [instructionCopied, setInstructionCopied] = useState(false);
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects', scopeId],
+    queryFn: () => projectApi.list(scopeId),
+  });
+  const { data: options } = useQuery({
+    queryKey: ['contractor-options', scopeId],
+    queryFn: () => contractorApi.options(scopeId),
+  });
+  const [form, setForm] = useState(() =>
+    contractor
+      ? {
+          name: contractor.name,
+          position: contractor.position ?? '',
+          type: contractor.type,
+          status: contractor.status,
+          email: contractor.email ?? '',
+          username: contractor.username ?? '',
+          role: contractor.role,
+          project_access_mode: contractor.project_access_mode,
+          book_access_mode: contractor.book_access_mode ?? 'none',
+          project_ids: contractor.projects.map((project) => project.id),
+          scope_ids: [],
+          permissions: explicitPermissions(contractor),
+          can_act_as: contractor.can_act_as,
+        }
+      : null,
+  );
   const previousRole = useRef(form?.role);
   const selectedRole = form?.role;
   useEffect(() => {
     if (!selectedRole || previousRole.current === selectedRole) return;
     previousRole.current = selectedRole;
-    setForm((current) => ({ ...current, permissions: permissionsForRole(selectedRole) }));
+    setForm((current) => ({
+      ...current,
+      permissions: permissionsForRole(selectedRole),
+    }));
   }, [selectedRole]);
-  const saveProfile = useMutation({ mutationFn: () => contractorApi.update(scopeId, contractor.id, { name: form.name, position: form.position || null, status: form.status, email: form.email || null, username: form.username || null }), onSuccess: () => { onChanged(); } });
-  const saveAccess = useMutation({ mutationFn: () => contractorApi.updateAccess(scopeId, contractor.id, { role: form.role, project_access_mode: form.project_access_mode, book_access_mode: form.book_access_mode, project_ids: form.project_ids, permissions: permissionsWithBookAccess(form.permissions, form.book_access_mode), can_act_as: form.can_act_as }), onSuccess: onChanged });
-  const addScopes = useMutation({ mutationFn: () => contractorApi.addScopes(scopeId, contractor.id, form.scope_ids), onSuccess: () => { setForm((current) => ({ ...current, scope_ids: [] })); onChanged(); } });
-  const act = useMutation({ mutationFn: () => contractorApi.startActing(scopeId, contractor.id), onSuccess: async () => { await check(); queryClient.invalidateQueries(); onClose(); } });
-  const issue = useMutation({ mutationFn: () => contractorApi.issueToken(scopeId, contractor.id, { name: 'Codex workstation', abilities: (form.permissions.allow.includes('*') ? (options?.abilities ?? Object.keys(abilityLabels)) : form.permissions.allow).filter((ability) => !['contractor.manage', 'agent.manage_own'].includes(ability)) }), onSuccess: (token) => { setPlainToken(token.token); onChanged(); } });
-  const revoke = useMutation({ mutationFn: (tokenId) => contractorApi.revokeToken(scopeId, contractor.id, tokenId), onSuccess: onChanged });
+  const saveProfile = useMutation({
+    mutationFn: () =>
+      contractorApi.update(scopeId, contractor.id, {
+        name: form.name,
+        position: form.position || null,
+        status: form.status,
+        email: form.email || null,
+        username: form.username || null,
+      }),
+    onSuccess: () => {
+      onChanged();
+    },
+  });
+  const saveAccess = useMutation({
+    mutationFn: () =>
+      contractorApi.updateAccess(scopeId, contractor.id, {
+        role: form.role,
+        project_access_mode: form.project_access_mode,
+        book_access_mode: form.book_access_mode,
+        project_ids: form.project_ids,
+        permissions: permissionsWithBookAccess(form.permissions, form.book_access_mode),
+        can_act_as: form.can_act_as,
+      }),
+    onSuccess: onChanged,
+  });
+  const addScopes = useMutation({
+    mutationFn: () => contractorApi.addScopes(scopeId, contractor.id, form.scope_ids),
+    onSuccess: () => {
+      setForm((current) => ({ ...current, scope_ids: [] }));
+      onChanged();
+    },
+  });
+  const act = useMutation({
+    mutationFn: () => contractorApi.startActing(scopeId, contractor.id),
+    onSuccess: async () => {
+      await check();
+      queryClient.invalidateQueries();
+      onClose();
+    },
+  });
+  const issue = useMutation({
+    mutationFn: () =>
+      contractorApi.issueToken(scopeId, contractor.id, {
+        name: 'Codex workstation',
+        abilities: (form.permissions.allow.includes('*') ? (options?.abilities ?? Object.keys(abilityLabels)) : form.permissions.allow).filter((ability) => !['contractor.manage', 'agent.manage_own'].includes(ability)),
+      }),
+    onSuccess: (token) => {
+      setPlainToken(token.token);
+      onChanged();
+    },
+  });
+  const revoke = useMutation({
+    mutationFn: (tokenId) => contractorApi.revokeToken(scopeId, contractor.id, tokenId),
+    onSuccess: onChanged,
+  });
+  const copyAgentInstruction = async () => {
+    if (!plainToken) return;
+    await navigator.clipboard.writeText(buildAgentInstruction(plainToken));
+    setInstructionCopied(true);
+    window.setTimeout(() => setInstructionCopied(false), 2200);
+  };
   if (!contractor || !form) return <aside className="contractor-editor">Загружаю…</aside>;
-  const toggleProject = (projectId) => setForm((current) => ({ ...current, project_ids: current.project_ids.includes(projectId) ? current.project_ids.filter((id) => id !== projectId) : [...current.project_ids, projectId] }));
-  const setAbility = (ability, value) => setForm((current) => ({ ...current, permissions: { allow: current.permissions.allow.filter((item) => item !== ability), deny: current.permissions.deny.filter((item) => item !== ability), ...(value === 'allow' ? { allow: [...current.permissions.allow.filter((item) => item !== ability), ability] } : {}), ...(value === 'deny' ? { deny: [...current.permissions.deny.filter((item) => item !== ability), ability] } : {}) } }));
-  return <aside className="contractor-editor"><header><div className={`contractor-editor-icon contractor-card--${contractor.type}`}><TypeIcon type={contractor.type}/></div><div><strong>{contractor.name}</strong><small>{typeLabels[contractor.type]}</small></div><button onClick={onClose}><IconX size={19}/></button></header><section><h2>Профиль</h2><div className="contractor-form-row"><label>Имя<input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}/></label><label>Статус<select value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))}>{Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div><label>Должность<input value={form.position} onChange={(event) => setForm((current) => ({ ...current, position: event.target.value }))} placeholder="Кто есть кто"/></label><div className="contractor-form-row"><label>Логин<input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))}/></label><label>Email<input value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}/></label></div><button className="contractor-secondary" onClick={() => saveProfile.mutate()}>Сохранить профиль</button></section><section><h2>Доступ к скоупам</h2><div className="contractor-scope-list">{(contractor.scopes ?? []).map((item) => <span key={item.id}>{item.name}<small>{item.role}</small></span>)}</div><div className="contractor-scope-add">{(options?.manageable_scopes ?? []).filter((item) => !(contractor.scopes ?? []).some((scope) => scope.id === item.id)).map((item) => <label key={item.id}><input type="checkbox" checked={form.scope_ids.includes(item.id)} onChange={() => setForm((current) => ({ ...current, scope_ids: current.scope_ids.includes(item.id) ? current.scope_ids.filter((id) => id !== item.id) : [...current.scope_ids, item.id] }))}/>{item.name}</label>)}</div><button className="contractor-secondary" disabled={!form.scope_ids.length || addScopes.isPending} onClick={() => addScopes.mutate()}>Добавить выбранные скоупы</button></section><section><h2>Область доступа текущего скоупа</h2><div className="contractor-form-row"><label>Роль<select value={form.role} disabled={form.role === 'owner'} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}>{form.role === 'owner' && <option value="owner">Владелец</option>}<option value="admin">Администратор</option><option value="member">Участник</option><option value="observer">Наблюдатель</option></select></label><label>Проекты<select value={form.project_access_mode} onChange={(event) => setForm((current) => ({ ...current, project_access_mode: event.target.value }))}><option value="all">Все проекты</option><option value="restricted">Только выбранные</option><option value="none">Без проектов</option></select></label></div>{form.project_access_mode === 'restricted' && <div className="contractor-projects">{projects.map((project) => <label key={project.id}><input type="checkbox" checked={form.project_ids.includes(project.id)} onChange={() => toggleProject(project.id)}/><i style={{ background: project.color }}/><span>{project.key} · {project.title}</span></label>)}</div>}<h3>Возможности и запреты</h3><div className="contractor-abilities">{(options?.abilities ?? Object.keys(abilityLabels)).map((ability) => { const value = form.permissions.deny.includes(ability) ? 'deny' : form.permissions.allow.includes(ability) ? 'allow' : 'inherit'; return <label key={ability}><span>{abilityLabels[ability] ?? ability}<code>{ability}</code></span><select value={value} onChange={(event) => setAbility(ability, event.target.value)}><option value="inherit">По роли</option><option value="allow">Разрешить</option><option value="deny">Запретить</option></select></label>; })}</div>{contractor.type === 'virtual' && <label className="contractor-checkbox"><input type="checkbox" checked={form.can_act_as} onChange={(event) => setForm((current) => ({ ...current, can_act_as: event.target.checked }))}/>Разрешить мне работать от имени этого пользователя</label>}<button className="contractor-primary" onClick={() => saveAccess.mutate()}>Сохранить доступ</button></section>{contractor.type === 'virtual' && <section className="contractor-persona"><h2>Виртуальная персона</h2><p>Новые задачи и комментарии будут подписаны этим пользователем. Реальный оператор останется в аудите.</p><button disabled={!contractor.can_act_as || act.isPending} onClick={() => act.mutate()}><IconUserCog size={17}/>Работать от имени {contractor.name}</button></section>}{contractor.type === 'agent' && <section><h2>Ключи агента</h2><p className="contractor-hint">Ключ получает только разрешённые выше capabilities и показывается один раз.</p><button className="contractor-token-button" disabled={issue.isPending || form.permissions.allow.filter((item) => item !== 'contractor.manage').length === 0} onClick={() => issue.mutate()}><IconKey size={17}/>Выпустить ключ для Codex</button>{plainToken && <div className="contractor-token"><strong>Скопируйте сейчас</strong><code>{plainToken}</code><button onClick={() => navigator.clipboard.writeText(plainToken)}><IconCopy size={15}/>Копировать</button></div>}<div className="contractor-token-list">{(contractor.tokens ?? []).map((token) => <div key={token.id}><span><strong>{token.name}</strong><small>{token.last_used_at ? `Использован ${new Date(token.last_used_at).toLocaleString()}` : 'Ещё не использован'}</small></span><button onClick={() => revoke.mutate(token.id)}>Отозвать</button></div>)}</div></section>}{(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error) && <p className="contractor-error">{(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error).message}</p>}</aside>;
+  const toggleProject = (projectId) =>
+    setForm((current) => ({
+      ...current,
+      project_ids: current.project_ids.includes(projectId) ? current.project_ids.filter((id) => id !== projectId) : [...current.project_ids, projectId],
+    }));
+  const setAbility = (ability, value) =>
+    setForm((current) => ({
+      ...current,
+      permissions: {
+        allow: current.permissions.allow.filter((item) => item !== ability),
+        deny: current.permissions.deny.filter((item) => item !== ability),
+        ...(value === 'allow'
+          ? {
+              allow: [...current.permissions.allow.filter((item) => item !== ability), ability],
+            }
+          : {}),
+        ...(value === 'deny'
+          ? {
+              deny: [...current.permissions.deny.filter((item) => item !== ability), ability],
+            }
+          : {}),
+      },
+    }));
+  return (
+    <aside className="contractor-editor">
+      <header>
+        <div className={`contractor-editor-icon contractor-card--${contractor.type}`}>
+          <TypeIcon type={contractor.type} />
+        </div>
+        <div>
+          <strong>{contractor.name}</strong>
+          <small>{typeLabels[contractor.type]}</small>
+        </div>
+        <button onClick={onClose}>
+          <IconX size={19} />
+        </button>
+      </header>
+      <section>
+        <h2>Профиль</h2>
+        <div className="contractor-form-row">
+          <label>
+            Имя
+            <input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} />
+          </label>
+          <label>
+            Статус
+            <select
+              value={form.status}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  status: event.target.value,
+                }))
+              }
+            >
+              {Object.entries(statusLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <label>
+          Должность
+          <input
+            value={form.position}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                position: event.target.value,
+              }))
+            }
+            placeholder="Кто есть кто"
+          />
+        </label>
+        <div className="contractor-form-row">
+          <label>
+            Логин
+            <input
+              value={form.username}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  username: event.target.value,
+                }))
+              }
+            />
+          </label>
+          <label>
+            Email
+            <input
+              value={form.email}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  email: event.target.value,
+                }))
+              }
+            />
+          </label>
+        </div>
+        <button className="contractor-secondary" onClick={() => saveProfile.mutate()}>
+          Сохранить профиль
+        </button>
+      </section>
+      <section>
+        <h2>Доступ к скоупам</h2>
+        <div className="contractor-scope-list">
+          {(contractor.scopes ?? []).map((item) => (
+            <span key={item.id}>
+              {item.name}
+              <small>{item.role}</small>
+            </span>
+          ))}
+        </div>
+        <div className="contractor-scope-add">
+          {(options?.manageable_scopes ?? [])
+            .filter((item) => !(contractor.scopes ?? []).some((scope) => scope.id === item.id))
+            .map((item) => (
+              <label key={item.id}>
+                <input
+                  type="checkbox"
+                  checked={form.scope_ids.includes(item.id)}
+                  onChange={() =>
+                    setForm((current) => ({
+                      ...current,
+                      scope_ids: current.scope_ids.includes(item.id) ? current.scope_ids.filter((id) => id !== item.id) : [...current.scope_ids, item.id],
+                    }))
+                  }
+                />
+                {item.name}
+              </label>
+            ))}
+        </div>
+        <button className="contractor-secondary" disabled={!form.scope_ids.length || addScopes.isPending} onClick={() => addScopes.mutate()}>
+          Добавить выбранные скоупы
+        </button>
+      </section>
+      <section>
+        <h2>Область доступа текущего скоупа</h2>
+        <div className="contractor-form-row">
+          <label>
+            Роль
+            <select value={form.role} disabled={form.role === 'owner'} onChange={(event) => setForm((current) => ({ ...current, role: event.target.value }))}>
+              {form.role === 'owner' && <option value="owner">Владелец</option>}
+              <option value="admin">Администратор</option>
+              <option value="member">Участник</option>
+              <option value="observer">Наблюдатель</option>
+            </select>
+          </label>
+          <label>
+            Проекты
+            <select
+              value={form.project_access_mode}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  project_access_mode: event.target.value,
+                }))
+              }
+            >
+              <option value="all">Все проекты</option>
+              <option value="restricted">Только выбранные</option>
+              <option value="none">Без проектов</option>
+            </select>
+          </label>
+        </div>
+        {form.project_access_mode === 'restricted' && (
+          <div className="contractor-projects">
+            {projects.map((project) => (
+              <label key={project.id}>
+                <input type="checkbox" checked={form.project_ids.includes(project.id)} onChange={() => toggleProject(project.id)} />
+                <i style={{ background: project.color }} />
+                <span>
+                  {project.key} · {project.title}
+                </span>
+              </label>
+            ))}
+          </div>
+        )}
+        <h3>Возможности и запреты</h3>
+        <div className="contractor-abilities">
+          {(options?.abilities ?? Object.keys(abilityLabels)).map((ability) => {
+            const value = form.permissions.deny.includes(ability) ? 'deny' : form.permissions.allow.includes(ability) ? 'allow' : 'inherit';
+            return (
+              <label key={ability}>
+                <span>
+                  {abilityLabels[ability] ?? ability}
+                  <code>{ability}</code>
+                </span>
+                <select value={value} onChange={(event) => setAbility(ability, event.target.value)}>
+                  <option value="inherit">По роли</option>
+                  <option value="allow">Разрешить</option>
+                  <option value="deny">Запретить</option>
+                </select>
+              </label>
+            );
+          })}
+        </div>
+        {contractor.type === 'virtual' && (
+          <label className="contractor-checkbox">
+            <input
+              type="checkbox"
+              checked={form.can_act_as}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  can_act_as: event.target.checked,
+                }))
+              }
+            />
+            Разрешить мне работать от имени этого пользователя
+          </label>
+        )}
+        <button className="contractor-primary" onClick={() => saveAccess.mutate()}>
+          Сохранить доступ
+        </button>
+      </section>
+      {contractor.type === 'virtual' && (
+        <section className="contractor-persona">
+          <h2>Виртуальная персона</h2>
+          <p>Новые задачи и комментарии будут подписаны этим пользователем. Реальный оператор останется в аудите.</p>
+          <button disabled={!contractor.can_act_as || act.isPending} onClick={() => act.mutate()}>
+            <IconUserCog size={17} />
+            Работать от имени {contractor.name}
+          </button>
+        </section>
+      )}
+      {contractor.type === 'agent' && (
+        <section>
+          <h2>Ключи агента</h2>
+          <p className="contractor-hint">Ключ получает только разрешённые выше capabilities и показывается один раз.</p>
+          <div className="contractor-agent-actions">
+            <button className="contractor-token-button" disabled={issue.isPending || form.permissions.allow.filter((item) => item !== 'contractor.manage').length === 0} onClick={() => issue.mutate()}>
+              <IconKey size={17} />
+              {issue.isPending ? 'Выпускаю…' : 'Выпустить ключ для Codex'}
+            </button>
+            <button className="contractor-instruction-button" disabled={!plainToken} title={plainToken ? 'Скопировать адреса, ключ и команду подключения' : 'Сначала выпустите новый ключ'} onClick={copyAgentInstruction}>
+              <IconCopy size={17} />
+              {instructionCopied ? 'Инструкция скопирована' : 'Скопировать инструкцию для агента'}
+            </button>
+          </div>
+          {plainToken && (
+            <div className="contractor-token">
+              <strong>Скопируйте сейчас</strong>
+              <code>{plainToken}</code>
+              <button onClick={() => navigator.clipboard.writeText(plainToken)}>
+                <IconCopy size={15} />
+                Копировать
+              </button>
+            </div>
+          )}
+          <div className="contractor-token-list">
+            {(contractor.tokens ?? []).map((token) => (
+              <div key={token.id}>
+                <span>
+                  <strong>{token.name}</strong>
+                  <small>{token.last_used_at ? `Использован ${new Date(token.last_used_at).toLocaleString()}` : 'Ещё не использован'}</small>
+                </span>
+                <button onClick={() => revoke.mutate(token.id)}>Отозвать</button>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error) && <p className="contractor-error">{(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error).message}</p>}
+    </aside>
+  );
 }
