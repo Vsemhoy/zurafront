@@ -316,6 +316,20 @@ export function TaskEditorPage() {
                 ))}
               </select>
             </label>
+            <label>
+              Плановая дата
+              <input
+                type="date"
+                value={task.due_at ? String(task.due_at).slice(0, 10) : ""}
+                onChange={(event) =>
+                  save.mutate({
+                    due_at: event.target.value
+                      ? `${event.target.value} 12:00:00`
+                      : null,
+                  })
+                }
+              />
+            </label>
           </div>
           <label className="task-customer-field">
             Заказчик
