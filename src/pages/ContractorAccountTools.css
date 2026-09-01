@@ -1,8 +1,9 @@
 .contractor-account-tools {
-    z-index: 62;
-    top: 8px;
-    right: 62px;
-    width: min(410px, calc(96vw - 190px));
+    position: relative;
+    z-index: auto;
+    top: auto;
+    right: auto;
+    width: 100%;
     grid-template-columns: minmax(150px, 1fr) auto auto;
     align-items: end;
     gap: 6px;
@@ -10,6 +11,29 @@
     border-left: 2px solid #176dbd;
     background: #edf3fa;
     padding: 5px 7px;
+    box-shadow: none;
+}
+
+.contractor-editor-stack {
+    position: fixed;
+    z-index: 61;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(690px, 96vw);
+    overflow: auto;
+    background: #fff;
+    box-shadow: -12px 0 44px #14213b22;
+    padding: 8px 20px 35px;
+}
+
+.contractor-editor-stack > .contractor-editor {
+    position: relative;
+    z-index: auto;
+    inset: auto;
+    width: 100%;
+    overflow: visible;
+    padding: 8px 0 0;
     box-shadow: none;
 }
 
@@ -25,10 +49,7 @@
 
 @media (max-width: 700px) {
     .contractor-account-tools {
-        top: 52px;
-        right: 13px;
-        width: calc(96vw - 26px);
         grid-template-columns: 1fr 1fr;
     }
-    .contractor-editor > header { margin-bottom: 48px; }
+    .contractor-editor-stack { padding: 8px 13px 28px; }
 }

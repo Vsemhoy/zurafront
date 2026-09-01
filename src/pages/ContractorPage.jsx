@@ -87,8 +87,7 @@ export function ContractorPage() {
         }}
       />
     )}
-    {selectedContractor && activeScope && <><div className="contractor-backdrop" onClick={() => setSelectedId(null)}/><ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onClose={() => setSelectedId(null)} onChanged={refresh}/></>}
-    {selectedContractor && selectedContractor.type !== 'agent' && activeScope && <ContractorAccountTools scopeId={activeScope.id} contractor={selectedContractor} onChanged={refresh}/>}
+    {selectedContractor && activeScope && <><div className="contractor-backdrop" onClick={() => setSelectedId(null)}/><div className="contractor-editor-stack">{selectedContractor.type !== 'agent' && <ContractorAccountTools scopeId={activeScope.id} contractor={selectedContractor} onChanged={refresh}/>}<ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onClose={() => setSelectedId(null)} onChanged={refresh}/></div></>}
     {selectedContractor && selectedContractor.id !== currentUser?.id && activeScope && <ContractorDeleteButton scopeId={activeScope.id} contractor={selectedContractor} onDeleted={() => { setSelectedId(null); refresh(); }}/>}
   </main>;
 }
