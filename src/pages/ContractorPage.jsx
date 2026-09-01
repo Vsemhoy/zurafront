@@ -7,6 +7,7 @@ import { contractorApi } from '../entities/contractor/api';
 import { projectApi } from '../entities/project/api';
 import './ContractorPage.css';
 import './ContractorModalFix.css';
+import './ContractorAccountTools.css';
 
 const typeLabels = { real: 'Реальный', virtual: 'Виртуальный', agent: 'Агент' };
 const statusLabels = { active: 'Активен', blocked: 'Заблокирован', dormant: 'Спит' };

@@ -1,0 +1,39 @@
+.contractor-editor > header { margin-bottom: 118px; }
+
+.contractor-account-tools {
+    z-index: 62;
+    top: 72px;
+    right: 20px;
+    width: min(650px, calc(96vw - 40px));
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 8px 12px;
+    border: 0;
+    border-left: 3px solid #176dbd;
+    background: #edf3fa;
+    padding: 10px 12px;
+    box-shadow: 0 5px 18px #14213b14;
+}
+
+.contractor-account-tools::before {
+    content: 'Учётная запись';
+    grid-column: 1 / -1;
+    color: #27364a;
+    font-size: 13px;
+    font-weight: 750;
+}
+
+.contractor-account-tools > button {
+    min-width: 190px;
+    padding: 0 12px;
+}
+
+@media (max-width: 700px) {
+    .contractor-editor > header { margin-bottom: 154px; }
+    .contractor-account-tools {
+        right: 13px;
+        width: calc(96vw - 26px);
+        grid-template-columns: 1fr;
+    }
+    .contractor-account-tools::before { grid-column: auto; }
+}
