@@ -324,7 +324,7 @@ export function TaskEditorPage() {
               onChange={(event) => save.mutate({ customer_id: event.target.value || null })}
             >
               <option value="">Не указан</option>
-              {assignable.assignees.map((user) => (
+              {(assignable.people ?? assignable.assignees).map((user) => (
                 <option key={user.id} value={user.id}>{user.name}{user.position ? ` · ${user.position}` : ""}</option>
               ))}
             </select>

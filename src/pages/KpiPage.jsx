@@ -18,7 +18,7 @@ const shiftMonth = (month, amount) => {
 export function KpiPage() {
   const { activeScope } = useWorkspace();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState('goals');
+  const [tab, setTab] = useState('report');
   const [month, setMonth] = useState(currentMonth);
   const [personId, setPersonId] = useState('');
   const [editing, setEditing] = useState(null);
@@ -35,7 +35,7 @@ export function KpiPage() {
 
   return <main className="kpi-page">
     <header className="kpi-toolbar"><div><IconTargetArrow size={21}/><h1>KPI</h1><small>{kpis.length} показателей</small></div>{tab === 'goals' && <button onClick={() => setEditing(emptyKpi)}><IconPlus size={16}/>Новый KPI</button>}</header>
-    <nav className="kpi-tabs"><button className={tab === 'goals' ? 'active' : ''} onClick={() => setTab('goals')}>Цели</button><button className={tab === 'report' ? 'active' : ''} onClick={() => setTab('report')}>Отчёт</button></nav>
+    <nav className="kpi-tabs"><button className={tab === 'report' ? 'active' : ''} onClick={() => setTab('report')}>Отчёт</button><button className={tab === 'goals' ? 'active' : ''} onClick={() => setTab('goals')}>Цели</button></nav>
     {tab === 'goals' ? <><ScopeTargets key={JSON.stringify(settings)} scopeId={activeScope.id} settings={settings} onSaved={() => queryClient.invalidateQueries()}/><KpiCatalog kpis={kpis} loading={isLoading} remove={remove} onEdit={setEditing}/></> : <><ReportFilters people={people} personId={activePersonId} setPersonId={setPersonId} month={month} setMonth={setMonth}/><PersonReport stats={stats} loading={statsLoading}/></>}
     {editing ? <KpiEditor scopeId={activeScope.id} kpi={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); refresh(); }}/> : null}
   </main>;
