@@ -12,9 +12,12 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
+import { contractorApi } from "../entities/contractor/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
 import { priorityLabel } from "../entities/task/model";
+import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
+import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
 import {
   BlockerPanel,
   RelationsPanel,
@@ -54,6 +57,11 @@ export function TaskEditorPage() {
   const { data: projects = [] } = useQuery({
     queryKey: ["projects", activeScope?.id],
     queryFn: () => projectApi.list(activeScope.id),
+    enabled: Boolean(activeScope),
+  });
+  const { data: assignable = { assignees: [], agents: [] } } = useQuery({
+    queryKey: ["task-assignable", activeScope?.id],
+    queryFn: () => contractorApi.assignable(activeScope.id),
     enabled: Boolean(activeScope),
   });
   const commentsKey = ["task-comments", activeScope?.id, taskId];
@@ -240,9 +248,26 @@ export function TaskEditorPage() {
               Проект
               <select
                 value={task.project_id ?? ""}
-                onChange={(event) =>
-                  save.mutate({ project_id: event.target.value || null })
-                }
+                onChange={(event) => {
+                  const projectId = event.target.value || null;
+                  const assignee = assignable.assignees.find(
+                    (item) => item.id === task.assignee_id,
+                  );
+                  const agent = assignable.agents.find(
+                    (item) => item.id === task.delegated_agent_id,
+                  );
+                  save.mutate({
+                    project_id: projectId,
+                    ...(assignee &&
+                    !contractorCanAccessProject(assignee, projectId)
+                      ? { assignee_id: null }
+                      : {}),
+                    ...(agent &&
+                    !contractorCanAccessProject(agent, projectId)
+                      ? { delegated_agent_id: null }
+                      : {}),
+                  });
+                }}
               >
                 <option value="">Без проекта</option>
                 {projects.map((project) => (
@@ -268,6 +293,15 @@ export function TaskEditorPage() {
               </select>
             </label>
           </div>
+          <TaskAssignmentFields
+            assignees={assignable.assignees}
+            agents={assignable.agents}
+            assigneeId={task.assignee_id}
+            agentDelegatable={Boolean(task.is_agent_delegatable)}
+            delegatedAgentId={task.delegated_agent_id}
+            projectId={task.project_id}
+            onChange={(payload) => save.mutate(payload)}
+          />
           <div className="editor-mechanics-grid">
             <TaskChecklistPanel
               task={task}

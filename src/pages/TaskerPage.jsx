@@ -32,9 +32,12 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
+import { contractorApi } from "../entities/contractor/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
 import { priorityLabel, taskReference } from "../entities/task/model";
+import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
+import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
 import "./TaskerPage.css";
 import "./TaskInteractions.css";
 import "./Subtasks.css";
@@ -357,6 +360,7 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
 function CreateDialog({
   scopeId,
   projects,
+  assignable,
   defaultProjectId,
   initialStatus,
   onClose,
@@ -373,6 +377,9 @@ function CreateDialog({
     priority: 3,
     description: "",
     color: "#2668D8",
+    assignee_id: "",
+    is_agent_delegatable: false,
+    delegated_agent_id: "",
   });
   const mutation = useMutation({
     mutationFn: () =>
@@ -383,6 +390,11 @@ function CreateDialog({
             priority: Number(form.priority),
             status: initialStatus,
             description: form.description || null,
+            assignee_id: form.assignee_id || null,
+            is_agent_delegatable: form.is_agent_delegatable,
+            delegated_agent_id: form.is_agent_delegatable
+              ? form.delegated_agent_id || null
+              : null,
           })
         : projectApi.create(scopeId, {
             title: form.title,
@@ -472,7 +484,31 @@ function CreateDialog({
             <div className="form-row">
               <label>
                 Проект
-                <select value={form.project_id} onChange={set("project_id")}>
+                <select
+                  value={form.project_id}
+                  onChange={(event) => {
+                    const projectId = event.target.value;
+                    const assignee = assignable.assignees.find(
+                      (item) => item.id === form.assignee_id,
+                    );
+                    const agent = assignable.agents.find(
+                      (item) => item.id === form.delegated_agent_id,
+                    );
+                    setForm((value) => ({
+                      ...value,
+                      project_id: projectId,
+                      assignee_id:
+                        assignee &&
+                        !contractorCanAccessProject(assignee, projectId)
+                          ? ""
+                          : value.assignee_id,
+                      delegated_agent_id:
+                        agent && !contractorCanAccessProject(agent, projectId)
+                          ? ""
+                          : value.delegated_agent_id,
+                    }));
+                  }}
+                >
                   <option value="">Без проекта</option>
                   {projects.map((project) => (
                     <option key={project.id} value={project.id}>
@@ -492,6 +528,17 @@ function CreateDialog({
                 </select>
               </label>
             </div>
+            <TaskAssignmentFields
+              assignees={assignable.assignees}
+              agents={assignable.agents}
+              assigneeId={form.assignee_id}
+              agentDelegatable={form.is_agent_delegatable}
+              delegatedAgentId={form.delegated_agent_id}
+              projectId={form.project_id || null}
+              onChange={(payload) =>
+                setForm((value) => ({ ...value, ...payload }))
+              }
+            />
             <label>
               Описание
               <textarea
@@ -922,7 +969,7 @@ function RelationsPanel({ task, scopeId }) {
   );
 }
 
-function TaskInspector({ scopeId, taskId, projects, onClose }) {
+function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [pane, setPane] = useState("description");
@@ -1048,9 +1095,26 @@ function TaskInspector({ scopeId, taskId, projects, onClose }) {
           Проект
           <select
             value={task.project_id ?? ""}
-            onChange={(event) =>
-              save.mutate({ project_id: event.target.value || null })
-            }
+            onChange={(event) => {
+              const projectId = event.target.value || null;
+              const assignee = assignable.assignees.find(
+                (item) => item.id === task.assignee_id,
+              );
+              const agent = assignable.agents.find(
+                (item) => item.id === task.delegated_agent_id,
+              );
+              save.mutate({
+                project_id: projectId,
+                ...(assignee &&
+                !contractorCanAccessProject(assignee, projectId)
+                  ? { assignee_id: null }
+                  : {}),
+                ...(agent &&
+                !contractorCanAccessProject(agent, projectId)
+                  ? { delegated_agent_id: null }
+                  : {}),
+              });
+            }}
           >
             <option value="">Без проекта</option>
             {projects.map((project) => (
@@ -1076,6 +1140,15 @@ function TaskInspector({ scopeId, taskId, projects, onClose }) {
           </select>
         </label>
       </div>
+      <TaskAssignmentFields
+        assignees={assignable.assignees}
+        agents={assignable.agents}
+        assigneeId={task.assignee_id}
+        agentDelegatable={Boolean(task.is_agent_delegatable)}
+        delegatedAgentId={task.delegated_agent_id}
+        projectId={task.project_id}
+        onChange={(payload) => save.mutate(payload)}
+      />
       <nav className="content-switch">
         <button
           className={activePane === "description" ? "active" : ""}
@@ -1253,6 +1326,11 @@ export function TaskerPage() {
   const { data: projectData = [] } = useQuery({
     queryKey: ["projects", activeScope?.id],
     queryFn: () => projectApi.list(activeScope.id),
+    enabled: Boolean(activeScope),
+  });
+  const { data: assignable = { assignees: [], agents: [] } } = useQuery({
+    queryKey: ["task-assignable", activeScope?.id],
+    queryFn: () => contractorApi.assignable(activeScope.id),
     enabled: Boolean(activeScope),
   });
   const projects = useMemo(
@@ -1635,6 +1713,7 @@ export function TaskerPage() {
         <CreateDialog
           scopeId={activeScope.id}
           projects={projects}
+          assignable={assignable}
           defaultProjectId={defaultProjectId}
           initialStatus={create.status}
           onClose={() => setCreate(null)}
@@ -1657,6 +1736,7 @@ export function TaskerPage() {
             scopeId={activeScope.id}
             taskId={taskId}
             projects={projects}
+            assignable={assignable}
             onClose={() => navigate("/tasks")}
           />
         </>

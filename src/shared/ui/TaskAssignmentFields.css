@@ -1,0 +1,53 @@
+.task-assignment-fields {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr);
+  gap: 8px;
+  align-items: end;
+  margin-top: 10px;
+  padding: 10px;
+  background: #f4f7fc;
+}
+
+.task-assignment-fields > label:not(.task-agent-toggle) {
+  display: grid;
+  gap: 4px;
+  color: #687386;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.task-assignment-fields select {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  border: 1px solid #cbd3df;
+  background: #fff;
+  padding: 0 7px;
+  color: #1d2738;
+}
+
+.task-agent-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  color: #445168;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.task-agent-toggle input {
+  width: auto;
+}
+
+.task-assignment-fields > small {
+  grid-column: 1 / -1;
+  color: #8a6816;
+  font-size: 10px;
+}
+
+@media (max-width: 700px) {
+  .task-assignment-fields {
+    grid-template-columns: 1fr;
+  }
+}
