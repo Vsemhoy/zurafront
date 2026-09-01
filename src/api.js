@@ -6,10 +6,12 @@ export class ApiError extends Error {
     }
 }
 export async function apiRequest(path, init = {}) {
+    const method = (init.method ?? 'GET').toUpperCase();
+    const requiresJson = !['GET', 'HEAD'].includes(method);
     const response = await fetch(`/api${path}`, {
         ...init,
         credentials: 'include',
-        headers: { Accept: 'application/json', 'X-App-Request': 'Zuratax', ...(init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
+        headers: { Accept: 'application/json', 'X-App-Request': 'Zuratax', ...(requiresJson || init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
     });
     if (!response.ok) {
         const payload = await response.json().catch(() => null);
