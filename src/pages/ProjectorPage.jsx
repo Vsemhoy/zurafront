@@ -4,6 +4,7 @@ import { IconBook2, IconFolderPlus, IconSearch, IconTrash, IconX } from '@tabler
 import { useWorkspace } from '../app/workspace';
 import { bookApi } from '../entities/book/api';
 import { projectApi } from '../entities/project/api';
+import { useSearchParams } from 'react-router-dom';
 import './ProjectorPage.css';
 
 const empty = { title: '', key: '', description: '', result: '', status: 'planning', priority: 2, color: '#2668D8', sort_order: 0 };
@@ -12,19 +13,22 @@ export function ProjectorPage() {
   const { activeScope } = useWorkspace();
   const scopeId = activeScope?.id;
   const queryClient = useQueryClient();
+  const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState(null);
   const [creating, setCreating] = useState(false);
   const { data: projects = [], isLoading, error } = useQuery({ queryKey: ['projects', scopeId], queryFn: () => projectApi.list(scopeId), enabled: Boolean(scopeId) });
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['projects', scopeId] });
   const rows = projects.filter((project) => `${project.key} ${project.title} ${project.description ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+  const selectedProjectId = selected ?? params.get('project');
+  const closeEditor = () => { setCreating(false); setSelected(null); if (params.has('project')) setParams({}, { replace: true }); };
 
   return <main className="projector-page">
     <header className="projector-toolbar"><div><small>Управление проектами</small><h1>Projector</h1></div><label><IconSearch size={16}/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Проект или литерал…"/></label><button onClick={() => setCreating(true)}><IconFolderPlus size={17}/>Новый проект</button></header>
     <section className="projector-grid">{rows.map((project) => <button key={project.id} className="projector-card" style={{ borderLeftColor: project.color }} onDoubleClick={() => setSelected(project.id)} onClick={() => setSelected(project.id)}><header><code>{project.key}</code><span>{project.status}</span></header><strong>{project.title}</strong><p>{project.description || 'Описание проекта пока не задано.'}</p><footer><span>{project.tasks_count ?? 0} задач</span><span><IconBook2 size={13}/>{project.books_count ?? 0} книг</span></footer></button>)}</section>
     {isLoading && <p className="projector-state">Загружаю проекты…</p>}
     {error && <p className="projector-state error">{error.message}</p>}
-    {(creating || selected) && <ProjectEditor scopeId={scopeId} projectId={selected} onClose={() => { setCreating(false); setSelected(null); }} onSaved={refresh}/>}
+    {(creating || selectedProjectId) && <ProjectEditor scopeId={scopeId} projectId={selectedProjectId} onClose={closeEditor} onSaved={refresh}/>}
   </main>;
 }
 

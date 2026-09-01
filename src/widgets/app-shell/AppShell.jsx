@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconBell, IconBook2, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFileText, IconFolder, IconHome, IconMapPin, IconPlus, IconRocket, IconSearch, IconUser, IconUsers, IconWallet, IconX } from '@tabler/icons-react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
 import { scopeApi } from '../../entities/scope/api';
@@ -38,6 +38,9 @@ function ScopeMenu({ scopes, active, onSelect, onClose }) {
 export function AppShell() {
     const { t } = useTranslation();
     const { user, logout, check } = useAuth();
+    const navigate = useNavigate();
+    const searchRef = useRef(null);
+    const [headerSearch, setHeaderSearch] = useState('');
     const stopActing = useMutation({ mutationFn: contractorApi.stopActing, onSuccess: () => check() });
     const { data: scopes = [] } = useQuery({ queryKey: ['scopes'], queryFn: scopeApi.list });
     const [activeScopeId, setActiveScopeId] = useState(() => localStorage.getItem('zuratax-active-scope'));
@@ -45,5 +48,20 @@ export function AppShell() {
     const activeScope = scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)
         localStorage.setItem('zuratax-active-scope', activeScope.id); }, [activeScope]);
-    return <div className="app-shell"><aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end, color, tint]) => <NavLink key={to} to={to} end={end} title={label} aria-label={label} style={{ '--module-color': color, '--module-tint': tint }} className={({ isActive }) => isActive ? 'active' : ''}><Icon size={21}/></NavLink>)}</aside><header className="app-header"><button className="scope-pill" onClick={() => setScopeOpen(true)}><i />{activeScope?.name ?? 'Скоуп не выбран'}<IconChevronDown size={16}/></button>{user?.acting_as && <div className="persona-chip"><IconUser size={15}/><span>От имени <strong>{user.acting_as.name}</strong></span><button title="Вернуться к себе" disabled={stopActing.isPending} onClick={() => stopActing.mutate()}><IconX size={14}/></button></div>}<label className="command-search"><IconSearch size={19}/><input placeholder={t('search')}/></label><div className="header-actions"><button aria-label="Create"><IconPlus /></button><button aria-label="Notifications"><IconBell /></button><LanguageMenu /><button className="avatar" onClick={() => void logout()} title={user?.name}>{user?.name.slice(0, 2).toUpperCase()}</button></div></header><Outlet context={{ activeScope }}/>{scopeOpen && <ScopeMenu scopes={scopes} active={activeScope} onSelect={(scope) => setActiveScopeId(scope.id)} onClose={() => setScopeOpen(false)}/>}<footer className="status-bar"><span><i />{t('status')}</span><span>Zuratax v2.1</span></footer></div>;
+    useEffect(() => {
+        const focusSearch = (event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+                event.preventDefault();
+                searchRef.current?.focus();
+            }
+        };
+        window.addEventListener('keydown', focusSearch);
+        return () => window.removeEventListener('keydown', focusSearch);
+    }, []);
+    const submitSearch = (event) => {
+        event.preventDefault();
+        const query = headerSearch.trim();
+        if (query.length >= 2) navigate(`/search?q=${encodeURIComponent(query)}`);
+    };
+    return <div className="app-shell"><aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end, color, tint]) => <NavLink key={to} to={to} end={end} title={label} aria-label={label} style={{ '--module-color': color, '--module-tint': tint }} className={({ isActive }) => isActive ? 'active' : ''}><Icon size={21}/></NavLink>)}</aside><header className="app-header"><button className="scope-pill" onClick={() => setScopeOpen(true)}><i />{activeScope?.name ?? 'Скоуп не выбран'}<IconChevronDown size={16}/></button>{user?.acting_as && <div className="persona-chip"><IconUser size={15}/><span>От имени <strong>{user.acting_as.name}</strong></span><button title="Вернуться к себе" disabled={stopActing.isPending} onClick={() => stopActing.mutate()}><IconX size={14}/></button></div>}<form className="command-search" onSubmit={submitSearch}><IconSearch size={19}/><input ref={searchRef} value={headerSearch} onChange={(event) => setHeaderSearch(event.target.value)} placeholder={t('search')}/></form><div className="header-actions"><button aria-label="Create"><IconPlus /></button><button aria-label="Notifications"><IconBell /></button><LanguageMenu /><button className="avatar" onClick={() => void logout()} title={user?.name}>{user?.name.slice(0, 2).toUpperCase()}</button></div></header><Outlet context={{ activeScope }}/>{scopeOpen && <ScopeMenu scopes={scopes} active={activeScope} onSelect={(scope) => setActiveScopeId(scope.id)} onClose={() => setScopeOpen(false)}/>}<footer className="status-bar"><span><i />{t('status')}</span><span>Zuratax v2.1</span></footer></div>;
 }
