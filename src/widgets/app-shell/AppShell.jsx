@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconBell, IconBook2, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChecklist, IconChevronDown, IconFileText, IconFolder, IconHome, IconMapPin, IconPlus, IconRocket, IconSearch, IconUser, IconUsers, IconWallet, IconX } from '@tabler/icons-react';
+import { IconBell, IconBook2, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFileText, IconFolder, IconHome, IconMapPin, IconPlus, IconRocket, IconSearch, IconUser, IconUsers, IconWallet, IconX } from '@tabler/icons-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
@@ -15,6 +15,7 @@ const modules = [
     ['/planner', 'Planner', IconCalendarStats, false, '#0f766e', '#ccfbf1'],
     ['/projects', 'Projector', IconFolder, false, '#be185d', '#fce7f3'],
     ['/contractors', 'Contractor', IconUsers, false, '#7c3aed', '#ede9fe'],
+    ['/kpi', 'KPI', IconChartBar, false, '#9333ea', '#f3e8ff'],
     ['/ledger', 'Ledger', IconWallet, false, '#2d9e6b', '#d5f7df'],
     ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
     ['/factor', 'Factor', IconBuildingFactory2, false, '#2b6cb0', '#ebf4ff'],

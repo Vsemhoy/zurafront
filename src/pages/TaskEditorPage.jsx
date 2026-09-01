@@ -20,6 +20,7 @@ import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
 import { priorityLabel } from "../entities/task/model";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
+import { TaskKpiField } from "../shared/ui/TaskKpiField";
 import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
 import {
   BlockerPanel,
@@ -308,6 +309,7 @@ export function TaskEditorPage() {
               ))}
             </select>
           </label>
+          <TaskKpiField scopeId={activeScope.id} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
           <TaskAssignmentFields
             assignees={assignable.assignees}
             agents={assignable.agents}
