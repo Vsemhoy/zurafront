@@ -71,11 +71,12 @@ export function SearchPage() {
     queryFn: () => projectApi.list(scopeId),
     enabled: Boolean(scopeId),
   });
-  const { data: users = [] } = useQuery({
+  const { data: userOptions } = useQuery({
     queryKey: ['contractors-assignable', scopeId],
     queryFn: () => contractorApi.assignable(scopeId),
     enabled: Boolean(scopeId),
   });
+  const users = Array.isArray(userOptions?.people) ? userOptions.people : [];
 
   const counts = Object.fromEntries((search.data?.facets ?? []).map((facet) => [facet.type, facet.count]));
   const hasFilters = Boolean(types.length || projectId || userId || status || dateFrom || dateTo);
