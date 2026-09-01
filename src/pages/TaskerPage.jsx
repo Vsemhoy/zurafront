@@ -55,8 +55,10 @@ const allColumns = [
   { id: "blocked", statuses: ["blocked"], label: "Заблокировано", creatable: false },
   { id: "review", statuses: ["review"], label: "На проверке" },
   { id: "done", statuses: ["done"], label: "Готово" },
-  { id: "cancelled", statuses: ["cancelled"], label: "Удалено" },
+  { id: "cancelled", statuses: ["cancelled"], label: "Удалено", creatable: false },
 ];
+
+const KANBAN_PAGE_SIZE = 16;
 
 const columnPresets = {
   main: ["todo", "in_progress", "review", "done"],
@@ -1343,6 +1345,7 @@ export function TaskerPage() {
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [search, setSearch] = useState("");
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
+  const [columnLimits, setColumnLimits] = useState({});
   const [visibleColumnIds, setVisibleColumnIds] = useState(storedColumnIds);
   const [projectRailOpen, setProjectRailOpen] = useState(
     () => localStorage.getItem("zuratax:task-project-rail") !== "closed",
@@ -1672,6 +1675,8 @@ export function TaskerPage() {
             const items = filtered
               .filter((task) => column.statuses.includes(task.status))
               .sort((a, b) => a.sort_order - b.sort_order);
+            const visibleLimit = columnLimits[column.id] ?? KANBAN_PAGE_SIZE;
+            const visibleItems = items.slice(0, visibleLimit);
             const movableCount = items.filter(
               (task) => task.status === status,
             ).length;
@@ -1708,13 +1713,13 @@ export function TaskerPage() {
                   </div>
                 </header>
                 <div>
-                  {items.map((task, index) => (
+                  {visibleItems.map((task, index) => (
                     <TaskCard
                       key={task.id}
                       task={task}
                       status={status}
                       index={
-                        items
+                        visibleItems
                           .slice(0, index)
                           .filter((item) => item.status === status).length
                       }
@@ -1724,6 +1729,22 @@ export function TaskerPage() {
                     />
                   ))}
                 </div>
+                {items.length > visibleItems.length && (
+                  <button
+                    type="button"
+                    className="task-column-more"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setColumnLimits((current) => ({
+                        ...current,
+                        [column.id]: visibleLimit + KANBAN_PAGE_SIZE,
+                      }));
+                    }}
+                  >
+                    Показать ещё…
+                    <small>{items.length - visibleItems.length}</small>
+                  </button>
+                )}
                 {column.creatable !== false && (
                   <button onClick={() => setCreate({ status })}>
                     <IconPlus size={16} />

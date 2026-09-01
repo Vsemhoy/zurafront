@@ -9,3 +9,4 @@
 .task-customer-field{display:grid;gap:5px;margin:8px 0;font-size:11px;font-weight:700}.task-customer-field select{min-height:34px;border:1px solid #cbd3df;background:#fff;padding:5px 8px}
 .inspector-header>div{display:flex;align-items:center;gap:6px}.delete-task{width:32px;height:32px;display:grid;place-items:center;border:1px solid #efc4c4;border-radius:5px;background:#fff;color:#b42318}.delete-task:hover{background:#fff1f0}.delete-task:disabled{opacity:.55;cursor:wait}
 .task-properties{grid-template-columns:1fr 1.4fr 1fr 1fr}.task-properties input{width:100%;min-width:0;border:1px solid #cbd3df;border-radius:5px;background:#fff;padding:6px;color:#1d2738}@media(max-width:680px){.task-properties{grid-template-columns:1fr}}
+.task-column>.task-column-more{align-self:stretch;justify-content:center;margin-top:8px;padding:7px;border-top:1px solid #c8d2e0;background:#e4e9f1;color:#435268;font-size:11px}.task-column>.task-column-more small{color:#6d7889;font-size:9px}
