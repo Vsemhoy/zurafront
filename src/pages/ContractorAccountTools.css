@@ -1,40 +1,31 @@
-.contractor-editor > header { margin-bottom: 118px; }
-
 .contractor-account-tools {
     z-index: 62;
-    top: 72px;
-    right: 20px;
-    width: min(650px, calc(96vw - 40px));
-    grid-template-columns: minmax(0, 1fr) auto;
+    top: 8px;
+    right: 62px;
+    width: min(410px, calc(96vw - 190px));
+    grid-template-columns: minmax(150px, 1fr) auto;
     align-items: end;
-    gap: 8px 12px;
+    gap: 6px;
     border: 0;
-    border-left: 3px solid #176dbd;
+    border-left: 2px solid #176dbd;
     background: #edf3fa;
-    padding: 10px 12px;
-    box-shadow: 0 5px 18px #14213b14;
+    padding: 5px 7px;
+    box-shadow: none;
 }
 
-.contractor-account-tools::before {
-    content: 'Учётная запись';
-    grid-column: 1 / -1;
-    color: #27364a;
-    font-size: 13px;
-    font-weight: 750;
-}
+.contractor-account-tools label { gap: 2px; font-size: 9px; }
+.contractor-account-tools select { min-height: 28px; }
+.contractor-account-tools > button { min-width: 145px; min-height: 28px; padding: 0 8px; }
 
-.contractor-account-tools > button {
-    min-width: 190px;
-    padding: 0 12px;
-}
+.contractor-delete { position: fixed; right: 18px; bottom: 42px; z-index: 43; display: flex; align-items: center; gap: 8px; }
+.contractor-delete button { display: flex; align-items: center; gap: 7px; border: 1px solid #fecaca; background: #fff1f2; color: #be123c; padding: 8px 12px; cursor: pointer; }
+.contractor-delete small { color: #be123c; background: #fff; padding: 6px; }
 
 @media (max-width: 700px) {
-    .contractor-editor > header { margin-bottom: 154px; }
     .contractor-account-tools {
+        top: 52px;
         right: 13px;
         width: calc(96vw - 26px);
-        grid-template-columns: 1fr;
     }
-    .contractor-account-tools::before { grid-column: auto; }
+    .contractor-editor > header { margin-bottom: 48px; }
 }
-.contractor-delete{position:fixed;right:18px;bottom:42px;z-index:43;display:flex;align-items:center;gap:8px}.contractor-delete button{display:flex;align-items:center;gap:7px;border:1px solid #fecaca;background:#fff1f2;color:#be123c;padding:8px 12px;cursor:pointer}.contractor-delete small{color:#be123c;background:#fff;padding:6px}

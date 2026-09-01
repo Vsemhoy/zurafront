@@ -1,0 +1,58 @@
+.kpi-toolbar > button { margin-left: auto; }
+
+.kpi-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid #dfe4ec;
+}
+
+.kpi-tabs button {
+    min-width: 110px;
+    border: 0;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    padding: 8px 12px;
+    color: #68758a;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.kpi-tabs button.active { border-bottom-color: #6d28d9; color: #5b21b6; }
+.kpi-report-filters { display: flex; align-items: end; gap: 12px; margin-bottom: 10px; background: #fff; padding: 11px 12px; }
+.kpi-report-filters label { display: grid; gap: 4px; color: #68758a; font-size: 10px; font-weight: 700; }
+.kpi-report-filters select, .kpi-report-filters input { height: 32px; border: 1px solid #cbd3df; background: #fff; padding: 0 8px; }
+.kpi-report-filters > label { min-width: 280px; }
+.kpi-month { display: flex; align-items: end; gap: 4px; margin-left: auto; }
+.kpi-month > button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #cbd3df; background: #f6f8fb; color: #536176; }
+.kpi-report, .kpi-report-state { background: #fff; }
+.kpi-report-state { min-height: 180px; display: grid; place-items: center; color: #778294; font-size: 12px; }
+.kpi-report > header { display: grid; grid-template-columns: 38px minmax(180px, 1fr) 150px 210px; align-items: center; gap: 9px; border-bottom: 1px solid #e4e8ee; padding: 12px; }
+.kpi-report > header > span, .kpi-report > header > div:not(.kpi-person-avatar) { display: grid; }
+.kpi-report h2 { margin: 0; font-size: 15px; }
+.kpi-report header small { color: #778294; font-size: 9px; }
+.kpi-report > p { margin: 0; padding: 35px; color: #778294; text-align: center; font-size: 11px; }
+.kpi-report-areas { display: grid; }
+.kpi-report-areas > article { border-bottom: 1px solid #e8ebf0; padding: 10px 12px; }
+.kpi-report-areas > article > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.kpi-report-areas > article > header span { display: flex; align-items: center; gap: 7px; }
+.kpi-report-areas > article > header span:last-child { justify-content: flex-end; }
+.kpi-report-areas > article > header b { font-size: 10px; }
+.kpi-report-areas > article > div { display: grid; margin-top: 7px; }
+.kpi-report-areas a { display: grid; grid-template-columns: 82px minmax(0, 1fr) 82px; align-items: center; gap: 8px; border-top: 1px solid #eef1f5; padding: 7px 5px; color: inherit; text-decoration: none; }
+.kpi-report-areas a:hover { background: #f6f4ff; }
+.kpi-report-areas a code { color: #5b21b6; font-size: 10px; font-weight: 700; }
+.kpi-report-areas a span { min-width: 0; display: grid; }
+.kpi-report-areas a strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.kpi-report-areas a small, .kpi-report-areas a time { color: #7c8798; font-size: 9px; }
+.kpi-report-areas a time { text-align: right; }
+
+@media (max-width: 700px) {
+    .kpi-report-filters { align-items: stretch; flex-direction: column; }
+    .kpi-report-filters > label { min-width: 0; }
+    .kpi-month { width: 100%; margin-left: 0; }
+    .kpi-month label { flex: 1; }
+    .kpi-report > header { grid-template-columns: 38px 1fr; }
+    .kpi-report-areas a { grid-template-columns: 72px minmax(0, 1fr); }
+    .kpi-report-areas a time { display: none; }
+}
