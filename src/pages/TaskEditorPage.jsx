@@ -149,10 +149,10 @@ export function TaskEditorPage() {
           className="editor-delete"
           disabled={removeTask.isPending}
           onClick={() => {
-            if (window.confirm(`Удалить ${task.task_key} · ${task.title}?`)) removeTask.mutate();
+            if (window.confirm(task.status === "cancelled" ? `Физически удалить ${task.task_key} · ${task.title}? Отменить это действие нельзя.` : `Переместить ${task.task_key} · ${task.title} в «Удалено»?`)) removeTask.mutate();
           }}
         >
-          <IconTrash size={16}/>{removeTask.isPending ? "Удаляю…" : "Удалить"}
+          <IconTrash size={16}/>{removeTask.isPending ? "Удаляю…" : task.status === "cancelled" ? "Удалить навсегда" : "В удалённые"}
         </button>
         <code>{task.task_key}</code>
         <input

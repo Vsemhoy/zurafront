@@ -25,6 +25,11 @@ export const taskApi = {
   remove(scopeId, taskId) {
     return apiRequest(`/scopes/${scopeId}/tasks/${taskId}`, { method: "DELETE" });
   },
+  async purgeTrash(scopeId) {
+    return (
+      await apiRequest(`/scopes/${scopeId}/tasks/trash`, { method: "DELETE" })
+    ).data;
+  },
   async move(scopeId, taskId, status, targetIndex) {
     return (
       await apiRequest(`/scopes/${scopeId}/tasks/${taskId}/move`, {

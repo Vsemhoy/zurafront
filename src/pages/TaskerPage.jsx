@@ -1068,11 +1068,11 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           <button
             type="button"
             className="delete-task"
-            title="Удалить задачу"
+            title={task.status === "cancelled" ? "Удалить задачу навсегда" : "Переместить в удалённые"}
             disabled={removeTask.isPending}
             onClick={() =>
               window.confirm(
-                `Удалить задачу ${task.task_key}? Она исчезнет из рабочих списков.`,
+                task.status === "cancelled" ? `Физически удалить задачу ${task.task_key}? Отменить это действие нельзя.` : `Переместить задачу ${task.task_key} в «Удалено»?`,
               ) && removeTask.mutate()
             }
           >
@@ -1461,6 +1461,13 @@ export function TaskerPage() {
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] }),
   });
+  const purgeTrash = useMutation({
+    mutationFn: () => taskApi.purgeTrash(activeScope.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard", activeScope.id] });
+    },
+  });
   const taskCounts = useMemo(() => {
     const counts = { all: tasks.length };
     tasks.forEach((task) => {
@@ -1469,6 +1476,7 @@ export function TaskerPage() {
     });
     return counts;
   }, [tasks]);
+  const trashCount = tasks.filter((task) => task.status === "cancelled").length;
   const filtered = tasks.filter((task) => {
     const projectId = task.project_id ?? task.project?.id;
     const selected =
@@ -1680,7 +1688,10 @@ export function TaskerPage() {
               >
                 <header>
                   <span>{column.label}</span>
-                  <small>{items.length}</small>
+                  <div className="task-column-actions">
+                    <small>{items.length}</small>
+                    {column.id === "cancelled" && <button type="button" disabled={!trashCount || purgeTrash.isPending} title="Физически удалить все задачи из этой колонки во всём скоупе" onClick={(event) => { event.stopPropagation(); if (window.confirm(`Физически удалить все задачи из «Удалено» (${trashCount})? Фильтры проектов и поиска не применяются. Отменить это действие нельзя.`)) purgeTrash.mutate(); }}><IconTrash size={14}/>{purgeTrash.isPending ? "Очищаю…" : "Очистить"}</button>}
+                  </div>
                 </header>
                 <div>
                   {items.map((task, index) => (

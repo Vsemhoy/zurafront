@@ -12,3 +12,7 @@
 .task-card:hover .task-card-edit,.task-card-edit:focus-visible { opacity: 1; }
 .task-card-edit:hover { background: #e8f0fb; color: #075aaf; }
 .task-card-edit:focus-visible { outline: 2px solid #83b7ef; outline-offset: 1px; }
+.task-column-actions { display: flex; align-items: center; gap: 5px; }
+.task-column-actions > button { height: 23px; display: flex; align-items: center; gap: 4px; border: 0; background: #fff0f0; padding: 0 6px; color: #a52b2b; font-size: 9px; font-weight: 700; text-transform: none; }
+.task-column-actions > button:hover:not(:disabled) { background: #ffe0e0; }
+.task-column-actions > button:disabled { opacity: .45; }
