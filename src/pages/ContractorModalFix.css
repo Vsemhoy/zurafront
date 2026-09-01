@@ -1,0 +1,9 @@
+.contractor-modal {
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+}
+
+.contractor-modal > footer .contractor-primary {
+  background: #075aaf;
+  color: #fff;
+}
