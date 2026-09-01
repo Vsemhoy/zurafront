@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconCopy, IconKey, IconPlus, IconRobot, IconSearch, IconUser, IconUserCog, IconUsers, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
@@ -15,6 +15,22 @@ const abilityLabels = {
   'contractor.manage': 'Управлять Contractor', 'agent.manage_own': 'Управлять своими агентами', 'task.view': 'Смотреть задачи', 'task.create': 'Создавать задачи',
   'task.update': 'Изменять задачи', 'task.assign': 'Назначать исполнителей', 'book.view': 'Смотреть Booker', 'book.create': 'Создавать книги', 'book.update': 'Редактировать Booker', 'report.view': 'Смотреть отчёты', 'report.write': 'Писать отчёты',
 };
+const rolePresets = {
+  owner: Object.keys(abilityLabels),
+  admin: Object.keys(abilityLabels),
+  member: ['agent.manage_own', 'task.view', 'task.create', 'task.update', 'task.assign', 'report.view', 'report.write'],
+  observer: ['task.view', 'report.view'],
+};
+
+function permissionsForRole(role) {
+  return { allow: [...(rolePresets[role] ?? [])], deny: [] };
+}
+
+function explicitPermissions(contractor) {
+  const deny = contractor.permissions?.deny ?? [];
+  const explicit = contractor.permissions?.allow?.includes('*') ? Object.keys(abilityLabels) : contractor.permissions?.allow ?? [];
+  return { allow: [...new Set([...(rolePresets[contractor.role] ?? []), ...explicit])].filter((ability) => !deny.includes(ability)), deny };
+}
 
 function TypeIcon({ type, size = 18 }) {
   if (type === 'agent') return <IconRobot size={size}/>;
@@ -69,11 +85,12 @@ function ContractorAccountTools({ scopeId, contractor, onChanged }) {
 
 function ContractorCreate({ scopeId, options, onClose, onCreated }) {
   const canManageAll = options?.can_manage_all !== false;
-  const [form, setForm] = useState({ name: '', position: '', type: canManageAll ? 'virtual' : 'agent', role: canManageAll ? 'member' : 'observer', project_access_mode: 'none', book_access_mode: 'none', permissions: { allow: ['task.view', 'task.create', 'task.update'], deny: [] }, project_ids: [], can_act_as: canManageAll });
+  const defaultRole = canManageAll ? 'member' : 'observer';
+  const [form, setForm] = useState({ name: '', position: '', type: canManageAll ? 'virtual' : 'agent', role: defaultRole, project_access_mode: 'none', book_access_mode: 'none', permissions: permissionsForRole(defaultRole), project_ids: [], can_act_as: canManageAll });
   const create = useMutation({ mutationFn: () => contractorApi.create(scopeId, form), onSuccess: onCreated });
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const changeType = (event) => { const next = event.target.value; setForm((current) => ({ ...current, type: next, can_act_as: next === 'virtual' })); };
-  return <div className="contractor-modal-backdrop" onMouseDown={onClose}><form className="contractor-modal" onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}><header><div><strong>{canManageAll ? 'Новый актор' : 'Новый агент'}</strong><small>Добавится в текущий скоуп</small></div><button type="button" onClick={onClose}><IconX size={18}/></button></header><label>Имя<input autoFocus required value={form.name} onChange={set('name')} placeholder="Имя коллеги или агента"/></label><label>Должность<input value={form.position} onChange={set('position')} placeholder="Системный администратор"/></label><div className="contractor-form-row"><label>Тип<select value={form.type} disabled={!canManageAll} onChange={changeType}>{(options?.types ?? Object.keys(typeLabels)).map((value) => <option key={value} value={value}>{typeLabels[value]}</option>)}</select></label><label>Роль<select value={form.role} disabled={!canManageAll} onChange={set('role')}><option value="member">Участник</option><option value="observer">Наблюдатель</option><option value="admin">Администратор</option></select></label></div>{form.type === 'real' && <><label>Email<input type="email" required value={form.email ?? ''} onChange={set('email')}/></label><label>Временный пароль<input type="password" required minLength="8" value={form.password ?? ''} onChange={set('password')}/></label></>}<p className="contractor-hint">{canManageAll ? 'По умолчанию проектный доступ закрыт. Назначьте проекты и точные возможности в редакторе.' : 'Агент принадлежит вам и не сможет получить больше прав и проектов, чем есть у вашей учётки.'}</p>{create.error && <p className="contractor-error">{create.error.message}</p>}<footer><button type="button" onClick={onClose}>Отмена</button><button className="contractor-primary" disabled={create.isPending}>Создать</button></footer></form></div>;
+  return <div className="contractor-modal-backdrop" onMouseDown={onClose}><form className="contractor-modal" onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}><header><div><strong>{canManageAll ? 'Новый актор' : 'Новый агент'}</strong><small>Добавится в текущий скоуп</small></div><button type="button" onClick={onClose}><IconX size={18}/></button></header><label>Имя<input autoFocus required value={form.name} onChange={set('name')} placeholder="Имя коллеги или агента"/></label><label>Должность<input value={form.position} onChange={set('position')} placeholder="Системный администратор"/></label><div className="contractor-form-row"><label>Тип<select value={form.type} disabled={!canManageAll} onChange={changeType}>{(options?.types ?? Object.keys(typeLabels)).map((value) => <option key={value} value={value}>{typeLabels[value]}</option>)}</select></label><label>Роль<select value={form.role} disabled={!canManageAll} onChange={(event) => { const role = event.target.value; setForm((current) => ({ ...current, role, permissions: permissionsForRole(role) })); }}><option value="member">Участник</option><option value="observer">Наблюдатель</option><option value="admin">Администратор</option></select></label></div>{form.type === 'real' && <><label>Email<input type="email" required value={form.email ?? ''} onChange={set('email')}/></label><label>Временный пароль<input type="password" required minLength="8" value={form.password ?? ''} onChange={set('password')}/></label></>}<p className="contractor-hint">{canManageAll ? 'Роль сразу применит стандартный набор возможностей. После создания его можно точечно изменить в редакторе.' : 'Агент принадлежит вам и не сможет получить больше прав и проектов, чем есть у вашей учётки.'}</p>{create.error && <p className="contractor-error">{create.error.message}</p>}<footer><button type="button" onClick={onClose}>Отмена</button><button className="contractor-primary" disabled={create.isPending}>Создать</button></footer></form></div>;
 }
 
 function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
@@ -82,7 +99,14 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const [plainToken, setPlainToken] = useState(null);
   const { data: projects = [] } = useQuery({ queryKey: ['projects', scopeId], queryFn: () => projectApi.list(scopeId) });
   const { data: options } = useQuery({ queryKey: ['contractor-options', scopeId], queryFn: () => contractorApi.options(scopeId) });
-  const [form, setForm] = useState(() => contractor ? ({ name: contractor.name, position: contractor.position ?? '', type: contractor.type, status: contractor.status, email: contractor.email ?? '', username: contractor.username ?? '', role: contractor.role, project_access_mode: contractor.project_access_mode, book_access_mode: contractor.book_access_mode ?? 'none', project_ids: contractor.projects.map((project) => project.id), scope_ids: [], permissions: contractor.permissions?.allow?.includes('*') ? { allow: Object.keys(abilityLabels), deny: contractor.permissions.deny ?? [] } : contractor.permissions ?? { allow: [], deny: [] }, can_act_as: contractor.can_act_as }) : null);
+  const [form, setForm] = useState(() => contractor ? ({ name: contractor.name, position: contractor.position ?? '', type: contractor.type, status: contractor.status, email: contractor.email ?? '', username: contractor.username ?? '', role: contractor.role, project_access_mode: contractor.project_access_mode, book_access_mode: contractor.book_access_mode ?? 'none', project_ids: contractor.projects.map((project) => project.id), scope_ids: [], permissions: explicitPermissions(contractor), can_act_as: contractor.can_act_as }) : null);
+  const previousRole = useRef(form?.role);
+  const selectedRole = form?.role;
+  useEffect(() => {
+    if (!selectedRole || previousRole.current === selectedRole) return;
+    previousRole.current = selectedRole;
+    setForm((current) => ({ ...current, permissions: permissionsForRole(selectedRole) }));
+  }, [selectedRole]);
   const saveProfile = useMutation({ mutationFn: () => contractorApi.update(scopeId, contractor.id, { name: form.name, position: form.position || null, status: form.status, email: form.email || null, username: form.username || null }), onSuccess: () => { onChanged(); } });
   const saveAccess = useMutation({ mutationFn: () => contractorApi.updateAccess(scopeId, contractor.id, { role: form.role, project_access_mode: form.project_access_mode, book_access_mode: form.book_access_mode, project_ids: form.project_ids, permissions: form.permissions, can_act_as: form.can_act_as }), onSuccess: onChanged });
   const addScopes = useMutation({ mutationFn: () => contractorApi.addScopes(scopeId, contractor.id, form.scope_ids), onSuccess: () => { setForm((current) => ({ ...current, scope_ids: [] })); onChanged(); } });
