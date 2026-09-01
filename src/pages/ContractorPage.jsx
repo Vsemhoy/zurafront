@@ -31,6 +31,7 @@ export function ContractorPage() {
   const key = ['contractors', activeScope?.id];
   const { data: contractors = [], isLoading, error } = useQuery({ queryKey: key, queryFn: () => contractorApi.list(activeScope.id), enabled: Boolean(activeScope) });
   const filtered = contractors.filter((item) => (type === 'all' || item.type === type) && `${item.name} ${item.email ?? ''} ${item.username ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+  const selectedContractor = contractors.find((item) => item.id === selectedId) ?? null;
   const counts = useMemo(() => Object.fromEntries(['real', 'virtual', 'agent'].map((item) => [item, contractors.filter((contractor) => contractor.type === item).length])), [contractors]);
   const refresh = () => queryClient.invalidateQueries({ queryKey: key });
 
@@ -39,15 +40,28 @@ export function ContractorPage() {
     <div className="contractor-layout"><aside className="contractor-filters"><strong>Типы</strong>{[['all', 'Все', contractors.length], ['real', 'Реальные', counts.real], ['virtual', 'Виртуальные', counts.virtual], ['agent', 'Агенты', counts.agent]].map(([value, label, count]) => <button key={value} className={type === value ? 'active' : ''} onClick={() => setType(value)}><span>{label}</span><i>{count}</i></button>)}</aside>
       <section className="contractor-content">{!activeScope && <div className="contractor-state">Выберите скоуп.</div>}{isLoading && <div className="contractor-state">Загружаю акторов…</div>}{error && <div className="contractor-state contractor-error">{error.message}</div>}<div className="contractor-grid">{filtered.map((contractor) => <button key={contractor.id} className={`contractor-card contractor-card--${contractor.type}`} onClick={() => setSelectedId(contractor.id)}><header><span className="contractor-avatar"><TypeIcon type={contractor.type}/></span><span className={`contractor-status contractor-status--${contractor.status}`}>{statusLabels[contractor.status]}</span></header><strong>{contractor.name}</strong><small>{contractor.position || `${typeLabels[contractor.type]} · ${contractor.role}`}</small><div className="contractor-access"><span>{contractor.project_access_mode === 'all' ? 'Все проекты' : contractor.project_access_mode === 'none' ? 'Без проектов' : `${contractor.projects.length} проектов`}</span>{contractor.type === 'agent' && <span><IconKey size={12}/>{contractor.tokens?.length ?? 0}</span>}</div></button>)}</div>{!isLoading && filtered.length === 0 && <div className="contractor-state">Никого не нашли.</div>}</section>
     </div>
-    {creating && activeScope && <ContractorCreate scopeId={activeScope.id} onClose={() => setCreating(false)} onCreated={(contractor) => { refresh(); setCreating(false); setSelectedId(contractor.id); }}/>} 
-    {selectedId && activeScope && <><div className="contractor-backdrop" onClick={() => setSelectedId(null)}/><ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={contractors.find((item) => item.id === selectedId)} onClose={() => setSelectedId(null)} onChanged={refresh}/></>}
-    {selectedId && activeScope && <ContractorBookAccess scopeId={activeScope.id} contractor={contractors.find((item) => item.id === selectedId)} onChanged={refresh}/>}
+    {creating && activeScope && (
+      <ContractorCreate
+        scopeId={activeScope.id}
+        onClose={() => setCreating(false)}
+        onCreated={(contractor) => {
+          queryClient.setQueryData(key, (current = []) => [contractor, ...current.filter((item) => item.id !== contractor.id)]);
+          setCreating(false);
+          setSelectedId(contractor.id);
+        }}
+      />
+    )}
+    {selectedContractor && activeScope && <><div className="contractor-backdrop" onClick={() => setSelectedId(null)}/><ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onClose={() => setSelectedId(null)} onChanged={refresh}/></>}
+    {selectedContractor && activeScope && <ContractorAccountTools scopeId={activeScope.id} contractor={selectedContractor} onChanged={refresh}/>}
   </main>;
 }
 
-function ContractorBookAccess({ scopeId, contractor, onChanged }) {
-  const save = useMutation({ mutationFn: (bookAccessMode) => contractorApi.updateAccess(scopeId, contractor.id, { role: contractor.role, project_access_mode: contractor.project_access_mode, book_access_mode: bookAccessMode, project_ids: contractor.projects.map((project) => project.id), permissions: contractor.permissions, can_act_as: contractor.can_act_as }), onSuccess: onChanged });
-  return <label className="contractor-book-access">Доступ к Booker<select value={contractor.book_access_mode ?? 'none'} disabled={save.isPending} onChange={(event) => save.mutate(event.target.value)}><option value="none">Запретить</option><option value="projects">Только книги доступных проектов</option><option value="all">Все книги скоупа</option></select>{save.isPending && <small>сохраняю…</small>}</label>;
+function ContractorAccountTools({ scopeId, contractor, onChanged }) {
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [login, setLogin] = useState({ username: contractor.username ?? '', email: contractor.email ?? '', password: '' });
+  const saveAccess = useMutation({ mutationFn: (bookAccessMode) => contractorApi.updateAccess(scopeId, contractor.id, { role: contractor.role, project_access_mode: contractor.project_access_mode, book_access_mode: bookAccessMode, project_ids: contractor.projects.map((project) => project.id), permissions: contractor.permissions, can_act_as: contractor.can_act_as }), onSuccess: onChanged });
+  const saveLogin = useMutation({ mutationFn: () => contractorApi.update(scopeId, contractor.id, { type: 'real', username: login.username || null, email: login.email, password: login.password }), onSuccess: () => { setLoginOpen(false); setLogin((current) => ({ ...current, password: '' })); onChanged(); } });
+  return <><div className="contractor-account-tools"><label>Доступ к Booker<select value={contractor.book_access_mode ?? 'none'} disabled={saveAccess.isPending} onChange={(event) => saveAccess.mutate(event.target.value)}><option value="none">Запретить</option><option value="projects">Только книги доступных проектов</option><option value="all">Все книги скоупа</option></select></label>{contractor.type !== 'agent' && <button onClick={() => setLoginOpen(true)}>{contractor.type === 'virtual' ? 'Оживить и разрешить вход' : 'Сменить пароль'}</button>}{saveAccess.isPending && <small>сохраняю…</small>}</div>{loginOpen && <div className="contractor-modal-backdrop contractor-login-backdrop" onMouseDown={() => setLoginOpen(false)}><form className="contractor-modal contractor-login-modal" onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); saveLogin.mutate(); }}><header><div><strong>{contractor.type === 'virtual' ? 'Оживить пользователя' : 'Новый пароль'}</strong><small>{contractor.name}</small></div><button type="button" onClick={() => setLoginOpen(false)}><IconX size={18}/></button></header>{contractor.type === 'virtual' && <p className="contractor-hint">Аккаунт станет реальным пользователем и сможет входить через форму авторизации.</p>}<label>Логин<input value={login.username} onChange={(event) => setLogin({ ...login, username: event.target.value })} placeholder="Необязательно"/></label><label>Email<input type="email" required value={login.email} onChange={(event) => setLogin({ ...login, email: event.target.value })}/></label><label>{contractor.type === 'virtual' ? 'Первоначальный пароль' : 'Новый пароль'}<input autoFocus type="password" required minLength="8" value={login.password} onChange={(event) => setLogin({ ...login, password: event.target.value })}/></label>{saveLogin.error && <p className="contractor-error">{saveLogin.error.message}</p>}<footer><button type="button" onClick={() => setLoginOpen(false)}>Отмена</button><button className="contractor-primary" disabled={saveLogin.isPending}>{saveLogin.isPending ? 'Сохраняю…' : contractor.type === 'virtual' ? 'Оживить' : 'Сменить пароль'}</button></footer></form></div>}</>;
 }
 
 function ContractorCreate({ scopeId, onClose, onCreated }) {
