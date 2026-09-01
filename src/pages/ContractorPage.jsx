@@ -12,7 +12,7 @@ const typeLabels = { real: 'Реальный', virtual: 'Виртуальный'
 const statusLabels = { active: 'Активен', blocked: 'Заблокирован', dormant: 'Спит' };
 const abilityLabels = {
   'contractor.manage': 'Управлять Contractor', 'task.view': 'Смотреть задачи', 'task.create': 'Создавать задачи',
-  'task.update': 'Изменять задачи', 'task.assign': 'Назначать исполнителей', 'report.view': 'Смотреть отчёты', 'report.write': 'Писать отчёты',
+  'task.update': 'Изменять задачи', 'task.assign': 'Назначать исполнителей', 'book.view': 'Смотреть Booker', 'book.create': 'Создавать книги', 'book.update': 'Редактировать Booker', 'report.view': 'Смотреть отчёты', 'report.write': 'Писать отчёты',
 };
 
 function TypeIcon({ type, size = 18 }) {
@@ -41,11 +41,17 @@ export function ContractorPage() {
     </div>
     {creating && activeScope && <ContractorCreate scopeId={activeScope.id} onClose={() => setCreating(false)} onCreated={(contractor) => { refresh(); setCreating(false); setSelectedId(contractor.id); }}/>} 
     {selectedId && activeScope && <><div className="contractor-backdrop" onClick={() => setSelectedId(null)}/><ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={contractors.find((item) => item.id === selectedId)} onClose={() => setSelectedId(null)} onChanged={refresh}/></>}
+    {selectedId && activeScope && <ContractorBookAccess scopeId={activeScope.id} contractor={contractors.find((item) => item.id === selectedId)} onChanged={refresh}/>}
   </main>;
 }
 
+function ContractorBookAccess({ scopeId, contractor, onChanged }) {
+  const save = useMutation({ mutationFn: (bookAccessMode) => contractorApi.updateAccess(scopeId, contractor.id, { role: contractor.role, project_access_mode: contractor.project_access_mode, book_access_mode: bookAccessMode, project_ids: contractor.projects.map((project) => project.id), permissions: contractor.permissions, can_act_as: contractor.can_act_as }), onSuccess: onChanged });
+  return <label className="contractor-book-access">Доступ к Booker<select value={contractor.book_access_mode ?? 'none'} disabled={save.isPending} onChange={(event) => save.mutate(event.target.value)}><option value="none">Запретить</option><option value="projects">Только книги доступных проектов</option><option value="all">Все книги скоупа</option></select>{save.isPending && <small>сохраняю…</small>}</label>;
+}
+
 function ContractorCreate({ scopeId, onClose, onCreated }) {
-  const [form, setForm] = useState({ name: '', position: '', type: 'virtual', role: 'member', project_access_mode: 'none', permissions: { allow: ['task.view', 'task.create', 'task.update'], deny: [] }, project_ids: [], can_act_as: true });
+  const [form, setForm] = useState({ name: '', position: '', type: 'virtual', role: 'member', project_access_mode: 'none', book_access_mode: 'none', permissions: { allow: ['task.view', 'task.create', 'task.update'], deny: [] }, project_ids: [], can_act_as: true });
   const create = useMutation({ mutationFn: () => contractorApi.create(scopeId, form), onSuccess: onCreated });
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
   const changeType = (event) => { const next = event.target.value; setForm((current) => ({ ...current, type: next, can_act_as: next === 'virtual' })); };
@@ -58,9 +64,9 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const [plainToken, setPlainToken] = useState(null);
   const { data: projects = [] } = useQuery({ queryKey: ['projects', scopeId], queryFn: () => projectApi.list(scopeId) });
   const { data: options } = useQuery({ queryKey: ['contractor-options', scopeId], queryFn: () => contractorApi.options(scopeId) });
-  const [form, setForm] = useState(() => contractor ? ({ name: contractor.name, position: contractor.position ?? '', type: contractor.type, status: contractor.status, email: contractor.email ?? '', username: contractor.username ?? '', role: contractor.role, project_access_mode: contractor.project_access_mode, project_ids: contractor.projects.map((project) => project.id), scope_ids: [], permissions: contractor.permissions?.allow?.includes('*') ? { allow: Object.keys(abilityLabels), deny: contractor.permissions.deny ?? [] } : contractor.permissions ?? { allow: [], deny: [] }, can_act_as: contractor.can_act_as }) : null);
+  const [form, setForm] = useState(() => contractor ? ({ name: contractor.name, position: contractor.position ?? '', type: contractor.type, status: contractor.status, email: contractor.email ?? '', username: contractor.username ?? '', role: contractor.role, project_access_mode: contractor.project_access_mode, book_access_mode: contractor.book_access_mode ?? 'none', project_ids: contractor.projects.map((project) => project.id), scope_ids: [], permissions: contractor.permissions?.allow?.includes('*') ? { allow: Object.keys(abilityLabels), deny: contractor.permissions.deny ?? [] } : contractor.permissions ?? { allow: [], deny: [] }, can_act_as: contractor.can_act_as }) : null);
   const saveProfile = useMutation({ mutationFn: () => contractorApi.update(scopeId, contractor.id, { name: form.name, position: form.position || null, status: form.status, email: form.email || null, username: form.username || null }), onSuccess: () => { onChanged(); } });
-  const saveAccess = useMutation({ mutationFn: () => contractorApi.updateAccess(scopeId, contractor.id, { role: form.role, project_access_mode: form.project_access_mode, project_ids: form.project_ids, permissions: form.permissions, can_act_as: form.can_act_as }), onSuccess: onChanged });
+  const saveAccess = useMutation({ mutationFn: () => contractorApi.updateAccess(scopeId, contractor.id, { role: form.role, project_access_mode: form.project_access_mode, book_access_mode: form.book_access_mode, project_ids: form.project_ids, permissions: form.permissions, can_act_as: form.can_act_as }), onSuccess: onChanged });
   const addScopes = useMutation({ mutationFn: () => contractorApi.addScopes(scopeId, contractor.id, form.scope_ids), onSuccess: () => { setForm((current) => ({ ...current, scope_ids: [] })); onChanged(); } });
   const act = useMutation({ mutationFn: () => contractorApi.startActing(scopeId, contractor.id), onSuccess: async () => { await check(); queryClient.invalidateQueries(); onClose(); } });
   const issue = useMutation({ mutationFn: () => contractorApi.issueToken(scopeId, contractor.id, { name: 'Codex workstation', abilities: (form.permissions.allow.includes('*') ? (options?.abilities ?? Object.keys(abilityLabels)) : form.permissions.allow).filter((ability) => ability !== 'contractor.manage') }), onSuccess: (token) => { setPlainToken(token.token); onChanged(); } });

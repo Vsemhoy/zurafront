@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconBell, IconBook2, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChecklist, IconChevronDown, IconFileText, IconHome, IconMapPin, IconPlus, IconRocket, IconSearch, IconUser, IconUsers, IconWallet, IconX } from '@tabler/icons-react';
+import { IconBell, IconBook2, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChecklist, IconChevronDown, IconFileText, IconFolder, IconHome, IconMapPin, IconPlus, IconRocket, IconSearch, IconUser, IconUsers, IconWallet, IconX } from '@tabler/icons-react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
@@ -9,7 +9,7 @@ import { contractorApi } from '../../entities/contractor/api';
 import { Brand } from '../../shared/ui/Brand';
 import { LanguageMenu } from '../../shared/ui/LanguageMenu';
 const modules = [
-    ['/', 'Home', IconHome, true], ['/tasks', 'Tasker', IconChecklist], ['/planner', 'Planner', IconCalendarStats], ['/contractors', 'Contractor', IconUsers], ['/ledger', 'Ledger', IconWallet], ['/events', 'Eventor', IconCalendarEvent], ['/factor', 'Factor', IconBuildingFactory2], ['/contacts', 'Contactor', IconUser], ['/books', 'Booker', IconBook2], ['/stuffer', 'Stuffer', IconBriefcase2], ['/exploiter', 'Exploiter', IconRocket], ['/tracker', 'Tracker', IconMapPin], ['/reports', 'Reporter', IconFileText],
+    ['/', 'Home', IconHome, true], ['/tasks', 'Tasker', IconChecklist], ['/planner', 'Planner', IconCalendarStats], ['/projects', 'Projector', IconFolder], ['/contractors', 'Contractor', IconUsers], ['/ledger', 'Ledger', IconWallet], ['/events', 'Eventor', IconCalendarEvent], ['/factor', 'Factor', IconBuildingFactory2], ['/contacts', 'Contactor', IconUser], ['/books', 'Booker', IconBook2], ['/stuffer', 'Stuffer', IconBriefcase2], ['/exploiter', 'Exploiter', IconRocket], ['/tracker', 'Tracker', IconMapPin], ['/reports', 'Reporter', IconFileText],
 ];
 function ScopeMenu({ scopes, active, onSelect, onClose }) {
     const queryClient = useQueryClient();

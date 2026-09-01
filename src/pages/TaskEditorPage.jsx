@@ -4,15 +4,18 @@ import {
   IconArrowLeft,
   IconArrowUpRight,
   IconBriefcase,
+  IconBook2,
   IconFileDescription,
   IconHistory,
   IconLink,
   IconMessage,
   IconTargetArrow,
 } from "@tabler/icons-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
 import { contractorApi } from "../entities/contractor/api";
+import { bookApi } from "../entities/book/api";
+import { entityLinkApi } from "../entities/link/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
 import { priorityLabel } from "../entities/task/model";
@@ -293,6 +296,18 @@ export function TaskEditorPage() {
               </select>
             </label>
           </div>
+          <label className="task-customer-field">
+            Заказчик
+            <select
+              value={task.customer_id ?? ""}
+              onChange={(event) => save.mutate({ customer_id: event.target.value || null })}
+            >
+              <option value="">Не указан</option>
+              {assignable.assignees.map((user) => (
+                <option key={user.id} value={user.id}>{user.name}{user.position ? ` · ${user.position}` : ""}</option>
+              ))}
+            </select>
+          </label>
           <TaskAssignmentFields
             assignees={assignable.assignees}
             agents={assignable.agents}
@@ -331,6 +346,7 @@ export function TaskEditorPage() {
       {tab === "links" && (
         <section className="editor-simple editor-relations">
           <RelationsPanel task={task} scopeId={activeScope.id} />
+          <BookerLinksPanel task={task} scopeId={activeScope.id} />
         </section>
       )}
       {tab === "discussion" && (
@@ -414,6 +430,21 @@ export function TaskEditorPage() {
       )}
     </main>
   );
+}
+
+function BookerLinksPanel({ task, scopeId }) {
+  const queryClient = useQueryClient();
+  const [bookId, setBookId] = useState("");
+  const [pageId, setPageId] = useState("");
+  const key = ["entity-links", scopeId, "task", task.id];
+  const { data: links = [] } = useQuery({ queryKey: key, queryFn: () => entityLinkApi.list(scopeId, "task", task.id) });
+  const { data: books = [] } = useQuery({ queryKey: ["books", scopeId], queryFn: () => bookApi.books(scopeId) });
+  const { data: pages = [] } = useQuery({ queryKey: ["book-pages", scopeId, bookId], queryFn: () => bookApi.pages(scopeId, bookId), enabled: Boolean(bookId) });
+  const refresh = () => queryClient.invalidateQueries({ queryKey: key });
+  const create = useMutation({ mutationFn: () => entityLinkApi.create(scopeId, { source_type: "task", source_id: task.id, target_type: pageId ? "book_page" : "book", target_id: pageId || bookId, relation: "specification" }), onSuccess: () => { setBookId(""); setPageId(""); refresh(); } });
+  const remove = useMutation({ mutationFn: (id) => entityLinkApi.remove(scopeId, id), onSuccess: refresh });
+  const bookLinks = links.filter((link) => ["book", "book_page"].includes(link.target_type) || ["book", "book_page"].includes(link.source_type));
+  return <section className="booker-linker"><header><div><IconBook2 size={18}/><h2>Техническое задание</h2></div><small>Booker</small></header><div className="booker-link-list">{bookLinks.map((link) => { const target = link.target_type === "task" ? link.source : link.target; const type = link.target_type === "task" ? link.source_type : link.target_type; const parentBookId = type === "book" ? target.id : target.book_id; const href = type === "book" ? `/books/${target.id}` : `/books/${parentBookId}/pages/${target.id}`; return <div key={link.id}><Link to={href}><IconBook2 size={15}/><span><strong>{target.title}</strong><small>{type === "book_page" ? "Страница Booker" : "Книга Booker"}</small></span></Link><button onClick={() => remove.mutate(link.id)}>×</button></div>; })}{!bookLinks.length && <p>К задаче ещё не привязано ТЗ из Booker.</p>}</div><div className="booker-link-form"><select value={bookId} onChange={(event) => { setBookId(event.target.value); setPageId(""); }}><option value="">Выберите книгу</option>{books.map((book) => <option key={book.id} value={book.id}>{book.title}</option>)}</select><select disabled={!bookId} value={pageId} onChange={(event) => setPageId(event.target.value)}><option value="">Вся книга</option>{pages.map((page) => <option key={page.id} value={page.id}>{page.title}</option>)}</select><button disabled={!bookId || create.isPending} onClick={() => create.mutate()}>Привязать</button></div>{create.error && <p className="form-error">{create.error.message}</p>}</section>;
 }
 
 function activityLabel(action) {

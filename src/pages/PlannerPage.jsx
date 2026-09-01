@@ -1,6 +1,7 @@
+/* oxlint-disable react/set-state-in-effect */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconArrowLeft, IconArrowRight, IconBolt, IconCalendarPlus, IconChevronDown, IconFilter, IconLayersSelected, IconPlus, IconX } from '@tabler/icons-react';
+import { IconArrowLeft, IconArrowRight, IconBolt, IconCalendarPlus, IconChevronDown, IconFilter, IconLayersSelected, IconPlus, IconRefresh, IconX } from '@tabler/icons-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { plannerApi } from '../entities/planner/api';
 import { contractorApi } from '../entities/contractor/api';
@@ -75,9 +76,26 @@ export function PlannerPage() {
     const [selected, setSelected] = useState([]);
     const [dragItem, setDragItem] = useState(null);
     const [selectionBox, setSelectionBox] = useState(null);
+    const [filtersReadyFor, setFiltersReadyFor] = useState(null);
     const visible = useMemo(() => period(anchor, mode), [anchor, mode]);
     const days = useMemo(() => rangeDays(visible.from, visible.to), [visible]);
     useEffect(() => { const close = (event) => { if (!event.target.closest('.planner-filter')) setOpenFilter(null); }; document.addEventListener('pointerdown', close); return () => document.removeEventListener('pointerdown', close); }, []);
+    // Filters are external per-scope preferences; hydrate them when the workspace changes.
+    // oxlint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => {
+        if (!scopeId) return;
+        try {
+            const saved = JSON.parse(localStorage.getItem(`zuratax:planner-filters:${scopeId}`) ?? '{}');
+            setProjectIds(Array.isArray(saved.projectIds) ? saved.projectIds : []);
+            setAssigneeIds(Array.isArray(saved.assigneeIds) ? saved.assigneeIds : []);
+            setStatuses(Array.isArray(saved.statuses) ? saved.statuses : []);
+        } catch { setProjectIds([]); setAssigneeIds([]); setStatuses([]); }
+        setFiltersReadyFor(scopeId);
+    }, [scopeId]);
+    useEffect(() => {
+        if (!scopeId || filtersReadyFor !== scopeId) return;
+        localStorage.setItem(`zuratax:planner-filters:${scopeId}`, JSON.stringify({ projectIds, assigneeIds, statuses }));
+    }, [scopeId, filtersReadyFor, projectIds, assigneeIds, statuses]);
 
     const { data: projects = [] } = useQuery({ queryKey: ['projects', scopeId], queryFn: () => projectApi.list(scopeId), enabled: Boolean(scopeId) });
     const { data: assignable = { assignees: [], agents: [] } } = useQuery({ queryKey: ['task-assignable', scopeId], queryFn: () => contractorApi.assignable(scopeId), enabled: Boolean(scopeId) });
@@ -130,7 +148,7 @@ export function PlannerPage() {
         <section className="planner-workspace">
             <header className="planner-head"><div><small>Планирование ресурсов</small><h1>Planner</h1></div><div className="planner-head__controls"><div className="planner-period"><button onClick={() => movePeriod(-1)} aria-label="Назад"><IconArrowLeft size={17}/></button><strong>{visible.title}</strong><button onClick={() => movePeriod(1)} aria-label="Вперёд"><IconArrowRight size={17}/></button><button onClick={() => setAnchor(new Date())}>Сегодня</button></div><div className="planner-mode"><button className={mode === 'month' ? 'active' : ''} onClick={() => setMode('month')}>Месяц</button><button className={mode === 'quarter' ? 'active' : ''} onClick={() => setMode('quarter')}>Квартал</button></div></div></header>
             <nav className="planner-tabs"><button className="active">Задачи</button><button disabled>События <small>скоро</small></button><button disabled>Эксплоиты <small>скоро</small></button></nav>
-            <div className="planner-toolbar"><MultiFilter label="Проекты" open={openFilter === 'projects'} onToggle={() => setOpenFilter(openFilter === 'projects' ? null : 'projects')} items={projects.map((project) => ({ value: project.id, label: project.title, color: project.color }))} selected={projectIds} onChange={setProjectIds}/><MultiFilter label="Исполнители" open={openFilter === 'assignees'} onToggle={() => setOpenFilter(openFilter === 'assignees' ? null : 'assignees')} items={assignable.assignees.map((user) => ({ value: user.id, label: user.name, color: '#8eb8e8' }))} selected={assigneeIds} onChange={setAssigneeIds}/><MultiFilter label="Статусы" open={openFilter === 'statuses'} onToggle={() => setOpenFilter(openFilter === 'statuses' ? null : 'statuses')} items={taskStatuses} selected={statuses} onChange={setStatuses}/><span className="planner-toolbar__hint"><kbd>Shift</kbd> копия <kbd>Alt</kbd> хвост</span><button className={`planner-bulk-trigger ${bulkOpen ? 'active' : ''}`} onClick={() => setBulkOpen(!bulkOpen)}><IconLayersSelected size={17}/>{selected.length ? `Выбрано: ${selected.length}` : 'Массово'}</button></div>
+            <div className="planner-toolbar"><MultiFilter label="Проекты" open={openFilter === 'projects'} onToggle={() => setOpenFilter(openFilter === 'projects' ? null : 'projects')} items={projects.map((project) => ({ value: project.id, label: project.title, color: project.color }))} selected={projectIds} onChange={setProjectIds}/><MultiFilter label="Исполнители" open={openFilter === 'assignees'} onToggle={() => setOpenFilter(openFilter === 'assignees' ? null : 'assignees')} items={assignable.assignees.map((user) => ({ value: user.id, label: user.name, color: '#8eb8e8' }))} selected={assigneeIds} onChange={setAssigneeIds}/><MultiFilter label="Статусы" open={openFilter === 'statuses'} onToggle={() => setOpenFilter(openFilter === 'statuses' ? null : 'statuses')} items={taskStatuses} selected={statuses} onChange={setStatuses}/><button type="button" className="planner-reset-filters" disabled={!projectIds.length && !assigneeIds.length && !statuses.length} title="Сбросить все фильтры" onClick={() => { setProjectIds([]); setAssigneeIds([]); setStatuses([]); setOpenFilter(null); }}><IconRefresh size={15}/><span>Сбросить</span></button><span className="planner-toolbar__hint"><kbd>Shift</kbd> копия <kbd>Alt</kbd> хвост</span><button className={`planner-bulk-trigger ${bulkOpen ? 'active' : ''}`} onClick={() => setBulkOpen(!bulkOpen)}><IconLayersSelected size={17}/>{selected.length ? `Выбрано: ${selected.length}` : 'Массово'}</button></div>
             <div className="planner-weekdays">{weekDays.map((day) => <strong key={day}>{day}</strong>)}</div>
             <div className={`planner-grid ${mode === 'quarter' ? 'planner-grid--quarter' : ''}`} ref={gridRef} onPointerDown={startMarquee}>
                 {days.map((day) => { const key = dateKey(day); const today = key === dateKey(new Date()); const foreignMonth = mode === 'month' && day.getMonth() !== anchor.getMonth(); return <div key={key} className={`planner-day ${today ? 'planner-day--today' : ''} ${foreignMonth ? 'planner-day--muted' : ''}`} onDoubleClick={(event) => { if (!bulkOpen && !event.target.closest('.planner-card')) { setEditTask(null); setCreateDate(key); } }} onDragOver={(event) => { event.preventDefault(); event.currentTarget.classList.add('planner-day--drop'); }} onDragLeave={(event) => event.currentTarget.classList.remove('planner-day--drop')} onDrop={(event) => { event.preventDefault(); event.currentTarget.classList.remove('planner-day--drop'); if (dragItem) dropMutation.mutate({ item: dragItem, day: key, shift: event.shiftKey, alt: event.altKey }); }}><button className="planner-day__number" ><span>{day.getDate()}</span>{(day.getDate() === 1 || (mode === 'quarter' && day.getDay() === 1)) && <small>{monthNames[day.getMonth()]}</small>}<IconCalendarPlus size={13}/></button><div className="planner-day__items">{(itemsByDay[key] ?? []).map((item) => { const status = taskStatusMap[item.task.status] ?? taskStatusMap.todo; const isSelected = selected.includes(item.task.id); return <article key={`${item.kind}-${item.id}`} draggable className={`planner-card planner-card--${item.kind} ${isSelected ? 'planner-card--selected' : ''}`} data-task-id={item.task.id} style={{ background: status.color, borderLeftColor: item.task.project?.color ?? '#8794a7' }} title={item.kind === 'tail' ? `Хвост ${taskReference(item.task)} · двойной клик — редактор` : item.task.title} onDragStart={(event) => { setDragItem(item); event.dataTransfer.effectAllowed = 'copyMove'; event.dataTransfer.setData('text/plain', item.id); }} onDragEnd={() => setDragItem(null)} onClick={(event) => { event.stopPropagation(); if (bulkOpen || event.ctrlKey || event.metaKey) toggleTask(item.task.id); }} onDoubleClick={(event) => { event.stopPropagation(); setEditTask({ ...item.task, planner_kind: item.kind }); setCreateDate(key); }}>{item.kind === 'tail' ? <strong>{taskReference(item.task)}</strong> : <><span><b>{taskReference(item.task)}</b>{item.task.assignee?.name && <i>{item.task.assignee.name}</i>}</span><p>{item.task.title}</p></>}</article>; })}</div></div>; })}

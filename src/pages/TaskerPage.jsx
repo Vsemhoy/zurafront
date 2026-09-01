@@ -1140,6 +1140,18 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           </select>
         </label>
       </div>
+      <label className="task-customer-field">
+        Заказчик
+        <select
+          value={task.customer_id ?? ""}
+          onChange={(event) => save.mutate({ customer_id: event.target.value || null })}
+        >
+          <option value="">Не указан</option>
+          {assignable.assignees.map((user) => (
+            <option key={user.id} value={user.id}>{user.name}{user.position ? ` · ${user.position}` : ""}</option>
+          ))}
+        </select>
+      </label>
       <TaskAssignmentFields
         assignees={assignable.assignees}
         agents={assignable.agents}
