@@ -11,6 +11,7 @@ import {
   IconHistory,
   IconLink,
   IconMessage,
+  IconRobot,
   IconTargetArrow,
   IconTrash,
 } from "@tabler/icons-react";
@@ -137,7 +138,7 @@ export function TaskEditorPage() {
     );
   const hasStoredResult = Boolean(task.result?.trim());
   const hasResult = hasStoredResult || creatingResult;
-  const activeDocument = document === "result" && hasResult ? "result" : "description";
+  const activeDocument = document === "agent_notes" ? "agent_notes" : document === "result" && hasResult ? "result" : "description";
 
   return (
     <main className="task-editor-page">
@@ -230,6 +231,13 @@ export function TaskEditorPage() {
                 Добавить результат
               </button>
             )}
+            <button
+              className={activeDocument === "agent_notes" ? "active" : ""}
+              onClick={() => setDocument("agent_notes")}
+            >
+              <IconRobot size={17} />
+              От агента
+            </button>
           </div>
           <Suspense
             fallback={
@@ -245,7 +253,9 @@ export function TaskEditorPage() {
               placeholder={
                 activeDocument === "description"
                   ? "Подробно опишите задачу, контекст и ограничения…"
-                  : "Зафиксируйте фактический результат работы…"
+                  : activeDocument === "result"
+                    ? "Зафиксируйте фактический результат работы…"
+                    : "Важные комментарии, ответы и выводы агента…"
               }
               onSave={(markdown) => {
                 save.mutate({ [activeDocument]: markdown });
