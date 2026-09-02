@@ -376,6 +376,7 @@ function ContractorCreate({ scopeId, options, onClose, onCreated }) {
   const [form, setForm] = useState({
     name: '',
     position: '',
+    preferred_language: 'ru',
     type: canManageAll ? 'virtual' : 'agent',
     is_executor: canManageAll,
     role: defaultRole,
@@ -429,6 +430,14 @@ function ContractorCreate({ scopeId, options, onClose, onCreated }) {
         <label>
           Должность
           <input value={form.position} onChange={set('position')} placeholder="Системный администратор" />
+        </label>
+        <label>
+          Язык работы
+          <select value={form.preferred_language} onChange={set('preferred_language')}>
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+          </select>
         </label>
         <div className="contractor-form-row">
           <label>
@@ -521,6 +530,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
       ? {
           name: contractor.name,
           position: contractor.position ?? '',
+          preferred_language: contractor.preferred_language ?? 'ru',
           type: contractor.type,
           status: contractor.status,
           email: contractor.email ?? '',
@@ -550,6 +560,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
       contractorApi.update(scopeId, contractor.id, {
         name: form.name,
         position: form.position || null,
+        preferred_language: form.preferred_language,
         status: form.status,
         email: form.email || null,
         username: form.username || null,
@@ -683,6 +694,23 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
             placeholder="Кто есть кто"
           />
         </label>
+        <label>
+          Язык работы
+          <select
+            value={form.preferred_language}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                preferred_language: event.target.value,
+              }))
+            }
+          >
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+            <option value="zh">中文</option>
+          </select>
+          <small>Этот язык попадёт в инструкцию агенту.</small>
+        </label>
         <div className="contractor-form-row">
           <label>
             Логин
@@ -788,6 +816,23 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
             ))}
           </div>
         )}
+        <label>
+          Доступ к Booker
+          <select
+            value={form.book_access_mode}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                book_access_mode: event.target.value,
+              }))
+            }
+          >
+            <option value="none">Запретить</option>
+            <option value="projects">Книги доступных проектов</option>
+            <option value="all">Все доступные книги скоупа</option>
+          </select>
+          <small>Приватные книги остаются доступны только создателю. Создание, редактирование и удаление задаются возможностями ниже.</small>
+        </label>
         <h3>Возможности и запреты</h3>
         <div className="contractor-abilities">
           {(options?.abilities ?? Object.keys(abilityLabels)).map((ability) => {

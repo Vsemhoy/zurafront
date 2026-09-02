@@ -11,12 +11,14 @@ import {
   IconHistory,
   IconLink,
   IconMessage,
+  IconCornerUpLeft,
   IconRobot,
   IconTargetArrow,
   IconTrash,
 } from "@tabler/icons-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
+import { useAuth } from "../auth";
 import { contractorApi } from "../entities/contractor/api";
 import { bookApi } from "../entities/book/api";
 import { entityLinkApi } from "../entities/link/api";
@@ -55,6 +57,8 @@ export function TaskEditorPage() {
   const [document, setDocument] = useState("description");
   const [creatingResult, setCreatingResult] = useState(false);
   const [comment, setComment] = useState("");
+  const [replyTo, setReplyTo] = useState(null);
+  const user = useAuth((state) => state.user);
   const queryKey = ["task", activeScope?.id, taskId];
   const {
     data: task,
@@ -118,13 +122,23 @@ export function TaskEditorPage() {
     },
   });
   const sendComment = useMutation({
-    mutationFn: () => taskApi.createComment(activeScope.id, taskId, comment),
+    mutationFn: () => taskApi.createComment(activeScope.id, taskId, comment, replyTo?.id ?? null),
     onSuccess: () => {
       setComment("");
+      setReplyTo(null);
       queryClient.invalidateQueries({ queryKey: commentsKey });
+      queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
       queryClient.invalidateQueries({
         queryKey: ["task-activity", activeScope.id, taskId],
       });
+    },
+  });
+  const removeComment = useMutation({
+    mutationFn: (commentId) => taskApi.deleteComment(activeScope.id, taskId, commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: commentsKey });
+      queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
+      queryClient.invalidateQueries({ queryKey: ["task-activity", activeScope.id, taskId] });
     },
   });
 
@@ -423,7 +437,7 @@ export function TaskEditorPage() {
           <div className="comment-list">
             {commentsLoading && <p>Загружаю комментарии…</p>}
             {comments.map((item) => (
-              <article key={item.id}>
+              <article key={item.id} className={item.parent_id ? "is-reply" : ""}>
                 <span className="comment-avatar">
                   {item.created_by?.name?.slice(0, 2).toUpperCase() ?? "??"}
                 </span>
@@ -435,6 +449,21 @@ export function TaskEditorPage() {
                     <time>{new Date(item.created_at).toLocaleString()}</time>
                   </header>
                   <p>{item.content}</p>
+                  <footer className="comment-actions">
+                    <button type="button" onClick={() => setReplyTo(item)}>
+                      <IconCornerUpLeft size={14} /> Ответить
+                    </button>
+                    {(item.created_by?.id === user?.id || task.created_by === user?.id || activeScope.owner_id === user?.id) && (
+                      <button
+                        type="button"
+                        className="comment-delete"
+                        disabled={removeComment.isPending}
+                        onClick={() => window.confirm("Удалить комментарий?") && removeComment.mutate(item.id)}
+                      >
+                        <IconTrash size={14} /> Удалить
+                      </button>
+                    )}
+                  </footer>
                 </div>
               </article>
             ))}
@@ -452,6 +481,12 @@ export function TaskEditorPage() {
               if (comment.trim()) sendComment.mutate();
             }}
           >
+            {replyTo && (
+              <div className="comment-replying">
+                <span>Ответ для <strong>{replyTo.created_by?.name ?? "автора"}</strong></span>
+                <button type="button" onClick={() => setReplyTo(null)} aria-label="Отменить ответ">×</button>
+              </div>
+            )}
             <textarea
               rows="4"
               value={comment}
@@ -460,6 +495,9 @@ export function TaskEditorPage() {
             />
             {sendComment.error && (
               <p className="form-error">{sendComment.error.message}</p>
+            )}
+            {removeComment.error && (
+              <p className="form-error">{removeComment.error.message}</p>
             )}
             <footer>
               <small>Вложения и @упоминания добавим следующим слоем</small>

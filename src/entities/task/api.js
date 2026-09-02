@@ -128,6 +128,12 @@ export const taskApi = {
       })
     ).data;
   },
+  deleteComment(scopeId, taskId, commentId) {
+    return apiRequest(
+      `/scopes/${scopeId}/tasks/${taskId}/comments/${commentId}`,
+      { method: "DELETE" },
+    );
+  },
   async activity(scopeId, taskId) {
     return (await apiRequest(`/scopes/${scopeId}/tasks/${taskId}/activity`))
       .data;

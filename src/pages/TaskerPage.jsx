@@ -22,7 +22,9 @@ import {
   IconList,
   IconLink,
   IconLockOpen,
+  IconMessageCircle,
   IconPlus,
+  IconRobot,
   IconSearch,
   IconSubtask,
   IconTargetArrow,
@@ -361,8 +363,9 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
         <code>{taskReference(task)}</code>
         <div className="task-card-actions">
           {task.assignee && (
-            <span title={task.assignee.name}>
+            <span className="task-card-assignee" title={task.is_agent_delegatable ? `${task.assignee.name} · можно делегировать агенту` : task.assignee.name}>
               {task.assignee.name.slice(0, 1)}
+              {task.is_agent_delegatable && <b aria-label="Можно делегировать агенту">+</b>}
             </span>
           )}
           <button
@@ -388,9 +391,15 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
       </header>
       <strong>{task.title}</strong>
       <footer>
-        <small>
+        <small className={`task-priority task-priority--${task.priority}`}>
           {blocked ? "Заблокировано" : priorityLabel(task.priority)}
         </small>
+        {Number(task.comments_count ?? 0) > 0 && (
+          <span className="task-card-comments" title={`${task.comments_count} комментариев`}>
+            <IconMessageCircle size={14} />
+            {task.comments_count}
+          </span>
+        )}
         {task.due_at && (
           <time>{new Date(task.due_at).toLocaleDateString()}</time>
         )}
@@ -1016,7 +1025,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [pane, setPane] = useState("description");
-  const [creatingResult, setCreatingResult] = useState(false);
+  const [formattingOpen, setFormattingOpen] = useState(false);
   const [referenceCopied, setReferenceCopied] = useState(false);
   const queryKey = ["task", scopeId, taskId];
   const {
@@ -1062,9 +1071,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
         <div className="inspector-state form-error">{error.message}</div>
       </aside>
     );
-  const hasStoredResult = Boolean(task.result?.trim());
-  const hasResult = hasStoredResult || creatingResult;
-  const activePane = pane === "result" && hasResult ? "result" : "description";
+  const activePane = ["description", "agent_notes", "result"].includes(pane) ? pane : "description";
   const reference = taskReference(task);
   const copyReference = async () => {
     await navigator.clipboard.writeText(reference);
@@ -1249,44 +1256,29 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           <IconFileDescription size={18} />
           Описание
         </button>
-        {hasResult ? (
-          <button
-            className={activePane === "result" ? "active" : ""}
-            onClick={() => setPane("result")}
-          >
-            <IconTargetArrow size={18} />
-            Результат
-          </button>
-        ) : (
-          <button
-            className="add-result"
-            onClick={() => {
-              setCreatingResult(true);
-              setPane("result");
-            }}
-          >
-            <IconPlus size={16} />
-            Добавить результат
-          </button>
-        )}
+        <button className={activePane === "agent_notes" ? "active" : ""} onClick={() => setPane("agent_notes")}>
+          <IconRobot size={18} />
+          От агента
+        </button>
+        <button className={activePane === "result" ? "active" : ""} onClick={() => setPane("result")}>
+          <IconTargetArrow size={18} />
+          Результат
+        </button>
       </nav>
       <Suspense fallback={<div className="md-loading">Загружаю Markdown…</div>}>
         <CompactMarkdownEditor
           key={activePane}
-          value={task[activePane]}
-          hideToolbarTrigger={!hasResult}
+          value={task[activePane] ?? ""}
+          toolbarOpen={formattingOpen}
+          onToolbarOpenChange={setFormattingOpen}
           placeholder={
             activePane === "result"
               ? "Фактический результат…"
+              : activePane === "agent_notes"
+                ? "Важные заметки и ответы агента…"
               : "Добавьте описание задачи…"
           }
-          onSave={(markdown) => {
-            save.mutate({ [activePane]: markdown });
-            if (activePane === "result" && !markdown) {
-              setCreatingResult(false);
-              setPane("description");
-            }
-          }}
+          onSave={(markdown) => save.mutate({ [activePane]: markdown })}
         />
       </Suspense>
       <TaskChecklistPanel task={task} scopeId={scopeId} refresh={refresh} assignees={assignable.assignees}/>
