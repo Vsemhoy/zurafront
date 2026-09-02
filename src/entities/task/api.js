@@ -61,6 +61,20 @@ export const taskApi = {
       )
     ).data;
   },
+  async updateChecklistItem(scopeId, taskId, itemId, payload) {
+    return (
+      await apiRequest(
+        `/scopes/${scopeId}/tasks/${taskId}/checklist/${itemId}`,
+        { method: "PATCH", body: JSON.stringify(payload) },
+      )
+    ).data;
+  },
+  deleteChecklistItem(scopeId, taskId, itemId) {
+    return apiRequest(
+      `/scopes/${scopeId}/tasks/${taskId}/checklist/${itemId}`,
+      { method: "DELETE" },
+    );
+  },
   async convertChecklistItem(scopeId, taskId, itemId) {
     return (
       await apiRequest(

@@ -4,6 +4,7 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconChecklist,
+  IconEdit,
   IconLink,
   IconLockOpen,
   IconPlus,
@@ -239,8 +240,9 @@ function BlockerHistory({ blockers }) {
   );
 }
 
-export function TaskChecklistPanel({ task, scopeId, refresh }) {
+export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
   const [title, setTitle] = useState("");
+  const [editingItem, setEditingItem] = useState(null);
   const items = task.checklist_items ?? [];
   const add = useMutation({
     mutationFn: () => taskApi.createChecklistItem(scopeId, task.id, title),
@@ -258,6 +260,21 @@ export function TaskChecklistPanel({ task, scopeId, refresh }) {
     mutationFn: (itemId) =>
       taskApi.convertChecklistItem(scopeId, task.id, itemId),
     onSuccess: refresh,
+  });
+  const update = useMutation({
+    mutationFn: ({ itemId, payload }) =>
+      taskApi.updateChecklistItem(scopeId, task.id, itemId, payload),
+    onSuccess: () => {
+      setEditingItem(null);
+      refresh();
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (itemId) => taskApi.deleteChecklistItem(scopeId, task.id, itemId),
+    onSuccess: () => {
+      setEditingItem(null);
+      refresh();
+    },
   });
 
   return (
@@ -291,6 +308,16 @@ export function TaskChecklistPanel({ task, scopeId, refresh }) {
                 </small>
               )}
             </span>
+            <button
+              className="edit-checklist-item"
+              title="Редактировать пункт"
+              onClick={(event) => {
+                event.preventDefault();
+                setEditingItem(item);
+              }}
+            >
+              <IconEdit size={14} />
+            </button>
             {!task.parent_id && (
               <button
                 className="convert-item"
@@ -324,7 +351,48 @@ export function TaskChecklistPanel({ task, scopeId, refresh }) {
       {(add.error || convert.error) && (
         <p className="form-error">{add.error?.message ?? convert.error?.message}</p>
       )}
+      {editingItem && (
+        <ChecklistItemEditor
+          item={editingItem}
+          assignees={assignees}
+          saving={update.isPending}
+          deleting={remove.isPending}
+          error={update.error ?? remove.error}
+          onClose={() => setEditingItem(null)}
+          onSave={(payload) => update.mutate({ itemId: editingItem.id, payload })}
+          onDelete={() => remove.mutate(editingItem.id)}
+        />
+      )}
     </section>
+  );
+}
+
+function ChecklistItemEditor({ item, assignees, saving, deleting, error, onClose, onSave, onDelete }) {
+  const [form, setForm] = useState({
+    title: item.title ?? "",
+    assignee_id: item.assignee_id ?? "",
+    due_at: item.due_at ? String(item.due_at).slice(0, 10) : "",
+  });
+  const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
+
+  return (
+    <div className="checklist-editor-backdrop" onMouseDown={onClose}>
+      <form
+        className="checklist-editor"
+        onMouseDown={(event) => event.stopPropagation()}
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (form.title.trim()) onSave({ title: form.title.trim(), assignee_id: form.assignee_id || null, due_at: form.due_at || null });
+        }}
+      >
+        <header><strong>Пункт чек-листа</strong><button type="button" onClick={onClose}><IconX size={16}/></button></header>
+        <label>Что сделать<input autoFocus required value={form.title} onChange={set("title")}/></label>
+        <label>Исполнитель<select value={form.assignee_id} onChange={set("assignee_id")}><option value="">Не назначен</option>{assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.name}</option>)}</select></label>
+        <label>Срок<input type="date" value={form.due_at} onChange={set("due_at")}/></label>
+        {error && <p className="form-error">{error.message}</p>}
+        <footer><button type="button" className="checklist-delete" disabled={deleting} onClick={() => window.confirm(`Удалить пункт «${item.title}»?`) && onDelete()}><IconTrash size={14}/>Удалить</button><span/><button type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving || !form.title.trim()}>Сохранить</button></footer>
+      </form>
+    </div>
   );
 }
 

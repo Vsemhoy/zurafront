@@ -5,6 +5,8 @@ import {
   IconArrowUpRight,
   IconBriefcase,
   IconBook2,
+  IconBolt,
+  IconCalendarEvent,
   IconFileDescription,
   IconHistory,
   IconLink,
@@ -17,6 +19,8 @@ import { useWorkspace } from "../app/workspace";
 import { contractorApi } from "../entities/contractor/api";
 import { bookApi } from "../entities/book/api";
 import { entityLinkApi } from "../entities/link/api";
+import { eventApi } from "../entities/event/api";
+import { factApi } from "../entities/fact/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
 import { priorityLabel } from "../entities/task/model";
@@ -227,7 +231,8 @@ export function TaskEditorPage() {
               key={activeDocument}
               variant="full"
               value={task[activeDocument]}
-              hideToolbarTrigger={!hasResult}
+              toolbarInitiallyOpen
+              hideToolbarTrigger
               placeholder={
                 activeDocument === "description"
                   ? "Подробно опишите задачу, контекст и ограничения…"
@@ -358,6 +363,7 @@ export function TaskEditorPage() {
               task={task}
               scopeId={activeScope.id}
               refresh={refresh}
+              assignees={assignable.assignees}
             />
             <SubtasksPanel
               task={task}
@@ -383,6 +389,7 @@ export function TaskEditorPage() {
         <section className="editor-simple editor-relations">
           <RelationsPanel task={task} scopeId={activeScope.id} />
           <BookerLinksPanel task={task} scopeId={activeScope.id} />
+          <TaskEntityLinksPanel task={task} scopeId={activeScope.id} />
         </section>
       )}
       {tab === "discussion" && (
@@ -481,6 +488,29 @@ function BookerLinksPanel({ task, scopeId }) {
   const remove = useMutation({ mutationFn: (id) => entityLinkApi.remove(scopeId, id), onSuccess: refresh });
   const bookLinks = links.filter((link) => ["book", "book_page"].includes(link.target_type) || ["book", "book_page"].includes(link.source_type));
   return <section className="booker-linker"><header><div><IconBook2 size={18}/><h2>Техническое задание</h2></div><small>Booker</small></header><div className="booker-link-list">{bookLinks.map((link) => { const target = link.target_type === "task" ? link.source : link.target; const type = link.target_type === "task" ? link.source_type : link.target_type; const parentBookId = type === "book" ? target.id : target.book_id; const href = type === "book" ? `/books/${target.id}` : `/books/${parentBookId}/pages/${target.id}`; return <div key={link.id}><Link to={href}><IconBook2 size={15}/><span><strong>{target.title}</strong><small>{type === "book_page" ? "Страница Booker" : "Книга Booker"}</small></span></Link><button onClick={() => remove.mutate(link.id)}>×</button></div>; })}{!bookLinks.length && <p>К задаче ещё не привязано ТЗ из Booker.</p>}</div><div className="booker-link-form"><select value={bookId} onChange={(event) => { setBookId(event.target.value); setPageId(""); }}><option value="">Выберите книгу</option>{books.map((book) => <option key={book.id} value={book.id}>{book.title}</option>)}</select><select disabled={!bookId} value={pageId} onChange={(event) => setPageId(event.target.value)}><option value="">Вся книга</option>{pages.map((page) => <option key={page.id} value={page.id}>{page.title}</option>)}</select><button disabled={!bookId || create.isPending} onClick={() => create.mutate()}>Привязать</button></div>{create.error && <p className="form-error">{create.error.message}</p>}</section>;
+}
+
+function TaskEntityLinksPanel({ task, scopeId }) {
+  const queryClient = useQueryClient();
+  const [type, setType] = useState("fact");
+  const [targetId, setTargetId] = useState("");
+  const key = ["entity-links", scopeId, "task", task.id];
+  const { data: links = [] } = useQuery({ queryKey: key, queryFn: () => entityLinkApi.list(scopeId, "task", task.id) });
+  const { data: facts = [] } = useQuery({ queryKey: ["facts", scopeId], queryFn: () => factApi.list(scopeId) });
+  const { data: eventPage } = useQuery({ queryKey: ["events-linker", scopeId], queryFn: () => eventApi.list(scopeId, { per_page: 200 }) });
+  const events = eventPage?.data ?? [];
+  const candidates = type === "fact" ? facts : events;
+  const create = useMutation({
+    mutationFn: () => entityLinkApi.create(scopeId, { source_type: "task", source_id: task.id, target_type: type, target_id: targetId, relation: "related" }),
+    onSuccess: () => {
+      setTargetId("");
+      queryClient.invalidateQueries({ queryKey: key });
+    },
+  });
+  const remove = useMutation({ mutationFn: (id) => entityLinkApi.remove(scopeId, id), onSuccess: () => queryClient.invalidateQueries({ queryKey: key }) });
+  const contextualLinks = links.filter((link) => ["fact", "event"].includes(link.target_type) || ["fact", "event"].includes(link.source_type));
+
+  return <section className="booker-linker context-linker"><header><div><IconLink size={18}/><h2>Контекст задачи</h2></div><small>Factor · Eventor</small></header><div className="booker-link-list">{contextualLinks.map((link) => { const target = link.target_type === "task" ? link.source : link.target; const targetType = link.target_type === "task" ? link.source_type : link.target_type; return <div key={link.id} className={`context-link context-link--${targetType}`}><Link to={targetType === "fact" ? "/factor" : "/events"}>{targetType === "fact" ? <IconBolt size={15}/> : <IconCalendarEvent size={15}/>}<span><strong>{targetType === "fact" ? target.label : target.title}</strong><small>{targetType === "fact" ? "Факт" : "Событие"}</small></span></Link><button title="Удалить связь" onClick={() => remove.mutate(link.id)}>×</button></div>; })}{!contextualLinks.length && <p>Факты и события пока не привязаны.</p>}</div><div className="context-link-form"><select value={type} onChange={(event) => { setType(event.target.value); setTargetId(""); }}><option value="fact">Factor</option><option value="event">Eventor</option></select><select value={targetId} onChange={(event) => setTargetId(event.target.value)}><option value="">Выберите сущность</option>{candidates.map((item) => <option key={item.id} value={item.id}>{type === "fact" ? item.label : item.title}</option>)}</select><button disabled={!targetId || create.isPending} onClick={() => create.mutate()}>Привязать</button></div>{create.error && <p className="form-error">{create.error.message}</p>}</section>;
 }
 
 function activityLabel(action) {

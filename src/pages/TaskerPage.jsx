@@ -13,7 +13,6 @@ import {
   IconArrowUpRight,
   IconArrowsMaximize,
   IconCheck,
-  IconChecklist,
   IconColumns,
   IconCopy,
   IconFolder,
@@ -33,6 +32,7 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
+import { useAuth } from "../auth";
 import { contractorApi } from "../entities/contractor/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
@@ -40,6 +40,7 @@ import { priorityLabel, taskReference } from "../entities/task/model";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
 import { TaskKpiField } from "../shared/ui/TaskKpiField";
 import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
+import { TaskChecklistPanel } from "./TaskMechanics";
 import "./TaskerPage.css";
 import "./TaskInteractions.css";
 import "./Subtasks.css";
@@ -407,6 +408,7 @@ function CreateDialog({
   onClose,
 }) {
   const queryClient = useQueryClient();
+  const user = useAuth((state) => state.user);
   const [mode, setMode] = useState("task");
   const [form, setForm] = useState({
     title: "",
@@ -418,7 +420,7 @@ function CreateDialog({
     priority: 3,
     description: "",
     color: "#2668D8",
-    assignee_id: "",
+    assignee_id: assignable.assignees.some((assignee) => assignee.id === user?.id) ? user.id : "",
     is_agent_delegatable: false,
     delegated_agent_id: "",
   });
@@ -1015,7 +1017,6 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const navigate = useNavigate();
   const [pane, setPane] = useState("description");
   const [creatingResult, setCreatingResult] = useState(false);
-  const [itemTitle, setItemTitle] = useState("");
   const [referenceCopied, setReferenceCopied] = useState(false);
   const queryKey = ["task", scopeId, taskId];
   const {
@@ -1033,23 +1034,6 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
       queryClient.setQueryData(queryKey, updated);
       queryClient.invalidateQueries({ queryKey: ["tasks", scopeId] });
     },
-  });
-  const addItem = useMutation({
-    mutationFn: () => taskApi.createChecklistItem(scopeId, taskId, itemTitle),
-    onSuccess: () => {
-      setItemTitle("");
-      refresh();
-    },
-  });
-  const toggleItem = useMutation({
-    mutationFn: ({ item, completed }) =>
-      taskApi.setChecklistItemCompleted(scopeId, taskId, item.id, completed),
-    onSuccess: refresh,
-  });
-  const convertItem = useMutation({
-    mutationFn: (itemId) =>
-      taskApi.convertChecklistItem(scopeId, taskId, itemId),
-    onSuccess: refresh,
   });
   const detach = useMutation({
     mutationFn: () => taskApi.detach(scopeId, taskId),
@@ -1078,7 +1062,6 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
         <div className="inspector-state form-error">{error.message}</div>
       </aside>
     );
-  const items = task.checklist_items ?? [];
   const hasStoredResult = Boolean(task.result?.trim());
   const hasResult = hasStoredResult || creatingResult;
   const activePane = pane === "result" && hasResult ? "result" : "description";
@@ -1306,77 +1289,12 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           }}
         />
       </Suspense>
-      <section className="checklist">
-        <header>
-          <span>
-            <IconChecklist size={18} />
-            Чек-лист
-          </span>
-          <small>
-            {items.filter((item) => item.completed_at).length}/{items.length}
-          </small>
-        </header>
-        <div>
-          {items.map((item) => (
-            <label
-              className={item.completed_at ? "completed" : ""}
-              key={item.id}
-            >
-              <input
-                type="checkbox"
-                checked={Boolean(item.completed_at)}
-                onChange={(event) =>
-                  toggleItem.mutate({ item, completed: event.target.checked })
-                }
-              />
-              <span>
-                <strong>{item.title}</strong>
-                {item.completed_at && (
-                  <small>
-                    <IconCheck size={12} />
-                    {item.completed_by?.name ?? "Выполнено"} ·{" "}
-                    {new Date(item.completed_at).toLocaleString()}
-                  </small>
-                )}
-              </span>
-              {!task.parent_id && (
-                <button
-                  className="convert-item"
-                  title="Преобразовать в подзадачу"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    convertItem.mutate(item.id);
-                  }}
-                  disabled={convertItem.isPending}
-                >
-                  <IconSubtask size={15} />
-                </button>
-              )}
-            </label>
-          ))}
-        </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (itemTitle.trim()) addItem.mutate();
-          }}
-        >
-          <IconPlus size={17} />
-          <input
-            value={itemTitle}
-            onChange={(event) => setItemTitle(event.target.value)}
-            placeholder="Добавить пункт…"
-          />
-          <button disabled={!itemTitle.trim() || addItem.isPending}>
-            Добавить
-          </button>
-        </form>
-      </section>
+      <TaskChecklistPanel task={task} scopeId={scopeId} refresh={refresh} assignees={assignable.assignees}/>
       <SubtasksPanel task={task} scopeId={scopeId} refresh={refresh} />
       <RelationsPanel task={task} scopeId={scopeId} />
-      {(convertItem.error || detach.error) && (
+      {detach.error && (
         <p className="form-error">
-          {convertItem.error?.message ?? detach.error?.message}
+          {detach.error.message}
         </p>
       )}
       {save.error && <p className="form-error">{save.error.message}</p>}
