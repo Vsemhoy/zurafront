@@ -4,7 +4,7 @@ import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from 
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { IconArrowLeft, IconBook2, IconBraces, IconChevronDown, IconChevronRight, IconEdit, IconFilePlus, IconFolder, IconGripVertical, IconHistory, IconHome, IconLayoutSidebarRight, IconLock, IconPlus, IconSettings, IconTrash } from '@tabler/icons-react';
+import { IconArrowDown, IconArrowLeft, IconArrowUp, IconBook2, IconBraces, IconChevronDown, IconChevronRight, IconEdit, IconFilePlus, IconFolder, IconGripVertical, IconHistory, IconHome, IconLayoutSidebarRight, IconLock, IconPlus, IconSettings, IconTrash } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { bookApi } from '../entities/book/api';
@@ -24,6 +24,7 @@ import './BookerExcalidraw.css';
 import './BookerHistory.css';
 import './BookerStructuredEditors.css';
 import './BookerReading.css';
+import './BookerSpaces.css';
 
 const BLOCK_TYPES = [['markdown', 'Текст'], ['callout', 'Врезка'], ['code', 'Код'], ['checklist', 'Чеклист'], ['table', 'Таблица'], ['svg', 'SVG'], ['excalidraw', 'Схема'], ['embed', 'Встраивание'], ['divider', 'Разделитель']];
 let ExcalidrawComponent = null; let exportExcalidrawToSvg = null;
@@ -46,21 +47,39 @@ export function BookerPage() {
     const { data: page, isLoading } = useQuery({ queryKey: ['book-page', activeScope?.id, bookId, activePageId], queryFn: () => bookApi.page(activeScope.id, bookId, activePageId), enabled: Boolean(activeScope && bookId && activePageId), refetchInterval: 15000 });
     const loadedPageId = page?.id; const loadedGroupCount = page?.groups?.length;
     const refreshBooks = () => queryClient.invalidateQueries({ queryKey: ['books', activeScope.id] });
+    const refreshSpaces = () => queryClient.invalidateQueries({ queryKey: ['book-spaces', activeScope.id] });
     const refreshPages = () => queryClient.invalidateQueries({ queryKey: ['book-pages', activeScope.id, bookId] });
     const refreshPage = () => queryClient.invalidateQueries({ queryKey: ['book-page', activeScope.id, bookId, activePageId] });
     useEffect(() => { if (!blockId || !loadedPageId) return; const frame = window.requestAnimationFrame(() => document.getElementById(`block-${blockId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })); return () => window.cancelAnimationFrame(frame); }, [blockId, versionId, loadedPageId, loadedGroupCount]);
     return <main className="booker-page">
-        <BookerNavigation spaces={spaces} books={books} activeBook={activeBook} pages={pages} pageId={activePageId} setBookId={selectBook} setPageId={selectPage} setForm={setForm} scopeId={activeScope?.id} refreshBooks={refreshBooks}/>
+        <BookerNavigation spaces={spaces} books={books} activeBook={activeBook} pages={pages} pageId={activePageId} setBookId={selectBook} setPageId={selectPage} setForm={setForm} scopeId={activeScope?.id} refreshBooks={refreshBooks} refreshSpaces={refreshSpaces}/>
         <section className="booker-content">{!bookId && <BookerWelcome/>}{activeBook && !activePageId && <><BookCover scopeId={activeScope.id} book={activeBook} spaces={spaces} scopes={scopes} projects={projects} selectScope={selectScope} refresh={refreshBooks}/><BookDeleteButton scopeId={activeScope.id} book={activeBook} onDeleted={() => { refreshBooks(); navigate('/books'); }}/></>} {isLoading && <div className="booker-empty">Загружаю страницу…</div>}{page && <BookPage scopeId={activeScope.id} scopeOwnerId={activeScope.owner_id} bookCreatedBy={activeBook?.created_by} bookId={bookId} page={page} refresh={refreshPage}/>}</section>
         <PageStructure scopeId={activeScope?.id} bookId={bookId} pageId={activePageId} page={page} editingBy={page?.editing_by} groups={page?.groups ?? []} refresh={refreshPage}/>
         {form && <CreateBookerEntity form={form} setForm={setForm} scopeId={activeScope.id} bookId={bookId} spaces={spaces} scopes={scopes} pages={pages} onCreated={(entity, targetScopeId) => { if (form.type === 'space') queryClient.invalidateQueries({ queryKey: ['book-spaces', activeScope.id] }); if (form.type === 'book') { if (targetScopeId !== activeScope.id) selectScope(targetScopeId); else { queryClient.setQueryData(['books', activeScope.id], (current = []) => [...current.filter((book) => book.id !== entity.id), entity].sort((left, right) => (left.sort_order ?? 0) - (right.sort_order ?? 0) || left.title.localeCompare(right.title))); refreshBooks(); selectBook(entity.id); } } if (form.type === 'page') { refreshPages(); selectPage(entity.id); } setForm(null); }}/>} 
     </main>;
 }
 
-function BookerNavigation({ spaces, books, activeBook, pages, pageId, setBookId, setPageId, setForm, scopeId, refreshBooks }) {
+function BookerNavigation({ spaces, books, activeBook, pages, pageId, setBookId, setPageId, setForm, scopeId, refreshBooks, refreshSpaces }) {
     const updateDepth = useMutation({ mutationFn: (depth) => bookApi.updateBook(scopeId, activeBook.id, { version_depth: depth }), onSuccess: refreshBooks });
+    const updateSpace = useMutation({ mutationFn: ({ spaceId, title }) => bookApi.updateSpace(scopeId, spaceId, { title }), onSuccess: refreshSpaces });
+    const deleteSpace = useMutation({ mutationFn: (spaceId) => bookApi.deleteSpace(scopeId, spaceId), onSuccess: () => { refreshSpaces(); refreshBooks(); } });
+    const reorderSpaces = useMutation({ mutationFn: (spaceIds) => bookApi.reorderSpaces(scopeId, spaceIds), onSuccess: refreshSpaces });
+    const renameSpace = (space) => {
+        const title = window.prompt('Название раздела Booker', space.title)?.trim();
+        if (title && title !== space.title) updateSpace.mutate({ spaceId: space.id, title });
+    };
+    const removeSpace = (space) => {
+        if (window.confirm(`Удалить раздел «${space.title}»? Книги из него перейдут в «Без раздела».`)) deleteSpace.mutate(space.id);
+    };
+    const moveSpace = (index, direction) => {
+        const target = index + direction;
+        if (target < 0 || target >= spaces.length) return;
+        const next = [...spaces];
+        [next[index], next[target]] = [next[target], next[index]];
+        reorderSpaces.mutate(next.map((space) => space.id));
+    };
     if (activeBook) return <aside className="booker-nav"><header><button title="К списку книг" onClick={() => setBookId(null)}><IconArrowLeft size={16}/></button><strong title={activeBook.title}>{activeBook.title}</strong><button title="Новая страница" onClick={() => setForm({ type: 'page' })}><IconFilePlus size={16}/></button></header><nav className="booker-page-tree"><button className={pageId === null ? 'active book-root' : 'book-root'} onClick={() => setPageId(null)}><IconHome size={13}/><span>{activeBook.title}</span></button>{treePages(pages).map((item) => <button key={item.id} className={item.id === pageId ? 'active' : ''} style={{ paddingLeft: 9 + item.depth * 14 }} onClick={() => setPageId(item.id)}><IconChevronRight size={13}/><span>{item.title}</span></button>)}</nav><label className="booker-depth"><IconSettings size={14}/><span>Глубина истории</span><input type="number" min="1" max="100" defaultValue={activeBook.version_depth ?? 25} onBlur={(event) => updateDepth.mutate(Number(event.target.value))}/></label></aside>;
-    return <aside className="booker-nav"><header><strong><IconBook2 size={18}/>Booker</strong><button title="Новый раздел" onClick={() => setForm({ type: 'space' })}><IconPlus size={16}/></button></header>{spaces.map((space) => <section key={space.id}><h3><IconFolder size={14}/>{space.title}</h3>{books.filter((book) => book.space_id === space.id).map((book) => <BookRow key={book.id} book={book} onClick={() => setBookId(book.id)}/>)}</section>)}<section><h3>Без раздела</h3>{books.filter((book) => !book.space_id).map((book) => <BookRow key={book.id} book={book} onClick={() => setBookId(book.id)}/>)}</section><button className="booker-add" onClick={() => setForm({ type: 'book', space_id: spaces[0]?.id ?? '' })}><IconPlus size={15}/>Новая книга</button></aside>;
+    return <aside className="booker-nav"><header><strong><IconBook2 size={18}/>Booker</strong><button title="Новый раздел" onClick={() => setForm({ type: 'space' })}><IconPlus size={16}/></button></header>{spaces.map((space, index) => <section key={space.id}><h3 className="booker-space-heading"><span><IconFolder size={14}/>{space.title}</span><span className="booker-space-actions"><button type="button" title="Выше" disabled={index === 0 || reorderSpaces.isPending} onClick={() => moveSpace(index, -1)}><IconArrowUp size={12}/></button><button type="button" title="Ниже" disabled={index === spaces.length - 1 || reorderSpaces.isPending} onClick={() => moveSpace(index, 1)}><IconArrowDown size={12}/></button><button type="button" title="Переименовать" disabled={updateSpace.isPending} onClick={() => renameSpace(space)}><IconEdit size={12}/></button><button type="button" title="Удалить раздел" disabled={deleteSpace.isPending} onClick={() => removeSpace(space)}><IconTrash size={12}/></button></span></h3>{books.filter((book) => book.space_id === space.id).map((book) => <BookRow key={book.id} book={book} onClick={() => setBookId(book.id)}/>)}</section>)}<section><h3>Без раздела</h3>{books.filter((book) => !book.space_id).map((book) => <BookRow key={book.id} book={book} onClick={() => setBookId(book.id)}/>)}</section>{(updateSpace.error || deleteSpace.error || reorderSpaces.error) && <p className="booker-error">{updateSpace.error?.message ?? deleteSpace.error?.message ?? reorderSpaces.error?.message}</p>}<button className="booker-add" onClick={() => setForm({ type: 'book', space_id: spaces[0]?.id ?? '' })}><IconPlus size={15}/>Новая книга</button></aside>;
 }
 
 function BookRow({ book, onClick }) { return <button onClick={onClick}><span>{book.title}</span><small>{book.pages_count}</small></button>; }

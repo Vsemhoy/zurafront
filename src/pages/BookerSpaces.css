@@ -1,0 +1,58 @@
+.booker-space-heading {
+  min-width: 0;
+  justify-content: space-between;
+}
+
+.booker-space-heading > span:first-child {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.booker-space-actions {
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.booker-space-heading:hover .booker-space-actions,
+.booker-space-actions:focus-within {
+  opacity: 1;
+}
+
+.booker-space-actions button {
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  padding: 0;
+  color: #687587;
+}
+
+.booker-space-actions button:hover:not(:disabled) {
+  background: #e6edf6;
+  color: #075aaf;
+}
+
+.booker-space-actions button:last-child:hover:not(:disabled) {
+  background: #fff0f0;
+  color: #b42318;
+}
+
+.booker-space-actions button:disabled {
+  opacity: 0.25;
+}
+
+@media (hover: none) {
+  .booker-space-actions {
+    opacity: 1;
+  }
+}

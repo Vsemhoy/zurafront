@@ -4,6 +4,9 @@ const json = (method, payload) => ({ method, body: JSON.stringify(payload) });
 export const bookApi = {
     spaces: (scopeId) => data(apiRequest(`/scopes/${scopeId}/book-spaces`)),
     createSpace: (scopeId, payload) => data(apiRequest(`/scopes/${scopeId}/book-spaces`, json('POST', payload))),
+    updateSpace: (scopeId, spaceId, payload) => data(apiRequest(`/scopes/${scopeId}/book-spaces/${spaceId}`, json('PATCH', payload))),
+    reorderSpaces: (scopeId, spaceIds) => data(apiRequest(`/scopes/${scopeId}/book-spaces/reorder`, json('PATCH', { space_ids: spaceIds }))),
+    deleteSpace: (scopeId, spaceId) => apiRequest(`/scopes/${scopeId}/book-spaces/${spaceId}`, { method: 'DELETE' }),
     books: (scopeId) => data(apiRequest(`/scopes/${scopeId}/books`)),
     createBook: (scopeId, payload) => data(apiRequest(`/scopes/${scopeId}/books`, json('POST', payload))),
     updateBook: (scopeId, bookId, payload) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}`, json('PATCH', payload))),
