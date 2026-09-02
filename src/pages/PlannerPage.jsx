@@ -1,7 +1,7 @@
 /* oxlint-disable react/set-state-in-effect */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconArrowLeft, IconArrowRight, IconBolt, IconCalendarPlus, IconChevronDown, IconFilter, IconLayersSelected, IconListDetails, IconPlus, IconRefresh, IconX } from '@tabler/icons-react';
+import { IconArrowLeft, IconArrowRight, IconBolt, IconCalendarPlus, IconChevronDown, IconFilter, IconLayersSelected, IconListDetails, IconPlus, IconRefresh, IconTrash, IconX } from '@tabler/icons-react';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { plannerApi } from '../entities/planner/api';
 import { contractorApi } from '../entities/contractor/api';
@@ -84,6 +84,7 @@ export function PlannerPage() {
     const [queueOpen, setQueueOpen] = useState(() => localStorage.getItem('zuratax:planner-unscheduled') === 'open');
     const [selected, setSelected] = useState([]);
     const [dragItem, setDragItem] = useState(null);
+    const [tailTrashActive, setTailTrashActive] = useState(false);
     const [selectionBox, setSelectionBox] = useState(null);
     const [filtersReadyFor, setFiltersReadyFor] = useState(null);
     const visible = useMemo(() => period(anchor, mode), [anchor, mode]);
@@ -121,6 +122,7 @@ export function PlannerPage() {
         if (shift) return plannerApi.copyTask(scopeId, item.id, day);
         return taskApi.update(scopeId, item.id, { due_at: `${day} 12:00:00` });
     }, onSuccess: refresh });
+    const deleteTail = useMutation({ mutationFn: (tailId) => plannerApi.deleteTail(scopeId, tailId), onSuccess: refresh, onSettled: () => { setDragItem(null); setTailTrashActive(false); } });
     const bulk = useMutation({ mutationFn: (payload) => plannerApi.bulk(scopeId, { task_ids: selected, ...payload }), onSuccess: () => { setSelected([]); refresh(); } });
 
     const itemsByDay = useMemo(() => {
@@ -155,7 +157,7 @@ export function PlannerPage() {
         window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
     };
 
-    return <main className={`planner-page ${bulkOpen ? 'planner-page--bulk' : ''}`}>
+    return <main className={`planner-page ${bulkOpen ? 'planner-page--bulk' : ''}`} onDragEndCapture={() => { setDragItem(null); setTailTrashActive(false); }}>
         {bulkOpen && <BulkTools selectedCount={selected.length} projects={projects} assignees={assignable.assignees} onClose={() => { setBulkOpen(false); setSelected([]); }} onApply={(payload) => bulk.mutate(payload)} pending={bulk.isPending} error={bulk.error}/>} 
         <section className="planner-workspace">
             <header className="planner-head"><div><small>Планирование ресурсов</small><h1>Planner</h1></div><div className="planner-head__controls"><div className="planner-period"><button onClick={() => movePeriod(-1)} aria-label="Назад"><IconArrowLeft size={17}/></button><strong>{visible.title}</strong><button onClick={() => movePeriod(1)} aria-label="Вперёд"><IconArrowRight size={17}/></button><button onClick={() => setAnchor(new Date())}>Сегодня</button></div><div className="planner-mode"><button className={mode === 'month' ? 'active' : ''} onClick={() => setMode('month')}>Месяц</button><button className={mode === 'quarter' ? 'active' : ''} onClick={() => setMode('quarter')}>Квартал</button></div></div></header>
@@ -171,6 +173,8 @@ export function PlannerPage() {
             </div></div></div>
             {calendar.isLoading && <div className="planner-loading">Раскладываю задачи…</div>}{calendar.error && <div className="planner-error planner-error--page">{calendar.error.message}</div>}
         </section>
+        {dragItem?.kind === 'tail' && <div className={`planner-tail-trash ${tailTrashActive ? 'is-active' : ''}`} onDragEnter={(event) => { event.preventDefault(); setTailTrashActive(true); }} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; }} onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setTailTrashActive(false); }} onDrop={(event) => { event.preventDefault(); deleteTail.mutate(dragItem.id); }}><IconTrash size={22}/><span>{tailTrashActive ? 'Отпускай — удалим этот хвост' : 'Удалить этот хвост'}</span></div>}
+        {deleteTail.error && <div className="planner-error planner-tail-trash-error">{deleteTail.error.message}</div>}
         {createDate && <QuickCreate key={editTask?.id ?? createDate} date={createDate} task={editTask} projects={projects} assignees={assignable.assignees} defaults={{ projectId: projectIds[0], assigneeId: assigneeIds[0], status: statuses[0] }} onClose={() => { setCreateDate(null); setEditTask(null); }} onSave={(payload) => saveTask.mutate(payload)} onOpenFull={() => navigate(`/tasks/${editTask.id}/edit`)} pending={saveTask.isPending} error={saveTask.error}/>}
     </main>;
 }

@@ -18,6 +18,9 @@ export const plannerApi = {
     async moveTail(scopeId, tailId, plannedOn) {
         return (await apiRequest(`/scopes/${scopeId}/planner/tails/${tailId}`, { method: 'PATCH', body: JSON.stringify({ planned_on: plannedOn }) })).data;
     },
+    deleteTail(scopeId, tailId) {
+        return apiRequest(`/scopes/${scopeId}/planner/tails/${tailId}`, { method: 'DELETE' });
+    },
     async copyTask(scopeId, taskId, plannedOn) {
         return (await apiRequest(`/scopes/${scopeId}/planner/tasks/${taskId}/copy`, { method: 'POST', body: JSON.stringify({ planned_on: plannedOn }) })).data;
     },

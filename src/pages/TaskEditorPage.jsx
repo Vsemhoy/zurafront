@@ -21,6 +21,7 @@ import { bookApi } from "../entities/book/api";
 import { entityLinkApi } from "../entities/link/api";
 import { eventApi } from "../entities/event/api";
 import { factApi } from "../entities/fact/api";
+import { plannerApi } from "../entities/planner/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
 import { priorityLabel } from "../entities/task/model";
@@ -105,6 +106,14 @@ export function TaskEditorPage() {
       queryClient.removeQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
       navigate("/tasks");
+    },
+  });
+  const removeTail = useMutation({
+    mutationFn: (tailId) => plannerApi.deleteTail(activeScope.id, tailId),
+    onSuccess: (_, tailId) => {
+      queryClient.setQueryData(queryKey, (current) => current ? { ...current, planner_tails: (current.planner_tails ?? []).filter((tail) => tail.id !== tailId) } : current);
+      queryClient.invalidateQueries({ queryKey: ["planner", activeScope.id] });
+      queryClient.invalidateQueries({ queryKey: ["task-activity", activeScope.id, taskId] });
     },
   });
   const sendComment = useMutation({
@@ -358,6 +367,12 @@ export function TaskEditorPage() {
             projectId={task.project_id}
             onChange={(payload) => save.mutate(payload)}
           />
+          <section className="task-tail-panel">
+            <header><div><IconCalendarEvent size={18}/><h2>Хвост задачи</h2></div><small>{task.planner_tails?.length ?? 0}</small></header>
+            <div>{(task.planner_tails ?? []).map((tail) => <article key={tail.id}><time dateTime={tail.planned_on}>{new Date(`${tail.planned_on}T00:00:00`).toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}</time><button title="Удалить этот хвост" disabled={removeTail.isPending} onClick={() => removeTail.mutate(tail.id)}><IconTrash size={15}/>Удалить</button></article>)}</div>
+            {!task.planner_tails?.length && <p>Дополнительных дней планирования пока нет.</p>}
+            {removeTail.error && <p className="form-error">{removeTail.error.message}</p>}
+          </section>
           <div className="editor-mechanics-grid">
             <TaskChecklistPanel
               task={task}
@@ -523,6 +538,9 @@ function activityLabel(action) {
       "task.relation_created": "добавил связь",
       "task.relation_deleted": "удалил связь",
       "task.comment_created": "добавил комментарий",
+      "task.planner_tail_created": "добавил хвост задачи",
+      "task.planner_tail_moved": "перенёс хвост задачи",
+      "task.planner_tail_deleted": "удалил хвост задачи",
       "checklist_item.completed": "выполнил пункт чек-листа",
       "checklist_item.reopened": "повторно открыл пункт чек-листа",
       "checklist_item.converted_to_subtask": "преобразовал пункт в подзадачу",
@@ -536,5 +554,8 @@ function activityDetails(item) {
   if (item.action === "task.blocked") return item.after?.reason;
   if (item.action === "task.unblocked") return item.after?.resolution_note;
   if (item.action === "task.relation_created") return item.after?.task_key;
+  if (item.action === "task.planner_tail_created") return item.after?.planned_on;
+  if (item.action === "task.planner_tail_moved") return `${item.before?.planned_on ?? "—"} → ${item.after?.planned_on ?? "—"}`;
+  if (item.action === "task.planner_tail_deleted") return item.before?.planned_on;
   return null;
 }
