@@ -1,0 +1,117 @@
+.markdown-renderer {
+  min-width: 0;
+  color: #26344d;
+  font-size: 15px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.markdown-renderer > :first-child {
+  margin-top: 0;
+}
+
+.markdown-renderer > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-renderer h1,
+.markdown-renderer h2,
+.markdown-renderer h3,
+.markdown-renderer h4,
+.markdown-renderer h5,
+.markdown-renderer h6 {
+  margin: 1.25em 0 0.5em;
+  color: #17233a;
+  line-height: 1.25;
+}
+
+.markdown-renderer h1 { font-size: 1.75em; }
+.markdown-renderer h2 { font-size: 1.4em; }
+.markdown-renderer h3 { font-size: 1.15em; }
+
+.markdown-renderer p,
+.markdown-renderer ul,
+.markdown-renderer ol,
+.markdown-renderer blockquote,
+.markdown-renderer pre,
+.markdown-renderer table {
+  margin: 0 0 0.85em;
+}
+
+.markdown-renderer ul,
+.markdown-renderer ol {
+  padding-left: 1.6em;
+}
+
+.markdown-renderer li + li {
+  margin-top: 0.2em;
+}
+
+.markdown-renderer blockquote {
+  padding: 0.5em 0.9em;
+  border-left: 3px solid #91a9d2;
+  background: #f3f6fb;
+  color: #52617a;
+}
+
+.markdown-renderer a {
+  color: #245fc2;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.markdown-renderer code {
+  padding: 0.12em 0.32em;
+  border-radius: 3px;
+  background: #eef1f6;
+  font: 0.9em/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.markdown-renderer pre {
+  max-width: 100%;
+  padding: 12px 14px;
+  overflow-x: auto;
+  background: #172033;
+  color: #edf3ff;
+}
+
+.markdown-renderer pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+}
+
+.markdown-renderer table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+}
+
+.markdown-renderer th,
+.markdown-renderer td {
+  padding: 6px 10px;
+  border: 1px solid #dfe5ef;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.markdown-renderer th {
+  background: #f3f6fa;
+  font-weight: 600;
+}
+
+.markdown-renderer img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.markdown-renderer input[type='checkbox'] {
+  margin: 0 0.45em 0 0;
+}
+
+.markdown-renderer-empty {
+  margin: 0;
+  color: #8a95a8;
+}
