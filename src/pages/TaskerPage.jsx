@@ -15,6 +15,7 @@ import {
   IconCheck,
   IconChecklist,
   IconColumns,
+  IconCopy,
   IconFolder,
   IconFolders,
   IconEdit,
@@ -1015,6 +1016,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const [pane, setPane] = useState("description");
   const [creatingResult, setCreatingResult] = useState(false);
   const [itemTitle, setItemTitle] = useState("");
+  const [referenceCopied, setReferenceCopied] = useState(false);
   const queryKey = ["task", scopeId, taskId];
   const {
     data: task,
@@ -1080,10 +1082,26 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const hasStoredResult = Boolean(task.result?.trim());
   const hasResult = hasStoredResult || creatingResult;
   const activePane = pane === "result" && hasResult ? "result" : "description";
+  const reference = taskReference(task);
+  const copyReference = async () => {
+    await navigator.clipboard.writeText(reference);
+    setReferenceCopied(true);
+    window.setTimeout(() => setReferenceCopied(false), 1600);
+  };
   return (
     <aside className="task-inspector">
       <header className="inspector-header">
-        <code>{task.task_key}</code>
+        <button
+          type="button"
+          className="task-reference-copy"
+          title={referenceCopied ? "Код скопирован" : "Скопировать код задачи"}
+          aria-label={`Скопировать код задачи ${reference}`}
+          onClick={copyReference}
+        >
+          <span>Код задачи</span>
+          <code>{reference}</code>
+          {referenceCopied ? <IconCheck size={15} /> : <IconCopy size={15} />}
+        </button>
         <div>
           <button
             type="button"
