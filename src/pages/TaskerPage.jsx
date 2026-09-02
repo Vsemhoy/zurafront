@@ -30,7 +30,7 @@ import {
   IconChevronDown,
   IconX,
 } from "@tabler/icons-react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
 import { contractorApi } from "../entities/contractor/api";
 import { projectApi } from "../entities/project/api";
@@ -95,6 +95,30 @@ function projectCountLabel(count) {
   if (mod10 === 1) return `${count} проект`;
   if (mod10 >= 2 && mod10 <= 4) return `${count} проекта`;
   return `${count} проектов`;
+}
+
+function parseProjectSelection(value, projects) {
+  if (!value || value === "all") return null;
+  if (value === "none") return new Set();
+  const lookup = new Map();
+  projects.forEach((project) => {
+    lookup.set(project.id.toLowerCase(), project.id);
+    lookup.set(project.key.toLowerCase(), project.id);
+  });
+  const ids = value
+    .split(",")
+    .map((token) => lookup.get(token.trim().toLowerCase()))
+    .filter(Boolean);
+  return ids.length ? new Set(ids) : null;
+}
+
+function serializeProjectSelection(ids, projects) {
+  if (ids === null) return "all";
+  if (ids.size === 0) return "none";
+  return projects
+    .filter((project) => ids.has(project.id))
+    .map((project) => project.key)
+    .join(",") || "none";
 }
 
 function ProjectRail({
@@ -193,6 +217,7 @@ function ProjectEditorDialog({ scopeId, project, onClose }) {
     status: project.status ?? "planning",
     priority: project.priority ?? 2,
     color: project.color ?? "#2668D8",
+    visibility: project.visibility ?? "scope",
     sort_order: project.sort_order ?? 0,
   });
   const save = useMutation({
@@ -235,6 +260,18 @@ function ProjectEditorDialog({ scopeId, project, onClose }) {
         <label>
           Название
           <input autoFocus required value={form.title} onChange={set("title")} />
+        </label>
+        <label className="project-editor-privacy">
+          Приватность
+          <select value={form.visibility} onChange={set("visibility")}>
+            <option value="private">Только создатель</option>
+            <option value="scope">Участники скоупа с доступом к проекту</option>
+          </select>
+          <small>
+            {form.visibility === "private"
+              ? "Проект и его задачи скрыты от коллег."
+              : "Доступ определяется настройками участников скоупа."}
+          </small>
         </label>
         <div className="project-editor-grid">
           <label>
@@ -1340,6 +1377,7 @@ export function TaskerPage() {
   const queryClient = useQueryClient();
   const { taskId } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [view, setView] = useState("board");
   const [create, setCreate] = useState(null);
   const [editingProjectId, setEditingProjectId] = useState(null);
@@ -1354,21 +1392,6 @@ export function TaskerPage() {
     scopeId: null,
     ids: null,
   });
-  const selectedProjectIds =
-    projectSelection.scopeId === activeScope?.id ? projectSelection.ids : null;
-  const setSelectedProjectIds = (nextValue) => {
-    setProjectSelection((current) => {
-      const currentIds =
-        current.scopeId === activeScope?.id ? current.ids : null;
-      return {
-        scopeId: activeScope?.id ?? null,
-        ids:
-          typeof nextValue === "function"
-            ? nextValue(currentIds)
-            : nextValue,
-      };
-    });
-  };
   const {
     data: tasks = [],
     isLoading,
@@ -1378,7 +1401,7 @@ export function TaskerPage() {
     queryFn: () => taskApi.list(activeScope.id),
     enabled: Boolean(activeScope),
   });
-  const { data: projectData = [] } = useQuery({
+  const { data: projectData = [], isSuccess: projectsLoaded } = useQuery({
     queryKey: ["projects", activeScope?.id],
     queryFn: () => projectApi.list(activeScope.id),
     enabled: Boolean(activeScope),
@@ -1397,6 +1420,39 @@ export function TaskerPage() {
       ),
     [projectData],
   );
+  let rememberedProjectIds = null;
+  if (activeScope?.id && projectsLoaded) {
+    const stored = localStorage.getItem(`zuratax:task-projects:${activeScope.id}`);
+    const urlScope = searchParams.get("scope");
+    const urlMatchesScope =
+      !urlScope || urlScope === activeScope.id || urlScope === activeScope.slug;
+    rememberedProjectIds = parseProjectSelection(
+      (urlMatchesScope ? searchParams.get("projects") : null) ?? stored,
+      projects,
+    );
+  }
+  const selectedProjectIds =
+    projectSelection.scopeId === activeScope?.id
+      ? projectSelection.ids
+      : rememberedProjectIds;
+  const setSelectedProjectIds = (nextValue) => {
+    const ids =
+      typeof nextValue === "function"
+        ? nextValue(selectedProjectIds)
+        : nextValue;
+    setProjectSelection({ scopeId: activeScope?.id ?? null, ids });
+  };
+  useEffect(() => {
+    if (!activeScope?.id || !projectsLoaded || projectSelection.scopeId !== activeScope.id) return;
+    const value = serializeProjectSelection(projectSelection.ids, projects);
+    const scopeValue = activeScope.slug ?? activeScope.id;
+    localStorage.setItem(`zuratax:task-projects:${activeScope.id}`, value);
+    if (searchParams.get("projects") === value && searchParams.get("scope") === scopeValue) return;
+    const next = new URLSearchParams(searchParams);
+    next.set("scope", scopeValue);
+    next.set("projects", value);
+    setSearchParams(next, { replace: true });
+  }, [activeScope?.id, activeScope?.slug, projectSelection, projects, projectsLoaded, searchParams, selectedProjectIds, setSearchParams]);
   useEffect(() => {
     localStorage.setItem(
       "zuratax:task-project-rail",

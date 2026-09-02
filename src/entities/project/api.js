@@ -5,5 +5,6 @@ export const projectApi = {
     async create(scopeId, payload) { return (await apiRequest(`/scopes/${scopeId}/projects`, { method: 'POST', body: JSON.stringify(payload) })).data; },
     async get(scopeId, projectId) { return (await apiRequest(`/scopes/${scopeId}/projects/${projectId}`)).data; },
     async update(scopeId, projectId, payload) { return (await apiRequest(`/scopes/${scopeId}/projects/${projectId}`, { method: 'PATCH', body: JSON.stringify(payload) })).data; },
+    async reorder(scopeId, projectIds) { return (await apiRequest(`/scopes/${scopeId}/projects/reorder`, { method: 'PATCH', body: JSON.stringify({ project_ids: projectIds }) })).data; },
     remove(scopeId, projectId) { return apiRequest(`/scopes/${scopeId}/projects/${projectId}`, { method: 'DELETE' }); },
 };
