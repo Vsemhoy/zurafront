@@ -1401,6 +1401,7 @@ export function TaskerPage() {
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [search, setSearch] = useState("");
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
+  const columnPickerRef = useRef(null);
   const [columnLimits, setColumnLimits] = useState({});
   const [visibleColumnIds, setVisibleColumnIds] = useState(storedColumnIds);
   const [projectRailOpen, setProjectRailOpen] = useState(
@@ -1483,6 +1484,16 @@ export function TaskerPage() {
       JSON.stringify(visibleColumnIds),
     );
   }, [visibleColumnIds]);
+  useEffect(() => {
+    if (!columnsMenuOpen) return undefined;
+    const closeColumnsMenu = (event) => {
+      if (!columnPickerRef.current?.contains(event.target)) {
+        setColumnsMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeColumnsMenu);
+    return () => document.removeEventListener("pointerdown", closeColumnsMenu);
+  }, [columnsMenuOpen]);
   const visibleColumns = useMemo(
     () => allColumns.filter((column) => visibleColumnIds.includes(column.id)),
     [visibleColumnIds],
@@ -1649,7 +1660,7 @@ export function TaskerPage() {
             <IconList size={17} />
           </button>
         </div>
-        <div className="column-picker">
+        <div className="column-picker" ref={columnPickerRef}>
           <button
             type="button"
             className={columnsMenuOpen ? "active" : ""}

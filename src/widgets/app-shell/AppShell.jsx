@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconBell, IconBook2, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFileText, IconFolder, IconHome, IconMapPin, IconPlus, IconRocket, IconSearch, IconUser, IconUsers, IconWallet, IconX } from '@tabler/icons-react';
+import { IconBell, IconBook2, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconPlus, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
@@ -16,15 +16,9 @@ const modules = [
     ['/projects', 'Projector', IconFolder, false, '#be185d', '#fce7f3'],
     ['/contractors', 'Contractor', IconUsers, false, '#7c3aed', '#ede9fe'],
     ['/kpi', 'KPI', IconChartBar, false, '#9333ea', '#f3e8ff'],
-    ['/ledger', 'Ledger', IconWallet, false, '#2d9e6b', '#d5f7df'],
     ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
     ['/factor', 'Factor', IconBuildingFactory2, false, '#2b6cb0', '#ebf4ff'],
-    ['/contacts', 'Contactor', IconUser, false, '#4c5fd5', '#e8ecff'],
     ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
-    ['/stuffer', 'Stuffer', IconBriefcase2, false, '#b45309', '#fef3c7'],
-    ['/exploiter', 'Exploiter', IconRocket, false, '#92400e', '#fde8a8'],
-    ['/tracker', 'Tracker', IconMapPin, false, '#c2410c', '#ffedd5'],
-    ['/reports', 'Reporter', IconFileText, false, '#475569', '#e2e8f0'],
 ];
 function ScopeMenu({ scopes, active, onSelect, onClose }) {
     const queryClient = useQueryClient();

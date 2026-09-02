@@ -1,0 +1,20 @@
+.planner-unscheduled > header span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.planner-unscheduled > header button {
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #667182;
+}
+
+.planner-unscheduled > header button:hover {
+  background: #dce2ea;
+  color: #1f2c3e;
+}
