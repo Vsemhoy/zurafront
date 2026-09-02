@@ -1431,7 +1431,7 @@ export function TaskerPage() {
   });
   const projects = useMemo(
     () =>
-      [...projectData].sort(
+      projectData.filter((project) => project.show_in_tasker !== false).sort(
         (left, right) =>
           (left.sort_order ?? 0) - (right.sort_order ?? 0) ||
           left.title.localeCompare(right.title),

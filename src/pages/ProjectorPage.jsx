@@ -10,7 +10,7 @@ import { bookApi } from "../entities/book/api";
 import { projectApi } from "../entities/project/api";
 import "./ProjectorPage.css";
 
-const empty = { title: "", key: "", description: "", result: "", status: "planning", priority: 2, color: "#2668D8", visibility: "private", sort_order: 0 };
+const empty = { title: "", key: "", description: "", result: "", status: "planning", priority: 2, color: "#2668D8", visibility: "private", show_in_tasker: true, show_in_eventor: true, event_comments_enabled: true, sort_order: 0 };
 
 function creatorName(project) {
   return project.creator?.name ?? project.creator?.username ?? "Неизвестный автор";
@@ -132,6 +132,7 @@ function ProjectEditor({ scopeId, projectId, onClose, onSaved }) {
 
   if (!form) return <aside className="projector-editor">Загружаю…</aside>;
   const set = (key) => (event) => setDraft({ ...form, [key]: event.target.value });
+  const setChecked = (key) => (event) => setDraft({ ...form, [key]: event.target.checked });
   const confirmDelete = () => { if (window.confirm(`Удалить проект ${form.key} · ${form.title}? Задачи и книги сохранятся без проекта.`)) remove.mutate(); };
 
   return <><div className="projector-backdrop" onClick={onClose} /><aside className="projector-editor">
@@ -139,6 +140,7 @@ function ProjectEditor({ scopeId, projectId, onClose, onSaved }) {
     <form onSubmit={(event) => { event.preventDefault(); save.mutate({ ...form, priority: Number(form.priority), sort_order: Number(form.sort_order), key: form.key.toUpperCase() }); }}>
       <label>Название<input autoFocus required value={form.title} onChange={set("title")} /></label>
       <label className="projector-privacy">Приватность<select value={form.visibility} onChange={set("visibility")}><option value="private">Только создатель</option><option value="scope">Участники скоупа с доступом к проекту</option></select><small>{form.visibility === "private" ? "Проект и его задачи скрыты от коллег." : "Проект и задачи видны участникам согласно их доступам."}</small></label>
+      <fieldset><legend>Модули проекта</legend><label className="projector-book"><input type="checkbox" checked={form.show_in_tasker} onChange={setChecked("show_in_tasker")} /><span>Показывать проект в Tasker</span></label><label className="projector-book"><input type="checkbox" checked={form.show_in_eventor} onChange={setChecked("show_in_eventor")} /><span>Показывать проект в Eventor</span></label><label className="projector-book"><input type="checkbox" checked={form.event_comments_enabled} onChange={setChecked("event_comments_enabled")} /><span>Разрешить комментарии к событиям</span></label></fieldset>
       <div className="projector-form-grid"><label>Литерал<input required maxLength="12" value={form.key} disabled={Boolean(projectId)} onChange={set("key")} /></label><label>Цвет<input type="color" value={form.color} onChange={set("color")} /></label><label>Статус<select value={form.status} onChange={set("status")}><option value="planning">Планируется</option><option value="active">Активный</option><option value="on_hold">На паузе</option><option value="completed">Завершён</option><option value="archived">Архив</option></select></label><label>Приоритет<input type="number" min="1" max="5" value={form.priority} onChange={set("priority")} /></label></div>
       <label>Описание<textarea rows="4" value={form.description ?? ""} onChange={set("description")} /></label>
       <label>Результат<textarea rows="3" value={form.result ?? ""} onChange={set("result")} /></label>
