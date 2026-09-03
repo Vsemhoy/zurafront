@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconPlus, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
 import { scopeApi } from '../../entities/scope/api';
@@ -34,13 +34,15 @@ export function AppShell() {
     const { t } = useTranslation();
     const { user, logout, check } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
     const searchRef = useRef(null);
     const [headerSearch, setHeaderSearch] = useState('');
     const stopActing = useMutation({ mutationFn: contractorApi.stopActing, onSuccess: () => check() });
     const { data: scopes = [] } = useQuery({ queryKey: ['scopes'], queryFn: scopeApi.list });
     const [activeScopeId, setActiveScopeId] = useState(() => localStorage.getItem('zuratax-active-scope'));
     const [scopeOpen, setScopeOpen] = useState(false);
-    const activeScope = scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
+    const routeScopeId = location.pathname.match(/^\/lore\/([^/]+)\//)?.[1];
+    const activeScope = scopes.find((scope) => scope.id === routeScopeId) ?? scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)
         localStorage.setItem('zuratax-active-scope', activeScope.id); }, [activeScope]);
     useEffect(() => {

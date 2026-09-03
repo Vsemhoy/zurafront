@@ -45,8 +45,15 @@
     border: 0;
     border-bottom: 1px solid #e1e6ed;
     border-radius: 0;
-    background: #f7f9fc;
+    background: #80808045;
     padding: 4px;
+}
+
+body [class*='toolbarNodeKindSelectContainer'],
+body [class*='toolbarButtonDropdownContainer'],
+body [class*='toolbarCodeBlockLanguageSelectContent'],
+body [class*='selectContainer'] {
+    z-index: 1000;
 }
 
 .compact-md [class*='contentEditable'] {

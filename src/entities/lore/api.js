@@ -5,6 +5,8 @@ export const loreApi = {
   async get(scopeId, id) { return (await apiRequest(`/scopes/${scopeId}/lore/${id}`)).data; },
   async create(scopeId, payload) { return (await apiRequest(`/scopes/${scopeId}/lore`, { method: 'POST', body: JSON.stringify(payload) })).data; },
   async revise(scopeId, id, payload) { return (await apiRequest(`/scopes/${scopeId}/lore/${id}/revisions`, { method: 'POST', body: JSON.stringify(payload) })).data; },
+  async editRevision(scopeId, id, revisionId, payload) { return (await apiRequest(`/scopes/${scopeId}/lore/${id}/revisions/${revisionId}`, { method: 'PATCH', body: JSON.stringify(payload) })).data; },
   async star(scopeId, id, starred) { return (await apiRequest(`/scopes/${scopeId}/lore/${id}/star`, { method: 'PATCH', body: JSON.stringify({ starred }) })).data; },
+  remove(scopeId, id) { return apiRequest(`/scopes/${scopeId}/lore/${id}`, { method: 'DELETE' }); },
   async areas(scopeId) { return (await apiRequest(`/scopes/${scopeId}/lore/areas`)).data; },
 };
