@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconBell, IconBook2, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconPlus, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
+import { IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconPlus, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
@@ -18,6 +18,7 @@ const modules = [
     ['/kpi', 'KPI', IconChartBar, false, '#9333ea', '#f3e8ff'],
     ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
     ['/factor', 'Factor', IconBuildingFactory2, false, '#2b6cb0', '#ebf4ff'],
+    ['/lore', 'Lore', IconBrain, false, '#4f46a5', '#eeecff'],
     ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
 ];
 function ScopeMenu({ scopes, active, onSelect, onClose }) {
