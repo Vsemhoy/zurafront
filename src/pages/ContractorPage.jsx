@@ -62,7 +62,7 @@ function explicitPermissions(contractor) {
   };
 }
 
-function buildAgentInstruction(token) {
+function buildAgentInstruction(token, specification = '') {
   const baseUrl = window.location.origin;
   const specificationUrl = `${baseUrl}/api/agent/spec`;
 
@@ -84,7 +84,20 @@ curl --fail-with-body --silent --show-error \\
 Затем проверь учётку через GET ${baseUrl}/api/agent/me и получи личную очередь через GET ${baseUrl}/api/agent/tasks.
 
 Для JSON-запросов отправляй Accept: application/json, а для POST/PATCH ещё Content-Type: application/json. Никогда не помещай ключ в URL, код, коммиты, комментарии, логи или сообщения. При 401 считай ключ отозванным, при 403 не обходи границу доступа, при 422 исправь payload по ответу API. Актуальная спецификация по ссылке выше всегда главнее этой стартовой инструкции.
+
+${specification ? `---\n\n# Актуальная спецификация, полученная при выпуске ключа\n\n${specification.trim()}\n` : ''}
 `;
+}
+
+async function fetchAgentSpecification(token) {
+  const response = await fetch(`${window.location.origin}/api/agent/spec`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'text/markdown',
+    },
+  });
+  if (!response.ok) throw new Error(`Не удалось получить спецификацию агента: HTTP ${response.status}`);
+  return response.text();
 }
 
 function TypeIcon({ type, size = 18 }) {
@@ -517,6 +530,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const queryClient = useQueryClient();
   const [plainToken, setPlainToken] = useState(null);
   const [instructionCopied, setInstructionCopied] = useState(false);
+  const [instructionError, setInstructionError] = useState(null);
   const { data: projects = [] } = useQuery({
     queryKey: ['projects', scopeId],
     queryFn: () => projectApi.list(scopeId),
@@ -612,10 +626,16 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
     onSuccess: onChanged,
   });
   const copyAgentInstruction = async () => {
-    if (!plainToken) return;
-    await navigator.clipboard.writeText(buildAgentInstruction(plainToken));
-    setInstructionCopied(true);
-    window.setTimeout(() => setInstructionCopied(false), 2200);
+    setInstructionError(null);
+    try {
+      const token = plainToken ?? (await issue.mutateAsync()).token;
+      const specification = await fetchAgentSpecification(token);
+      await navigator.clipboard.writeText(buildAgentInstruction(token, specification));
+      setInstructionCopied(true);
+      window.setTimeout(() => setInstructionCopied(false), 2200);
+    } catch (error) {
+      setInstructionError(error);
+    }
   };
   if (!contractor || !form) return <aside className="contractor-editor">Загружаю…</aside>;
   const toggleProject = (projectId) =>
@@ -890,9 +910,9 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
               <IconKey size={17} />
               {issue.isPending ? 'Выпускаю…' : 'Выпустить ключ для Codex'}
             </button>
-            <button className="contractor-instruction-button" disabled={!plainToken} title={plainToken ? 'Скопировать адреса, ключ и команду подключения' : 'Сначала выпустите новый ключ'} onClick={copyAgentInstruction}>
+            <button className="contractor-instruction-button" disabled={issue.isPending} title={plainToken ? 'Скопировать ключ и полную актуальную спецификацию' : 'Выпустить новый ключ и скопировать полную актуальную спецификацию'} onClick={copyAgentInstruction}>
               <IconCopy size={17} />
-              {instructionCopied ? 'Инструкция скопирована' : 'Скопировать инструкцию для агента'}
+              {issue.isPending ? 'Готовлю инструкцию…' : instructionCopied ? 'Полная инструкция скопирована' : plainToken ? 'Скопировать полную инструкцию' : 'Выпустить ключ и скопировать инструкцию'}
             </button>
           </div>
           {plainToken && (
@@ -916,6 +936,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
               </div>
             ))}
           </div>
+          {instructionError && <p className="contractor-error">{instructionError.message}</p>}
         </section>
       )}
       {(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error) && <p className="contractor-error">{(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error).message}</p>}

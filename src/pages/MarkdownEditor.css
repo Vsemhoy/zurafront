@@ -56,6 +56,10 @@ body [class*='selectContainer'] {
     z-index: 1000;
 }
 
+body .mdxeditor-popup-container {
+    z-index: 1000 !important;
+}
+
 .compact-md [class*='contentEditable'] {
     min-height: 150px;
     padding: 12px 4px;

@@ -10,7 +10,7 @@
 .lore-md-field .compact-md--full .md-source-input { min-height:322px; padding:8px; }
 .lore-md-field .md-editor-controls,
 .lore-md-field .compact-md--full .md-editor-controls { top:-34px; right:0; }
-.lore-md-field .mdxeditor-toolbar { border:0; background:transparent; padding:3px 0; }
+.lore-md-field .mdxeditor-toolbar { border:0; background:#80808045; padding:3px 0; }
 .lore-md-field--reason .compact-md { min-height:90px; }
 .lore-md-field--reason .compact-md [class*='contentEditable'] { min-height:84px; }
 .lore-current { margin:10px 0; border:0; background:transparent; padding:0; }
@@ -30,3 +30,4 @@
 .lore-history small > .markdown-renderer { color:inherit; }
 .lore-delete { margin-top:18px; border:0; background:transparent; padding:7px 0; color:#b42318; font-size:11px; }
 .lore-delete:disabled { opacity:.5; }
+.lore-row-actions a { text-decoration:none; }
