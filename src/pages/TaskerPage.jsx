@@ -1,4 +1,5 @@
 import {
+  Fragment,
   lazy,
   Suspense,
   useEffect,
@@ -72,6 +73,8 @@ const columnPresets = {
 };
 
 const availableColumnIds = new Set(allColumns.map((column) => column.id));
+const allStatusIds = allColumns.flatMap((column) => column.statuses);
+const availableStatusIds = new Set(allStatusIds);
 
 function storedColumnIds() {
   try {
@@ -85,6 +88,90 @@ function storedColumnIds() {
   } catch {
     return columnPresets.main;
   }
+}
+
+function storedListStatusIds() {
+  try {
+    const stored = JSON.parse(
+      localStorage.getItem("zuratax:task-list-statuses") ?? "null",
+    );
+    if (!Array.isArray(stored)) return allStatusIds;
+    return stored.filter((status) => availableStatusIds.has(status));
+  } catch {
+    return allStatusIds;
+  }
+}
+
+function taskCompletionDate(task) {
+  const value = task.completed_at ?? task.completedAt;
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function listMonthLabel(date) {
+  const label = date.toLocaleDateString("ru-RU", {
+    month: "long",
+    year: "numeric",
+  });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function groupListTasks(tasks) {
+  const groups = new Map();
+  tasks.forEach((task) => {
+    const completedAt = taskCompletionDate(task);
+    let key = "open";
+    let label = "Не завершены";
+    let order = Number.MAX_SAFE_INTEGER;
+    if (completedAt) {
+      key = `${completedAt.getFullYear()}-${String(completedAt.getMonth() + 1).padStart(2, "0")}`;
+      label = listMonthLabel(completedAt);
+      order = completedAt.getFullYear() * 12 + completedAt.getMonth();
+    } else if (task.status === "done") {
+      key = "done-without-date";
+      label = "Готово · дата завершения не указана";
+      order = Number.MAX_SAFE_INTEGER - 1;
+    }
+    if (!groups.has(key)) groups.set(key, { key, label, order, tasks: [] });
+    groups.get(key).tasks.push(task);
+  });
+  return Array.from(groups.values())
+    .sort((left, right) => right.order - left.order)
+    .map((group) => ({
+      ...group,
+      tasks: group.tasks.sort((left, right) => {
+        const leftDate = taskCompletionDate(left)?.getTime() ?? 0;
+        const rightDate = taskCompletionDate(right)?.getTime() ?? 0;
+        return rightDate - leftDate || (left.sort_order ?? 0) - (right.sort_order ?? 0);
+      }),
+    }));
+}
+
+function taskKpiTooltip(task, tasks) {
+  if (!task.kpi || !task.kpi_id) return "KPI не назначен";
+  const completedAt = taskCompletionDate(task);
+  const minimum = Number(task.kpi.minimum_completed_tasks ?? 1);
+  let completed = 0;
+  if (completedAt && task.assignee_id) {
+    completed = tasks.filter((candidate) => {
+      const candidateDate = taskCompletionDate(candidate);
+      return candidate.status === "done" &&
+        candidate.kpi_id === task.kpi_id &&
+        candidate.assignee_id === task.assignee_id &&
+        candidateDate?.getFullYear() === completedAt.getFullYear() &&
+        candidateDate?.getMonth() === completedAt.getMonth();
+    }).length;
+  }
+  const earned = completed >= minimum ? Number(task.kpi.points ?? 0) : 0;
+  const kind = task.kpi.kind === "bonus" ? "Премиальный" : "Окладный";
+  return [
+    task.kpi.name,
+    `${kind} KPI · ${task.kpi.points ?? 0} бал.`,
+    completedAt ? `${completed}/${minimum} задач за ${listMonthLabel(completedAt).toLowerCase()}` : `Порог: ${minimum} задач за месяц`,
+    `Заработано: ${earned} бал.`,
+    `ID: ${task.kpi_id}`,
+  ].join("\n");
 }
 
 function matchesColumnPreset(selected, preset) {
@@ -1466,6 +1553,7 @@ export function TaskerPage() {
   const columnPickerRef = useRef(null);
   const [columnLimits, setColumnLimits] = useState({});
   const [visibleColumnIds, setVisibleColumnIds] = useState(storedColumnIds);
+  const [listStatusIds, setListStatusIds] = useState(storedListStatusIds);
   const [projectRailOpen, setProjectRailOpen] = useState(
     () => localStorage.getItem("zuratax:task-project-rail") !== "closed",
   );
@@ -1547,6 +1635,12 @@ export function TaskerPage() {
     );
   }, [visibleColumnIds]);
   useEffect(() => {
+    localStorage.setItem(
+      "zuratax:task-list-statuses",
+      JSON.stringify(listStatusIds),
+    );
+  }, [listStatusIds]);
+  useEffect(() => {
     if (!columnsMenuOpen) return undefined;
     const closeColumnsMenu = (event) => {
       if (!columnPickerRef.current?.contains(event.target)) {
@@ -1579,6 +1673,13 @@ export function TaskerPage() {
       }
       return [...current, columnId];
     });
+  };
+  const toggleListStatus = (status) => {
+    setListStatusIds((current) =>
+      current.includes(status)
+        ? current.filter((item) => item !== status)
+        : [...current, status],
+    );
   };
   const colorProject = useMutation({
     mutationFn: ({ projectId, color }) =>
@@ -1689,6 +1790,9 @@ export function TaskerPage() {
         .includes(search.toLowerCase())
     );
   });
+  const listGroups = groupListTasks(
+    filtered.filter((task) => listStatusIds.includes(task.status)),
+  );
   const activePeopleFilters = Object.values(peopleFilters).filter(
     (value) => value !== "all",
   ).length;
@@ -1772,45 +1876,82 @@ export function TaskerPage() {
             aria-expanded={columnsMenuOpen}
           >
             <IconAdjustmentsHorizontal size={16} />
-            Колонки
+            {view === "board" ? "Колонки" : "Статусы"}
+            {view === "list" && listStatusIds.length !== allStatusIds.length && (
+              <b>{listStatusIds.length}</b>
+            )}
           </button>
           {columnsMenuOpen && (
             <div className="column-picker-menu">
-              <header>Набор колонок</header>
-              <div className="column-presets">
-                <button
-                  className={
-                    matchesColumnPreset(visibleColumnIds, columnPresets.main)
-                      ? "active"
-                      : ""
-                  }
-                  onClick={() => setVisibleColumnIds(columnPresets.main)}
-                >
-                  Основные
-                </button>
-                <button
-                  className={
-                    matchesColumnPreset(visibleColumnIds, columnPresets.hidden)
-                      ? "active"
-                      : ""
-                  }
-                  onClick={() => setVisibleColumnIds(columnPresets.hidden)}
-                >
-                  Скрытые
-                </button>
-              </div>
-              <div className="column-options">
-                {allColumns.map((column) => (
-                  <label key={column.id}>
-                    <input
-                      type="checkbox"
-                      checked={visibleColumnIds.includes(column.id)}
-                      onChange={() => toggleColumn(column.id)}
-                    />
-                    <span>{column.label}</span>
-                  </label>
-                ))}
-              </div>
+              {view === "board" ? (
+                <>
+                  <header>Набор колонок</header>
+                  <div className="column-presets">
+                    <button
+                      className={
+                        matchesColumnPreset(visibleColumnIds, columnPresets.main)
+                          ? "active"
+                          : ""
+                      }
+                      onClick={() => setVisibleColumnIds(columnPresets.main)}
+                    >
+                      Основные
+                    </button>
+                    <button
+                      className={
+                        matchesColumnPreset(visibleColumnIds, columnPresets.hidden)
+                          ? "active"
+                          : ""
+                      }
+                      onClick={() => setVisibleColumnIds(columnPresets.hidden)}
+                    >
+                      Скрытые
+                    </button>
+                  </div>
+                  <div className="column-options">
+                    {allColumns.map((column) => (
+                      <label key={column.id}>
+                        <input
+                          type="checkbox"
+                          checked={visibleColumnIds.includes(column.id)}
+                          onChange={() => toggleColumn(column.id)}
+                        />
+                        <span>{column.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <header>Показывать статусы</header>
+                  <div className="column-presets">
+                    <button
+                      className={listStatusIds.length === allStatusIds.length ? "active" : ""}
+                      onClick={() => setListStatusIds(allStatusIds)}
+                    >
+                      Все
+                    </button>
+                    <button
+                      className={listStatusIds.length === 0 ? "active" : ""}
+                      onClick={() => setListStatusIds([])}
+                    >
+                      Сбросить
+                    </button>
+                  </div>
+                  <div className="column-options">
+                    {allColumns.map((column) => (
+                      <label key={column.id}>
+                        <input
+                          type="checkbox"
+                          checked={column.statuses.some((status) => listStatusIds.includes(status))}
+                          onChange={() => toggleListStatus(column.statuses[0])}
+                        />
+                        <span>{column.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              )}
               <small>Выбор сохраняется в этом браузере</small>
             </div>
           )}
@@ -2010,31 +2151,51 @@ export function TaskerPage() {
             <span>Проект</span>
             <span>Исполнитель</span>
             <span>Приоритет</span>
+            <span>KPI ID</span>
             <span>Срок</span>
+            <span>Завершена</span>
           </header>
-          {filtered.map((task) => (
-            <button key={task.id} onClick={() => open(task)}>
-              <span>
-                {allColumns.find((column) => column.statuses.includes(task.status))
-                  ?.label ?? task.status}
-              </span>
-              <strong>
-                <code>{taskReference(task)}</code>
-                {task.title}
-              </strong>
-              <span className="task-list-project">
-                {task.project && (
-                  <i style={{ backgroundColor: task.project.color ?? "#2668D8" }} />
-                )}
-                {task.project?.title ?? "—"}
-              </span>
-              <span>{task.assignee?.name ?? "Не назначен"}</span>
-              <span>{priorityLabel(task.priority)}</span>
-              <time>
-                {task.due_at ? new Date(task.due_at).toLocaleDateString() : "—"}
-              </time>
-            </button>
+          {listGroups.map((group) => (
+            <Fragment key={group.key}>
+              <div className="task-list-month">
+                <strong>{group.label}</strong>
+                <span>{group.tasks.length}</span>
+              </div>
+              {group.tasks.map((task) => {
+                const completedAt = taskCompletionDate(task);
+                return (
+                  <button key={task.id} onClick={() => open(task)}>
+                    <span>
+                      {allColumns.find((column) => column.statuses.includes(task.status))
+                        ?.label ?? task.status}
+                    </span>
+                    <strong>
+                      <code>{taskReference(task)}</code>
+                      {task.title}
+                    </strong>
+                    <span className="task-list-project">
+                      {task.project && (
+                        <i style={{ backgroundColor: task.project.color ?? "#2668D8" }} />
+                      )}
+                      {task.project?.title ?? "—"}
+                    </span>
+                    <span>{task.assignee?.name ?? "Не назначен"}</span>
+                    <span>{priorityLabel(task.priority)}</span>
+                    <code className="task-list-kpi" title={taskKpiTooltip(task, tasks)}>
+                      {task.kpi_id ? `…${task.kpi_id.slice(-7)}` : "—"}
+                    </code>
+                    <time>
+                      {task.due_at ? new Date(task.due_at).toLocaleDateString("ru-RU") : "—"}
+                    </time>
+                    <time>{completedAt ? completedAt.toLocaleDateString("ru-RU") : "—"}</time>
+                  </button>
+                );
+              })}
+            </Fragment>
           ))}
+          {listGroups.length === 0 && (
+            <div className="task-list-empty">Задач с выбранными статусами нет.</div>
+          )}
         </section>
           )}
         </div>
