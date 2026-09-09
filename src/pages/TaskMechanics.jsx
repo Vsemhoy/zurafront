@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   IconAlertTriangle,
@@ -288,7 +289,7 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
           {items.filter((item) => item.completed_at).length}/{items.length}
         </small>
       </header>
-      <div>
+      <div className="checklist-items">
         {items.map((item) => (
           <label className={item.completed_at ? "completed" : ""} key={item.id}>
             <input
@@ -375,7 +376,7 @@ function ChecklistItemEditor({ item, assignees, saving, deleting, error, onClose
   });
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
 
-  return (
+  return createPortal(
     <div className="checklist-editor-backdrop" onMouseDown={onClose}>
       <form
         className="checklist-editor"
@@ -410,7 +411,8 @@ function ChecklistItemEditor({ item, assignees, saving, deleting, error, onClose
         {error && <p className="form-error">{error.message}</p>}
         <footer><button type="button" className="checklist-delete" disabled={deleting} onClick={() => window.confirm(`Удалить пункт «${item.title}»?`) && onDelete()}><IconTrash size={14}/>Удалить</button><span/><button type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving || !form.title.trim()}>Сохранить</button></footer>
       </form>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
