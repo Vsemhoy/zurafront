@@ -15,6 +15,7 @@ import {
   IconCheck,
   IconColumns,
   IconCopy,
+  IconCornerUpLeft,
   IconFolder,
   IconFolders,
   IconEdit,
@@ -331,7 +332,7 @@ function ProjectEditorDialog({ scopeId, project, onClose }) {
   );
 }
 
-function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
+function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments }) {
   const blocked = task.status === "blocked";
   return (
     <article
@@ -396,16 +397,158 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove }) {
           {blocked ? "Заблокировано" : priorityLabel(task.priority)}
         </small>
         {Number(task.comments_count ?? 0) > 0 && (
-          <span className="task-card-comments" title={`${task.comments_count} комментариев`}>
+          <button
+            type="button"
+            draggable="false"
+            className="task-card-comments"
+            title={`Открыть комментарии · ${task.comments_count}`}
+            aria-label={`Открыть комментарии задачи ${taskReference(task)}`}
+            onMouseDown={(event) => event.stopPropagation()}
+            onDragStart={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+            onKeyDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onComments();
+            }}
+          >
             <IconMessageCircle size={14} />
             {task.comments_count}
-          </span>
+          </button>
         )}
         {task.due_at && (
           <time>{new Date(task.due_at).toLocaleDateString()}</time>
         )}
       </footer>
     </article>
+  );
+}
+
+function TaskCommentsSidebar({ scope, task, onClose }) {
+  const user = useAuth((state) => state.user);
+  const queryClient = useQueryClient();
+  const [content, setContent] = useState("");
+  const [replyTo, setReplyTo] = useState(null);
+  const commentsKey = ["task-comments", scope.id, task.id];
+  const {
+    data: comments = [],
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: commentsKey,
+    queryFn: () => taskApi.comments(scope.id, task.id),
+  });
+  const refreshComments = () => {
+    queryClient.invalidateQueries({ queryKey: commentsKey });
+    queryClient.invalidateQueries({ queryKey: ["tasks", scope.id] });
+    queryClient.invalidateQueries({ queryKey: ["task-activity", scope.id, task.id] });
+  };
+  const send = useMutation({
+    mutationFn: () =>
+      taskApi.createComment(scope.id, task.id, content.trim(), replyTo?.id ?? null),
+    onSuccess: () => {
+      setContent("");
+      setReplyTo(null);
+      refreshComments();
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (commentId) => taskApi.deleteComment(scope.id, task.id, commentId),
+    onSuccess: refreshComments,
+  });
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div className="task-comments-backdrop" onMouseDown={onClose}>
+      <aside
+        className="task-comments-sidebar"
+        aria-label={`Комментарии задачи ${taskReference(task)}`}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <header>
+          <div>
+            <code>{taskReference(task)}</code>
+            <h2>Комментарии</h2>
+            <p>{task.title}</p>
+          </div>
+          <button type="button" onClick={onClose} aria-label="Закрыть комментарии">
+            <IconX size={18} />
+          </button>
+        </header>
+        <div className="task-comments-list">
+          {isLoading && <p className="task-comments-state">Загружаю комментарии…</p>}
+          {error && <p className="form-error">{error.message}</p>}
+          {comments.map((comment) => (
+            <article key={comment.id} className={comment.parent_id ? "is-reply" : ""}>
+              <span className="task-comment-avatar">
+                {comment.created_by?.name?.slice(0, 2).toUpperCase() ?? "??"}
+              </span>
+              <div>
+                <header>
+                  <strong>{comment.created_by?.name ?? "Неизвестный автор"}</strong>
+                  <time>{new Date(comment.created_at).toLocaleString()}</time>
+                </header>
+                <p>{comment.content}</p>
+                <footer>
+                  <button type="button" onClick={() => setReplyTo(comment)}>
+                    <IconCornerUpLeft size={13} />Ответить
+                  </button>
+                  {(comment.created_by?.id === user?.id || task.created_by === user?.id || scope.owner_id === user?.id) && (
+                    <button
+                      type="button"
+                      className="delete"
+                      disabled={remove.isPending}
+                      onClick={() => window.confirm("Удалить комментарий?") && remove.mutate(comment.id)}
+                    >
+                      <IconTrash size={13} />Удалить
+                    </button>
+                  )}
+                </footer>
+              </div>
+            </article>
+          ))}
+          {!isLoading && !error && comments.length === 0 && (
+            <p className="task-comments-state">Комментариев пока нет.</p>
+          )}
+        </div>
+        <form
+          className="task-comments-compose"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (content.trim()) send.mutate();
+          }}
+        >
+          {replyTo && (
+            <div>
+              <span>Ответ для <strong>{replyTo.created_by?.name ?? "автора"}</strong></span>
+              <button type="button" onClick={() => setReplyTo(null)} aria-label="Отменить ответ">
+                <IconX size={13} />
+              </button>
+            </div>
+          )}
+          <textarea
+            rows="4"
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
+            placeholder="Написать комментарий…"
+          />
+          {(send.error || remove.error) && (
+            <p className="form-error">{send.error?.message ?? remove.error?.message}</p>
+          )}
+          <button type="submit" disabled={!content.trim() || send.isPending}>
+            {send.isPending ? "Отправляю…" : "Отправить"}
+          </button>
+        </form>
+      </aside>
+    </div>
   );
 }
 
@@ -1310,6 +1453,7 @@ export function TaskerPage() {
   const [view, setView] = useState("board");
   const [create, setCreate] = useState(null);
   const [editingProjectId, setEditingProjectId] = useState(null);
+  const [commentsTask, setCommentsTask] = useState(null);
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filtersRef = useRef(null);
@@ -1827,6 +1971,7 @@ export function TaskerPage() {
                       onMove={move}
                       onOpen={() => open(task)}
                       onEdit={() => navigate(`/tasks/${task.id}/edit`)}
+                      onComments={() => setCommentsTask(task)}
                     />
                   ))}
                 </div>
@@ -1904,6 +2049,13 @@ export function TaskerPage() {
           onClose={() => setCreate(null)}
         />
       )}{" "}
+      {commentsTask && activeScope && (
+        <TaskCommentsSidebar
+          scope={activeScope}
+          task={commentsTask}
+          onClose={() => setCommentsTask(null)}
+        />
+      )}
       {editingProject && activeScope && (
         <ProjectEditorDialog
           scopeId={activeScope.id}
