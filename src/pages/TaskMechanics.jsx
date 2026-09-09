@@ -385,10 +385,28 @@ function ChecklistItemEditor({ item, assignees, saving, deleting, error, onClose
           if (form.title.trim()) onSave({ title: form.title.trim(), assignee_id: form.assignee_id || null, due_at: form.due_at || null });
         }}
       >
-        <header><strong>Пункт чек-листа</strong><button type="button" onClick={onClose}><IconX size={16}/></button></header>
-        <label>Что сделать<input autoFocus required value={form.title} onChange={set("title")}/></label>
-        <label>Исполнитель<select value={form.assignee_id} onChange={set("assignee_id")}><option value="">Не назначен</option>{assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.name}</option>)}</select></label>
-        <label>Срок<input type="date" value={form.due_at} onChange={set("due_at")}/></label>
+        <header>
+          <div>
+            <strong>Пункт чек-листа</strong>
+            <small>Уточните работу, исполнителя и срок</small>
+          </div>
+          <button type="button" aria-label="Закрыть" onClick={onClose}><IconX size={18}/></button>
+        </header>
+        <label className="checklist-editor-title">
+          Что сделать
+          <textarea
+            autoFocus
+            required
+            rows="4"
+            value={form.title}
+            onChange={set("title")}
+            placeholder="Опишите, что именно необходимо выполнить"
+          />
+        </label>
+        <div className="checklist-editor-fields">
+          <label>Исполнитель<select value={form.assignee_id} onChange={set("assignee_id")}><option value="">Не назначен</option>{assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.name}</option>)}</select></label>
+          <label>Срок<input type="date" value={form.due_at} onChange={set("due_at")}/></label>
+        </div>
         {error && <p className="form-error">{error.message}</p>}
         <footer><button type="button" className="checklist-delete" disabled={deleting} onClick={() => window.confirm(`Удалить пункт «${item.title}»?`) && onDelete()}><IconTrash size={14}/>Удалить</button><span/><button type="button" onClick={onClose}>Отмена</button><button className="primary-button" disabled={saving || !form.title.trim()}>Сохранить</button></footer>
       </form>
