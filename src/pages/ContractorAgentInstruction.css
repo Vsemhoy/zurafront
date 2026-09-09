@@ -22,3 +22,86 @@
   background: #f3f5f7;
   color: #9aa4b2;
 }
+
+.contractor-token-comment {
+  margin-top: 10px;
+}
+
+.contractor-token-comment textarea {
+  min-height: 54px;
+  resize: vertical;
+  border: 1px solid #cbd3df;
+  padding: 7px;
+  font: 11px/1.4 inherit;
+}
+
+.contractor-token-list input {
+  width: min(440px, 100%);
+  height: 27px;
+  margin: 4px 0;
+  border: 1px solid #d5dce5;
+  background: #f8fafc;
+  padding: 0 7px;
+  font-size: 10px;
+}
+
+.contractor-agent-trace h2 {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.contractor-agent-trace-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.contractor-agent-trace-list article {
+  border-left: 2px solid #008779;
+  background: #f5f8fa;
+  padding: 8px 10px;
+}
+
+.contractor-agent-trace-list header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.contractor-agent-trace-list header strong {
+  min-width: 0;
+  overflow: hidden;
+  font: 650 11px/1.3 'JetBrains Mono', monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.contractor-agent-trace-list time,
+.contractor-agent-trace-list small {
+  color: #748095;
+  font-size: 9px;
+}
+
+.contractor-agent-trace-list p {
+  margin: 5px 0;
+  color: #526176;
+  font-size: 10px;
+}
+
+.contractor-agent-trace-list details {
+  margin-top: 5px;
+  color: #69778b;
+  font-size: 9px;
+}
+
+.contractor-agent-trace-list pre {
+  max-height: 220px;
+  overflow: auto;
+  margin: 5px 0 0;
+  background: #172235;
+  color: #dce8f7;
+  padding: 8px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

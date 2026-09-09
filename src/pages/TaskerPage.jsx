@@ -19,6 +19,7 @@ import {
   IconFolders,
   IconEdit,
   IconFileDescription,
+  IconFilter,
   IconList,
   IconLink,
   IconLockOpen,
@@ -1310,6 +1311,13 @@ export function TaskerPage() {
   const [create, setCreate] = useState(null);
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filtersRef = useRef(null);
+  const [peopleFilters, setPeopleFilters] = useState({
+    assignee: "all",
+    creator: "all",
+    customer: "all",
+  });
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
   const columnPickerRef = useRef(null);
   const [columnLimits, setColumnLimits] = useState({});
@@ -1404,6 +1412,16 @@ export function TaskerPage() {
     document.addEventListener("pointerdown", closeColumnsMenu);
     return () => document.removeEventListener("pointerdown", closeColumnsMenu);
   }, [columnsMenuOpen]);
+  useEffect(() => {
+    if (!filtersOpen) return undefined;
+    const closeFilters = (event) => {
+      if (!filtersRef.current?.contains(event.target)) {
+        setFiltersOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", closeFilters);
+    return () => document.removeEventListener("pointerdown", closeFilters);
+  }, [filtersOpen]);
   const visibleColumns = useMemo(
     () => allColumns.filter((column) => visibleColumnIds.includes(column.id)),
     [visibleColumnIds],
@@ -1480,16 +1498,40 @@ export function TaskerPage() {
       queryClient.invalidateQueries({ queryKey: ["dashboard", activeScope.id] });
     },
   });
+  const filterUsers = useMemo(() => {
+    const unique = new Map();
+    [
+      ...(assignable.people ?? []),
+      ...(assignable.assignees ?? []),
+      ...(assignable.agents ?? []),
+    ].forEach((person) => unique.set(person.id, person));
+    return Array.from(unique.values()).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    );
+  }, [assignable]);
+  const peopleFilteredTasks = useMemo(() => tasks.filter((task) => {
+    const assigneeId = task.assignee_id ?? task.assignee?.id;
+    const creatorId = task.created_by ?? task.creator?.id;
+    const customerId = task.customer_id ?? task.customer?.id;
+    const matches = (selected, value) =>
+      selected === "all" ||
+      (selected === "none" ? !value : selected === value);
+    return (
+      matches(peopleFilters.assignee, assigneeId) &&
+      matches(peopleFilters.creator, creatorId) &&
+      matches(peopleFilters.customer, customerId)
+    );
+  }), [peopleFilters, tasks]);
   const taskCounts = useMemo(() => {
-    const counts = { all: tasks.length };
-    tasks.forEach((task) => {
+    const counts = { all: peopleFilteredTasks.length };
+    peopleFilteredTasks.forEach((task) => {
       const projectId = task.project_id ?? task.project?.id;
       if (projectId) counts[projectId] = (counts[projectId] ?? 0) + 1;
     });
     return counts;
-  }, [tasks]);
+  }, [peopleFilteredTasks]);
   const trashCount = tasks.filter((task) => task.status === "cancelled").length;
-  const filtered = tasks.filter((task) => {
+  const filtered = peopleFilteredTasks.filter((task) => {
     const projectId = task.project_id ?? task.project?.id;
     const selected =
       selectedProjectIds === null ||
@@ -1503,6 +1545,14 @@ export function TaskerPage() {
         .includes(search.toLowerCase())
     );
   });
+  const activePeopleFilters = Object.values(peopleFilters).filter(
+    (value) => value !== "all",
+  ).length;
+  const setPeopleFilter = (key) => (event) =>
+    setPeopleFilters((current) => ({
+      ...current,
+      [key]: event.target.value,
+    }));
   const selectionLabel =
     selectedProjectIds === null
       ? "Все проекты"
@@ -1618,6 +1668,62 @@ export function TaskerPage() {
                 ))}
               </div>
               <small>Выбор сохраняется в этом браузере</small>
+            </div>
+          )}
+        </div>
+        <div className="task-filter-picker" ref={filtersRef}>
+          <button
+            type="button"
+            className={filtersOpen || activePeopleFilters ? "active" : ""}
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
+          >
+            <IconFilter size={16} />
+            Фильтры
+            {activePeopleFilters > 0 && <b>{activePeopleFilters}</b>}
+          </button>
+          {filtersOpen && (
+            <div className="task-filter-menu">
+              <header>
+                <span>Фильтры задач</span>
+                {activePeopleFilters > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setPeopleFilters({ assignee: "all", creator: "all", customer: "all" })}
+                  >
+                    Сбросить
+                  </button>
+                )}
+              </header>
+              <label>
+                <span>Исполнитель</span>
+                <select value={peopleFilters.assignee} onChange={setPeopleFilter("assignee")}>
+                  <option value="all">Все исполнители</option>
+                  <option value="none">Не назначен</option>
+                  {(assignable.assignees ?? []).map((person) => (
+                    <option key={person.id} value={person.id}>{person.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Создатель</span>
+                <select value={peopleFilters.creator} onChange={setPeopleFilter("creator")}>
+                  <option value="all">Все создатели</option>
+                  {filterUsers.map((person) => (
+                    <option key={person.id} value={person.id}>{person.name}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Заказчик</span>
+                <select value={peopleFilters.customer} onChange={setPeopleFilter("customer")}>
+                  <option value="all">Все заказчики</option>
+                  <option value="none">Не указан</option>
+                  {(assignable.people ?? []).map((person) => (
+                    <option key={person.id} value={person.id}>{person.name}</option>
+                  ))}
+                </select>
+              </label>
             </div>
           )}
         </div>

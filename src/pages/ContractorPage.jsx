@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconCopy, IconKey, IconPlus, IconRobot, IconSearch, IconTrash, IconUser, IconUserCog, IconUsers, IconX } from '@tabler/icons-react';
+import { IconActivity, IconCopy, IconKey, IconPlus, IconRobot, IconSearch, IconTrash, IconUser, IconUserCog, IconUsers, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { contractorApi } from '../entities/contractor/api';
@@ -104,6 +104,12 @@ function TypeIcon({ type, size = 18 }) {
   if (type === 'agent') return <IconRobot size={size} />;
   if (type === 'virtual') return <IconUserCog size={size} />;
   return <IconUser size={size} />;
+}
+
+function agentActivityTitle(item) {
+  if (item.kind === 'lore') return `${item.after?.code ?? 'Lore'} · версия ${item.after?.version ?? '—'}`;
+  if (item.kind === 'api') return `${item.action.replace('agent.api.', '').toUpperCase()} ${item.context?.path ?? ''}`;
+  return item.action;
 }
 
 export function ContractorPage() {
@@ -531,6 +537,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const [plainToken, setPlainToken] = useState(null);
   const [instructionCopied, setInstructionCopied] = useState(false);
   const [instructionError, setInstructionError] = useState(null);
+  const [tokenComment, setTokenComment] = useState('');
   const { data: projects = [] } = useQuery({
     queryKey: ['projects', scopeId],
     queryFn: () => projectApi.list(scopeId),
@@ -538,6 +545,11 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const { data: options } = useQuery({
     queryKey: ['contractor-options', scopeId],
     queryFn: () => contractorApi.options(scopeId),
+  });
+  const { data: agentActivity = [], isLoading: activityLoading } = useQuery({
+    queryKey: ['contractor-activity', scopeId, contractor?.id],
+    queryFn: () => contractorApi.activity(scopeId, contractor.id),
+    enabled: contractor?.type === 'agent',
   });
   const [form, setForm] = useState(() =>
     contractor
@@ -614,12 +626,18 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
     mutationFn: () =>
       contractorApi.issueToken(scopeId, contractor.id, {
         name: 'Codex workstation',
+        comment: tokenComment.trim() || null,
         abilities: (form.permissions.allow.includes('*') ? (options?.abilities ?? Object.keys(abilityLabels)) : form.permissions.allow).filter((ability) => !['contractor.manage', 'agent.manage_own'].includes(ability)),
       }),
     onSuccess: (token) => {
       setPlainToken(token.token);
+      setTokenComment('');
       onChanged();
     },
+  });
+  const updateToken = useMutation({
+    mutationFn: ({ tokenId, comment }) => contractorApi.updateToken(scopeId, contractor.id, tokenId, { comment: comment.trim() || null }),
+    onSuccess: onChanged,
   });
   const revoke = useMutation({
     mutationFn: (tokenId) => contractorApi.revokeToken(scopeId, contractor.id, tokenId),
@@ -905,6 +923,10 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
         <section>
           <h2>Ключи агента</h2>
           <p className="contractor-hint">Ключ получает только разрешённые выше capabilities и показывается один раз.</p>
+          <label className="contractor-token-comment">
+            Топик и назначение нового подключения
+            <textarea value={tokenComment} maxLength={500} placeholder="Например: Codex на рабочем ПК · WMS-31 · накладные и резервы" onChange={(event) => setTokenComment(event.target.value)} />
+          </label>
           <div className="contractor-agent-actions">
             <button className="contractor-token-button" disabled={issue.isPending || form.permissions.allow.filter((item) => item !== 'contractor.manage').length === 0} onClick={() => issue.mutate()}>
               <IconKey size={17} />
@@ -930,13 +952,42 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
               <div key={token.id}>
                 <span>
                   <strong>{token.name}</strong>
+                  <input aria-label={`Комментарий ключа ${token.name}`} defaultValue={token.comment ?? ''} maxLength={500} placeholder="Где и для чего используется" onBlur={(event) => {
+                    if (event.target.value.trim() !== (token.comment ?? '')) updateToken.mutate({ tokenId: token.id, comment: event.target.value });
+                  }} />
                   <small>{token.last_used_at ? `Использован ${new Date(token.last_used_at).toLocaleString()}` : 'Ещё не использован'}</small>
+                  <small>Выпущен {new Date(token.created_at).toLocaleString()}</small>
                 </span>
                 <button onClick={() => revoke.mutate(token.id)}>Отозвать</button>
               </div>
             ))}
           </div>
-          {instructionError && <p className="contractor-error">{instructionError.message}</p>}
+          {(instructionError || updateToken.error) && <p className="contractor-error">{(instructionError || updateToken.error).message}</p>}
+        </section>
+      )}
+      {contractor.type === 'agent' && (
+        <section className="contractor-agent-trace">
+          <h2><IconActivity size={17} /> Следы агента</h2>
+          <p className="contractor-hint">Чтения и записи через Agent API, доменные события и созданные версии Lore. Секреты автоматически вырезаются.</p>
+          {activityLoading && <p className="contractor-hint">Загружаю следы…</p>}
+          {!activityLoading && agentActivity.length === 0 && <p className="contractor-hint">Следов в этом скоупе пока нет.</p>}
+          <div className="contractor-agent-trace-list">
+            {agentActivity.map((item) => (
+              <article key={item.id}>
+                <header>
+                  <strong>{agentActivityTitle(item)}</strong>
+                  <time>{new Date(item.created_at).toLocaleString()}</time>
+                </header>
+                {item.kind === 'api' && <p><b>{item.after?.status}</b> · {item.after?.duration_ms} мс · {item.context?.token_name}{item.context?.token_comment ? ` · ${item.context.token_comment}` : ''}</p>}
+                {item.kind === 'lore' && <p>{item.after?.title}</p>}
+                {item.ip_address && <small>{item.ip_address}{item.user_agent ? ` · ${item.user_agent}` : ''}</small>}
+                <details>
+                  <summary>Технические детали</summary>
+                  <pre>{JSON.stringify({ subject_type: item.subject_type, subject_id: item.subject_id, before: item.before, after: item.after, context: item.context }, null, 2)}</pre>
+                </details>
+              </article>
+            ))}
+          </div>
         </section>
       )}
       {(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error) && <p className="contractor-error">{(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error).message}</p>}
