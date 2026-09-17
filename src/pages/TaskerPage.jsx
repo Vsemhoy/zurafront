@@ -13,9 +13,7 @@ import {
   IconAdjustmentsHorizontal,
   IconArrowUpRight,
   IconArrowsMaximize,
-  IconCheck,
   IconColumns,
-  IconCopy,
   IconCornerUpLeft,
   IconFolder,
   IconFolders,
@@ -44,6 +42,7 @@ import { taskApi } from "../entities/task/api";
 import { priorityLabel, taskReference } from "../entities/task/model";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
 import { TaskKpiField } from "../shared/ui/TaskKpiField";
+import { TaskReferenceCopy } from "../shared/ui/TaskReferenceCopy";
 import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
 import { TaskChecklistPanel } from "./TaskMechanics";
 import "./TaskerPage.css";
@@ -1257,7 +1256,6 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const navigate = useNavigate();
   const [pane, setPane] = useState("description");
   const [formattingOpen, setFormattingOpen] = useState(false);
-  const [referenceCopied, setReferenceCopied] = useState(false);
   const queryKey = ["task", scopeId, taskId];
   const {
     data: task,
@@ -1303,26 +1301,9 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
       </aside>
     );
   const activePane = ["description", "agent_notes", "result"].includes(pane) ? pane : "description";
-  const reference = taskReference(task);
-  const copyReference = async () => {
-    await navigator.clipboard.writeText(reference);
-    setReferenceCopied(true);
-    window.setTimeout(() => setReferenceCopied(false), 1600);
-  };
   return (
     <aside className="task-inspector">
       <header className="inspector-header">
-        <button
-          type="button"
-          className="task-reference-copy"
-          title={referenceCopied ? "Код скопирован" : "Скопировать код задачи"}
-          aria-label={`Скопировать код задачи ${reference}`}
-          onClick={copyReference}
-        >
-          <span>Код задачи</span>
-          <code>{reference}</code>
-          {referenceCopied ? <IconCheck size={15} /> : <IconCopy size={15} />}
-        </button>
         <div>
           <button
             type="button"
@@ -1364,17 +1345,20 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
       {removeTask.error && (
         <p className="form-error">{removeTask.error.message}</p>
       )}
-      <input
-        className="inspector-title"
-        value={task.title}
-        onChange={(event) =>
-          queryClient.setQueryData(queryKey, {
-            ...task,
-            title: event.target.value,
-          })
-        }
-        onBlur={(event) => save.mutate({ title: event.target.value })}
-      />
+      <div className="inspector-title-row">
+        <TaskReferenceCopy task={task} />
+        <input
+          className="inspector-title"
+          value={task.title}
+          onChange={(event) =>
+            queryClient.setQueryData(queryKey, {
+              ...task,
+              title: event.target.value,
+            })
+          }
+          onBlur={(event) => save.mutate({ title: event.target.value })}
+        />
+      </div>
       <div className="task-properties">
         <label>
           Статус

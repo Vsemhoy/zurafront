@@ -30,6 +30,7 @@ import { taskApi } from "../entities/task/api";
 import { priorityLabel } from "../entities/task/model";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
 import { TaskKpiField } from "../shared/ui/TaskKpiField";
+import { TaskReferenceCopy } from "../shared/ui/TaskReferenceCopy";
 import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
 import {
   BlockerPanel,
@@ -182,7 +183,7 @@ export function TaskEditorPage() {
         >
           <IconTrash size={16}/>{removeTask.isPending ? "Удаляю…" : task.status === "cancelled" ? "Удалить навсегда" : "В удалённые"}
         </button>
-        <code>{task.task_key}</code>
+        <TaskReferenceCopy task={task} className="task-editor-reference" />
         <input
           value={task.title}
           onChange={(event) =>
