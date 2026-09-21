@@ -34,7 +34,7 @@
 .markdown-renderer ol,
 .markdown-renderer blockquote,
 .markdown-renderer pre,
-.markdown-renderer table {
+.markdown-table-scroll {
   margin: 0 0 0.85em;
 }
 
@@ -81,10 +81,15 @@
   color: inherit;
 }
 
-.markdown-renderer table {
-  display: block;
-  width: 100%;
+.markdown-table-scroll {
+  max-width: 100%;
   overflow-x: auto;
+}
+
+.markdown-renderer table {
+  width: 100%;
+  min-width: 560px;
+  table-layout: fixed;
   border-collapse: collapse;
 }
 
@@ -93,7 +98,10 @@
   padding: 6px 10px;
   border: 1px solid #dfe5ef;
   text-align: left;
-  white-space: nowrap;
+  vertical-align: top;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .markdown-renderer th {
