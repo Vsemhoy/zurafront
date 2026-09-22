@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { IconDownload, IconEye, IconFiles, IconLink, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
 import { apiRequest } from '../api';
 import { useWorkspace } from '../app/workspace';
+import { FilePreview } from '../shared/ui/FilePreview';
 import './FilerPage.css';
 
 const fileCategories = { documentation: 'Документация', general: 'Общие файлы', task: 'Вложения задач', event: 'Вложения событий', book: 'Вложения Букера', project: 'Вложения проектов', user: 'Вложения контакторов' };
@@ -65,7 +66,7 @@ export function FilePanel({ scopeId, category = '', subjectType = '', subjectId 
         {(error || actionError) && <p className="filer-error" role="alert">{actionError || error.message}</p>}
         {isPending ? <p className="filer-empty">Загружаю файлы…</p> : !error && !data?.data.length ? <p className="filer-empty">Файлов пока нет. Загрузите первый файл.</p> : null}
         {Boolean(data?.data.length) && <div className="filer-table-wrap"><table className="filer-table"><thead><tr><th>Файл</th><th>Раздел / связи</th><th>Размер</th><th>Автор / дата</th><th>Действия</th></tr></thead><tbody>{data.data.map((file) => <tr key={file.id}>
-            <td><button className="filer-name" onClick={() => setPreview(file)}>{file.name}</button><small>{file.visibility === 'private' ? 'Личный' : file.attachments.length ? 'По доступу к связям' : 'Общий в скоупе'}</small></td>
+            <td><button className="filer-name" onClick={() => setPreview(file)}>{file.name}</button><FileDescription key={`${file.id}:${file.description ?? ''}`} file={file} scopeId={scopeId} onSaved={refresh}/><small>{file.visibility === 'private' ? 'Личный' : file.attachments.length ? 'По доступу к связям' : 'Общий в скоупе'}</small></td>
             <td><span>{fileCategories[file.category]}</span><div className="filer-links">{file.attachments.map((attachment) => <Link key={`${attachment.type}:${attachment.id}`} to={attachmentHref(attachment)}>{subjectTypes[attachment.type]}: {attachment.title}</Link>)}</div></td>
             <td>{sizeLabel(file.size)}</td><td>{file.creator?.name || '—'}<small>{new Date(file.created_at).toLocaleDateString()}</small></td>
             <td><div className="filer-actions"><button title="Посмотреть" aria-label="Посмотреть" onClick={() => setPreview(file)}><IconEye size={16}/></button><button title="Скачать" aria-label="Скачать" disabled={busy === file.id} onClick={() => download(file)}><IconDownload size={16}/></button>{file.can_manage && <><button title="Связать с объектом" aria-label="Связать с объектом" onClick={() => setLinking(file)}><IconLink size={16}/></button><button title="Удалить файл" aria-label="Удалить файл" disabled={busy === file.id} onClick={() => remove(file)}><IconTrash size={16}/></button></>}</div></td>
@@ -138,23 +139,23 @@ function FileLinkModal({ scopeId, file, onClose, onSaved }) {
     return <div className="filer-backdrop"><form className="filer-modal" onSubmit={save}><header><h2>Связать файл</h2><button type="button" disabled={busy} onClick={onClose}><IconX size={19}/></button></header><p>{file.name}</p><TargetPicker scopeId={scopeId} type={type} id={id} onType={setType} onId={setId}/><small>Файл будет виден только тем, кому доступны все его связи. Личный файл остаётся личным.</small>{error && <p className="filer-error">{error}</p>}<footer><button type="button" disabled={busy} onClick={onClose}>Отмена</button><button className="filer-primary" disabled={busy || !id}>Связать</button></footer></form></div>;
 }
 
-function FilePreview({ scopeId, file, onClose, onDownload }) {
-    const [url, setUrl] = useState('');
-    const [text, setText] = useState(null);
+function FileDescription({ scopeId, file, onSaved }) {
+    const [value, setValue] = useState(file.description ?? '');
+    const [saved, setSaved] = useState(file.description ?? '');
+    const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
-    const image = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.mime);
-    const pdf = file.mime === 'application/pdf';
-    const plain = ['text/plain', 'text/csv', 'application/json'].includes(file.mime);
-    useEffect(() => {
-        if (!image && !pdf && !plain) return;
-        let objectUrl; let active = true;
-        const controller = new AbortController();
-        apiRequest(`${endpoint(scopeId)}/${file.id}/download`, { responseType: 'blob', signal: controller.signal }).then(async (blob) => {
-            if (plain) { const content = await blob.slice(0, 200000).text(); if (active) setText(content + (blob.size > 200000 ? '\n… Предпросмотр ограничен 200 КБ. Скачайте полный файл.' : '')); }
-            else if (active) { objectUrl = URL.createObjectURL(new Blob([blob], { type: file.mime })); setUrl(objectUrl); }
-        }).catch((failure) => { if (active) setError(failure.message); });
-        return () => { active = false; controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
-    }, [scopeId, file.id, file.mime, image, pdf, plain]);
-    useEffect(() => { const escape = (event) => { if (event.key === 'Escape') onClose(); }; window.addEventListener('keydown', escape); return () => window.removeEventListener('keydown', escape); }, [onClose]);
-    return <div className="filer-backdrop"><section className="filer-preview" role="dialog" aria-modal="true" aria-label={file.name}><header><strong>{file.name}</strong><button onClick={onDownload}><IconDownload size={17}/>Скачать</button><button aria-label="Закрыть" onClick={onClose}><IconX size={20}/></button></header>{error ? <p className="filer-error">{error}</p> : image && url ? <img src={url} alt={file.name}/> : pdf && url ? <iframe src={url} title={file.name}/> : plain && text !== null ? <pre>{text}</pre> : image || pdf || plain ? <p>Готовлю просмотр…</p> : <div className="filer-empty">Предпросмотр этого формата пока не подключён. Оригинал можно скачать.</div>}</section></div>;
+    const save = async () => {
+        if (busy || value === saved) return;
+        setBusy(true); setError('');
+        try {
+            const response = await apiRequest(`${endpoint(scopeId)}/${file.id}`, { method: 'PATCH', body: JSON.stringify({ description: value || null }) });
+            const description = response.data.description ?? '';
+            setSaved(description); setValue(description); await onSaved();
+        } catch (failure) { setError(failure.message); } finally { setBusy(false); }
+    };
+    if (!file.can_manage) return file.description ? <p className="filer-description-text">{file.description}</p> : null;
+    return <div className="filer-description"><textarea aria-label={`Описание файла ${file.name}`} placeholder="Добавить описание…" rows={1} maxLength={2000} value={value} disabled={busy} onChange={(event) => setValue(event.target.value)} onBlur={save} onKeyDown={(event) => {
+        if (event.key === 'Escape') { event.stopPropagation(); setValue(saved); setError(''); }
+        if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.currentTarget.blur(); }
+    }}/>{busy && <small role="status">Сохраняю…</small>}{error && <div role="alert" className="filer-error">{error} <button type="button" onClick={save}>Повторить</button></div>}</div>;
 }

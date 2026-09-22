@@ -11,7 +11,12 @@ export const contractorApi = {
   async issueToken(scopeId, contractorId, payload) { return (await apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/tokens`, { method: 'POST', body: JSON.stringify(payload) })).data; },
   async updateToken(scopeId, contractorId, tokenId, payload) { return (await apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/tokens/${tokenId}`, { method: 'PATCH', body: JSON.stringify(payload) })).data; },
   revokeToken(scopeId, contractorId, tokenId) { return apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/tokens/${tokenId}`, { method: 'DELETE' }); },
-  async activity(scopeId, contractorId) { return (await apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/activity?limit=100`)).data; },
+  activity(scopeId, contractorId, { cursor, tokenId, signal } = {}) {
+    const params = new URLSearchParams({ limit: '30' });
+    if (cursor) { params.set('cursor_at', cursor.at); params.set('cursor_id', cursor.id); }
+    if (tokenId) params.set('token_id', tokenId);
+    return apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/activity?${params}`, { signal });
+  },
   remove(scopeId, contractorId) { return apiRequest(`/scopes/${scopeId}/contractors/${contractorId}`, { method: 'DELETE' }); },
   startActing(scopeId, contractorId) { return apiRequest(`/scopes/${scopeId}/contractors/${contractorId}/act`, { method: 'POST', body: '{}' }); },
   stopActing() { return apiRequest('/contractors/acting', { method: 'DELETE' }); },

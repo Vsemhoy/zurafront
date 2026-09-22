@@ -1,6 +1,7 @@
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { createPortal } from 'react-dom';
 import { IconActivity, IconCopy, IconKey, IconPlus, IconRobot, IconSearch, IconTrash, IconUser, IconUserCog, IconUsers, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
@@ -13,6 +14,7 @@ import './ContractorTable.css';
 import './ContractorAgentInstruction.css';
 
 const typeLabels = { real: 'Реальный', virtual: 'Виртуальный', agent: 'Агент' };
+const isArchivedToken = (token) => Boolean(token.revoked_at || (token.expires_at && new Date(token.expires_at).getTime() <= Date.now()));
 const statusLabels = {
   active: 'Активен',
   blocked: 'Заблокирован',
@@ -222,7 +224,7 @@ export function ContractorPage() {
                   {contractor.type === 'agent' && (
                     <small>
                       <IconKey size={12} />
-                      {contractor.tokens?.length ?? 0}
+                      {contractor.tokens?.filter((token) => !isArchivedToken(token)).length ?? 0}
                     </small>
                   )}
                 </span>
@@ -539,6 +541,10 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const [instructionCopied, setInstructionCopied] = useState(false);
   const [instructionError, setInstructionError] = useState(null);
   const [tokenComment, setTokenComment] = useState('');
+  const [tokenName, setTokenName] = useState('');
+  const [editorTab, setEditorTab] = useState('profile');
+  const [showArchived, setShowArchived] = useState(false);
+  const [trace, setTrace] = useState(null);
   const { data: projects = [] } = useQuery({
     queryKey: ['projects', scopeId],
     queryFn: () => projectApi.list(scopeId),
@@ -546,11 +552,6 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const { data: options } = useQuery({
     queryKey: ['contractor-options', scopeId],
     queryFn: () => contractorApi.options(scopeId),
-  });
-  const { data: agentActivity = [], isLoading: activityLoading } = useQuery({
-    queryKey: ['contractor-activity', scopeId, contractor?.id],
-    queryFn: () => contractorApi.activity(scopeId, contractor.id),
-    enabled: contractor?.type === 'agent',
   });
   const [form, setForm] = useState(() =>
     contractor
@@ -626,13 +627,14 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   const issue = useMutation({
     mutationFn: () =>
       contractorApi.issueToken(scopeId, contractor.id, {
-        name: 'Codex workstation',
+        name: tokenName.trim() || 'Codex workstation',
         comment: tokenComment.trim() || null,
         abilities: (form.permissions.allow.includes('*') ? (options?.abilities ?? Object.keys(abilityLabels)) : form.permissions.allow).filter((ability) => !['contractor.manage', 'agent.manage_own'].includes(ability)),
       }),
     onSuccess: (token) => {
       setPlainToken(token.token);
       setTokenComment('');
+      setTokenName('');
       onChanged();
     },
   });
@@ -642,7 +644,10 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   });
   const revoke = useMutation({
     mutationFn: (tokenId) => contractorApi.revokeToken(scopeId, contractor.id, tokenId),
-    onSuccess: onChanged,
+    onSuccess: (_, tokenId) => {
+      if (plainToken?.startsWith(`${tokenId}|`)) setPlainToken(null);
+      onChanged();
+    },
   });
   const copyAgentInstruction = async () => {
     setInstructionError(null);
@@ -694,6 +699,8 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
           <IconX size={19} />
         </button>
       </header>
+      {contractor.type === 'agent' && <nav className="contractor-editor-tabs" aria-label="Разделы редактора"><button className={editorTab === 'profile' ? 'active' : ''} onClick={() => setEditorTab('profile')}>Профиль и доступ</button><button className={editorTab === 'connections' ? 'active' : ''} onClick={() => setEditorTab('connections')}>Подключения и ключи</button></nav>}
+      <div hidden={contractor.type === 'agent' && editorTab !== 'profile'}>
       <section>
         <h2>Профиль</h2>
         <div className="contractor-form-row">
@@ -920,10 +927,12 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
           </button>
         </section>
       )}
-      {contractor.type === 'agent' && (
+      </div>
+      {contractor.type === 'agent' && editorTab === 'connections' && (
         <section>
-          <h2>Ключи агента</h2>
-          <p className="contractor-hint">Ключ получает только разрешённые выше capabilities и показывается один раз.</p>
+          <div className="contractor-connections-heading"><h2>Ключи агента</h2><button className="contractor-secondary" onClick={() => setTrace({})}><IconActivity size={16}/> Следы агента</button></div>
+          <p className="contractor-hint">Права задаются во вкладке «Профиль и доступ». Секрет нового ключа показывается один раз.</p>
+          <label className="contractor-token-comment">Название подключения<input value={tokenName} maxLength={100} placeholder="Например: Рабочий ПК · склад" onChange={(event) => setTokenName(event.target.value)}/></label>
           <label className="contractor-token-comment">
             Топик и назначение нового подключения
             <textarea value={tokenComment} maxLength={500} placeholder="Например: Codex на рабочем ПК · WMS-31 · накладные и резервы" onChange={(event) => setTokenComment(event.target.value)} />
@@ -949,49 +958,76 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
             </div>
           )}
           <div className="contractor-token-list">
-            {(contractor.tokens ?? []).map((token) => (
-              <div key={token.id}>
-                <span>
-                  <strong>{token.name}</strong>
-                  <input aria-label={`Комментарий ключа ${token.name}`} defaultValue={token.comment ?? ''} maxLength={500} placeholder="Где и для чего используется" onBlur={(event) => {
-                    if (event.target.value.trim() !== (token.comment ?? '')) updateToken.mutate({ tokenId: token.id, comment: event.target.value });
-                  }} />
-                  <small>{token.last_used_at ? `Использован ${new Date(token.last_used_at).toLocaleString()}` : 'Ещё не использован'}</small>
-                  <small>Выпущен {new Date(token.created_at).toLocaleString()}</small>
-                </span>
-                <button onClick={() => revoke.mutate(token.id)}>Отозвать</button>
-              </div>
-            ))}
+            {(contractor.tokens ?? []).filter((token) => !isArchivedToken(token)).map((token) => <AgentTokenRow key={`${token.id}:${token.comment ?? ''}`} token={token} onSave={(comment) => updateToken.mutateAsync({ tokenId: token.id, comment })} onTrace={() => setTrace({ tokenId: token.id, name: token.name })} onRevoke={() => { if (window.confirm(`Отозвать подключение #${token.id} «${token.name}»? Его ключ перестанет работать.`)) revoke.mutate(token.id); }} revoking={revoke.isPending}/>)}
+            {!(contractor.tokens ?? []).some((token) => !isArchivedToken(token)) && <p className="contractor-hint">Активных подключений нет.</p>}
           </div>
-          {(instructionError || updateToken.error) && <p className="contractor-error">{(instructionError || updateToken.error).message}</p>}
+          <button className="contractor-secondary" aria-expanded={showArchived} onClick={() => setShowArchived(!showArchived)}>Архивные ({(contractor.tokens ?? []).filter(isArchivedToken).length}) {showArchived ? '▴' : '▾'}</button>
+          {showArchived && <div className="contractor-token-list contractor-token-archive">{(contractor.tokens ?? []).filter(isArchivedToken).map((token) => <AgentTokenRow key={`${token.id}:${token.comment ?? ''}`} token={token} onSave={(comment) => updateToken.mutateAsync({ tokenId: token.id, comment })} onTrace={() => setTrace({ tokenId: token.id, name: token.name })}/>)}<p className="contractor-hint">Отозванные ключи не восстанавливаются. Их комментарии и следы сохраняются.</p></div>}
+          {(instructionError || revoke.error) && <p className="contractor-error">{(instructionError || revoke.error).message}</p>}
         </section>
       )}
-      {contractor.type === 'agent' && (
-        <section className="contractor-agent-trace">
-          <h2><IconActivity size={17} /> Следы агента</h2>
-          <p className="contractor-hint">Чтения и записи через Agent API, доменные события и созданные версии Lore. Секреты автоматически вырезаются.</p>
-          {activityLoading && <p className="contractor-hint">Загружаю следы…</p>}
-          {!activityLoading && agentActivity.length === 0 && <p className="contractor-hint">Следов в этом скоупе пока нет.</p>}
-          <div className="contractor-agent-trace-list">
-            {agentActivity.map((item) => (
-              <article key={item.id}>
-                <header>
-                  <strong>{agentActivityTitle(item)}</strong>
-                  <time>{new Date(item.created_at).toLocaleString()}</time>
-                </header>
-                {item.kind === 'api' && <p><b>{item.after?.status}</b> · {item.after?.duration_ms} мс · {item.context?.token_name}{item.context?.token_comment ? ` · ${item.context.token_comment}` : ''}</p>}
-                {item.kind === 'lore' && <p>{item.after?.title}</p>}
-                {item.ip_address && <small>{item.ip_address}{item.user_agent ? ` · ${item.user_agent}` : ''}</small>}
-                <details>
-                  <summary>Технические детали</summary>
-                  <pre>{JSON.stringify({ subject_type: item.subject_type, subject_id: item.subject_id, before: item.before, after: item.after, context: item.context }, null, 2)}</pre>
-                </details>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+      {trace && <AgentTraceModal key={trace.tokenId ?? 'all'} scopeId={scopeId} contractor={contractor} token={trace} onClose={() => setTrace(null)}/>}
       {(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error) && <p className="contractor-error">{(saveProfile.error || saveAccess.error || addScopes.error || act.error || issue.error).message}</p>}
     </aside>
   );
+}
+
+function AgentTokenRow({ token, onSave, onTrace, onRevoke, revoking }) {
+  const [comment, setComment] = useState(token.comment ?? '');
+  const [saved, setSaved] = useState(token.comment ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const save = async () => {
+    if (busy || comment.trim() === saved) return;
+    setBusy(true); setError('');
+    try { await onSave(comment); setSaved(comment.trim()); }
+    catch (failure) { setError(failure.message); } finally { setBusy(false); }
+  };
+  return <div className="contractor-token-row"><div className="contractor-token-info"><strong><small>#{token.id}</small> {token.name}</strong>
+    <textarea aria-label={`Комментарий ключа #${token.id}`} rows={1} maxLength={500} disabled={busy} value={comment} placeholder="Где и для чего используется…" onChange={(event) => setComment(event.target.value)} onBlur={save} onKeyDown={(event) => { if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) { event.preventDefault(); event.currentTarget.blur(); } if (event.key === 'Escape') { event.stopPropagation(); setComment(saved); setError(''); } }}/>
+    {busy && <small role="status">Сохраняю…</small>}{error && <p className="contractor-error" role="alert">{error} <button onClick={save}>Повторить</button></p>}
+    <small>Выпущен {new Date(token.created_at).toLocaleString()}</small><small>{token.last_used_at ? `Использован ${new Date(token.last_used_at).toLocaleString()}` : 'Ещё не использован'}</small>
+    {token.revoked_at ? <small>Отозван {new Date(token.revoked_at).toLocaleString()}</small> : token.expires_at && <small>{isArchivedToken(token) ? 'Истёк' : 'Действует до'} {new Date(token.expires_at).toLocaleString()}</small>}
+    </div><div className="contractor-token-actions"><button onClick={onTrace}><IconActivity size={14}/> Следы</button>{onRevoke && <button disabled={revoking} onClick={onRevoke}>Отозвать</button>}</div></div>;
+}
+
+function AgentTraceModal({ scopeId, contractor, token, onClose }) {
+  const dialog = useRef(null);
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; }, [onClose]);
+  const { data, error, isPending, isFetchingNextPage, hasNextPage, fetchNextPage, refetch } = useInfiniteQuery({
+    queryKey: ['contractor-activity', scopeId, contractor.id, token.tokenId ?? null],
+    queryFn: ({ pageParam, signal }) => contractorApi.activity(scopeId, contractor.id, { cursor: pageParam, tokenId: token.tokenId, signal }),
+    initialPageParam: null,
+    getNextPageParam: (last) => last.meta?.next_cursor ?? undefined,
+    gcTime: 0,
+  });
+  useEffect(() => {
+    const previous = document.activeElement;
+    dialog.current?.focus();
+    const keydown = (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close.current(); }
+      if (event.key === 'Tab') {
+        const controls = [...dialog.current.querySelectorAll('button:not(:disabled), summary')];
+        const index = controls.indexOf(document.activeElement);
+        if (event.shiftKey && index <= 0) { event.preventDefault(); controls.at(-1)?.focus(); }
+        else if (!event.shiftKey && (index < 0 || index === controls.length - 1)) { event.preventDefault(); controls[0]?.focus(); }
+      }
+    };
+    document.addEventListener('keydown', keydown, true);
+    return () => { document.removeEventListener('keydown', keydown, true); if (previous?.isConnected) previous.focus(); };
+  }, []);
+  const items = data?.pages.flatMap((page) => page.data) ?? [];
+  return createPortal(<div className="contractor-trace-backdrop" onClick={(event) => { event.stopPropagation(); if (event.target === event.currentTarget) onClose(); }}><div className="contractor-trace-modal" role="dialog" aria-modal="true" aria-label="Следы агента" tabIndex={-1} ref={dialog}>
+    <header><div><strong>Следы · {contractor.name}</strong><small>{token.tokenId ? `Подключение #${token.tokenId} · ${token.name}` : 'Все подключения · текущий скоуп'}</small></div><button aria-label="Закрыть следы" onClick={onClose}><IconX size={20}/></button></header>
+    <p className="contractor-hint">{token.tokenId ? 'Запросы, достоверно связанные с этим ключом. Доменные события без ID ключа доступны в общих следах.' : 'Запросы API, доменные события и версии Lore в этом скоупе.'} Секреты вырезаются.</p>
+    <div className="contractor-trace-scroll"><div className="contractor-agent-trace-list">{items.map((item) => <article key={item.id}><header><strong title={agentActivityTitle(item)}>{agentActivityTitle(item)}</strong><time>{new Date(item.created_at).toLocaleString()}</time></header>
+      {item.kind === 'api' && <p><b>{item.after?.status}</b> · {item.after?.duration_ms} мс · #{item.context?.token_id} {item.context?.token_name}{item.context?.token_comment ? ` · ${item.context.token_comment}` : ''}</p>}
+      {item.kind === 'lore' && <p>{item.after?.title}</p>}{item.ip_address && <small>{item.ip_address}{item.user_agent ? ` · ${item.user_agent}` : ''}</small>}
+      <details><summary>Технические детали</summary><pre>{JSON.stringify({ subject_type: item.subject_type, subject_id: item.subject_id, before: item.before, after: item.after, context: item.context }, null, 2)}</pre></details>
+    </article>)}</div>
+    {isPending && <p role="status">Загружаю следы…</p>}{!isPending && !error && !items.length && <p>Следов в этом скоупе пока нет.</p>}
+    {error && <p className="contractor-error" role="alert">{error.message} <button onClick={() => items.length ? fetchNextPage() : refetch()}>Повторить</button></p>}
+    {hasNextPage && <button className="contractor-trace-more" disabled={isFetchingNextPage} onClick={() => fetchNextPage()}>{isFetchingNextPage ? 'Загружаю…' : 'Показать ещё'}</button>}
+    </div></div></div>, document.body);
 }
