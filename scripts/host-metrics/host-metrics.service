@@ -1,0 +1,25 @@
+[Unit]
+Description=Local host storage metrics API
+After=network.target
+
+[Service]
+Type=simple
+User=host-metrics
+Group=host-metrics
+Environment=METRICS_TOKEN_FILE=/etc/host-metrics/token
+Environment=METRICS_VOLUME=/var/www
+ExecStart=/usr/bin/python3 /opt/host-metrics/server.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_INET AF_UNIX
+MemoryMax=64M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target

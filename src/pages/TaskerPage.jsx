@@ -1,3 +1,4 @@
+import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import {
   Fragment,
   lazy,
@@ -1303,7 +1304,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const activePane = ["description", "agent_notes", "result"].includes(pane) ? pane : "description";
   return (
     <aside className="task-inspector">
-      <header className="inspector-header">
+      <header className="inspector-header"><AttachmentsButton scopeId={scopeId} type="task" id={task.id}/>
         <div>
           <button
             type="button"

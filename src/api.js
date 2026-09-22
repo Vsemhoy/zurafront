@@ -8,18 +8,20 @@ export class ApiError extends Error {
 export async function apiRequest(path, init = {}) {
     const method = (init.method ?? 'GET').toUpperCase();
     const requiresJson = !['GET', 'HEAD'].includes(method);
+    const isMultipart = init.body instanceof FormData;
     const response = await fetch(`/api${path}`, {
         ...init,
         credentials: 'include',
-        headers: { Accept: 'application/json', 'X-App-Request': 'Zuratax', ...(requiresJson || init.body ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
+        headers: { Accept: 'application/json', 'X-App-Request': 'Zuratax', ...(!isMultipart && (requiresJson || init.body) ? { 'Content-Type': 'application/json' } : {}), ...init.headers },
     });
     if (!response.ok) {
         const payload = await response.json().catch(() => null);
         const validationMessage = payload?.errors ? Object.values(payload.errors)[0]?.[0] : undefined;
-        throw new ApiError(validationMessage ?? payload?.message ?? 'Request failed.', response.status);
+        throw new ApiError(validationMessage ?? payload?.message ?? (response.status === 413 ? 'Файл превышает лимит загрузки сервера.' : 'Request failed.'), response.status);
     }
     if (response.status === 204)
         return undefined;
+    if (init.responseType === 'blob') return response.blob();
     return response.json();
 }
 export const authApi = {

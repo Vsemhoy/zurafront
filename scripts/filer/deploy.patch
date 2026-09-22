@@ -1,0 +1,34 @@
+--- routes/web.php
++++ routes/web.php
+@@ -1,1 +1,9 @@
+-    Route::prefix('/scopes/{scope}')->middleware('scope.member')->group(function (): void {
++    Route::prefix('/scopes/{scope}')->middleware('scope.member')->group(function (): void {
++        Route::prefix('files')->middleware(['scope.actor', 'throttle:60,1'])->group(function (): void {
++            Route::get('/', [\App\Http\Controllers\Api\FilerController::class, 'index']);
++            Route::get('/targets', [\App\Http\Controllers\Api\FilerController::class, 'targets']);
++            Route::post('/', [\App\Http\Controllers\Api\FilerController::class, 'store'])->name('filer.store');
++            Route::get('/{file}/download', [\App\Http\Controllers\Api\FilerController::class, 'download'])->whereUlid('file');
++            Route::post('/{file}/attachments', [\App\Http\Controllers\Api\FilerController::class, 'attach'])->whereUlid('file');
++            Route::delete('/{file}', [\App\Http\Controllers\Api\FilerController::class, 'destroy'])->whereUlid('file');
++        });
+--- config/filesystems.php
++++ config/filesystems.php
+@@ -1,1 +1,8 @@
+-    'disks' => [
++    'disks' => [
++        'filer' => [
++            'driver' => 'local',
++            'root' => env('FILER_ROOT', storage_path('app/filer')),
++            'visibility' => 'private',
++            'serve' => false,
++            'throw' => false,
++        ],
+--- app/Http/Middleware/EnsureSpaRequestIsTrusted.php
++++ app/Http/Middleware/EnsureSpaRequestIsTrusted.php
+@@ -1,1 +1,5 @@
+-        if (! $request->isMethodSafe()) {
++        $isFileUpload = $request->routeIs('filer.store')
++            && $request->isMethod('POST')
++            && str_starts_with(strtolower((string) $request->header('Content-Type')), 'multipart/form-data;');
++
++        if (! $request->isMethodSafe() && ! $isFileUpload) {

@@ -1,3 +1,4 @@
+import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from "@dnd-kit/core";
@@ -136,7 +137,7 @@ function ProjectEditor({ scopeId, projectId, onClose, onSaved }) {
   const confirmDelete = () => { if (window.confirm(`Удалить проект ${form.key} · ${form.title}? Задачи и книги сохранятся без проекта.`)) remove.mutate(); };
 
   return <><div className="projector-backdrop" onClick={onClose} /><aside className="projector-editor">
-    <header><div><small>{projectId ? form.key : "Новый"}</small><h2>{projectId ? "Редактор проекта" : "Создание проекта"}</h2></div><button onClick={onClose}><IconX size={18} /></button></header>
+    <header><div><small>{projectId ? form.key : "Новый"}</small><h2>{projectId ? "Редактор проекта" : "Создание проекта"}</h2><AttachmentsButton scopeId={scopeId} type="project" id={projectId}/></div><button onClick={onClose}><IconX size={18} /></button></header>
     <form onSubmit={(event) => { event.preventDefault(); save.mutate({ ...form, priority: Number(form.priority), sort_order: Number(form.sort_order), key: form.key.toUpperCase() }); }}>
       <label>Название<input autoFocus required value={form.title} onChange={set("title")} /></label>
       <label className="projector-privacy">Приватность<select value={form.visibility} onChange={set("visibility")}><option value="private">Только создатель</option><option value="scope">Участники скоупа с доступом к проекту</option></select><small>{form.visibility === "private" ? "Проект и его задачи скрыты от коллег." : "Проект и задачи видны участникам согласно их доступам."}</small></label>

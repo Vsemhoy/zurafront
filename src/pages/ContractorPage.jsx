@@ -1,3 +1,4 @@
+import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconActivity, IconCopy, IconKey, IconPlus, IconRobot, IconSearch, IconTrash, IconUser, IconUserCog, IconUsers, IconX } from '@tabler/icons-react';
@@ -687,7 +688,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
         </div>
         <div>
           <strong>{contractor.name}</strong>
-          <small>{typeLabels[contractor.type]}</small>
+          <small>{typeLabels[contractor.type]}</small><AttachmentsButton scopeId={scopeId} type="user" id={contractor.id}/>
         </div>
         <button onClick={onClose}>
           <IconX size={19} />
