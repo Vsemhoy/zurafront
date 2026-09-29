@@ -7,3 +7,9 @@
   background: #075aaf;
   color: #fff;
 }
+
+.contractor-create-types { display:flex; flex-wrap:wrap; gap:6px; margin:0; padding:0; border:0; min-width:0; }
+.contractor-create-types legend { margin-bottom:6px; color:#566276; font-size:11px; }
+.contractor-create-types button { display:flex; align-items:center; gap:5px; min-height:36px; padding:6px 10px; border:1px solid #cbd3df; background:#fff; color:#566276; }
+.contractor-create-types button[aria-pressed="true"] { border-color:#075aaf; background:#e8f1fc; color:#075aaf; }
+@media(max-width:700px) { .contractor-toolbar { height:auto; flex-wrap:wrap; } .contractor-toolbar>button { margin-left:0; } }

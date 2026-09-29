@@ -44,6 +44,7 @@ import { priorityLabel, taskReference } from "../entities/task/model";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
 import { TaskKpiField } from "../shared/ui/TaskKpiField";
 import { TaskReferenceCopy } from "../shared/ui/TaskReferenceCopy";
+import { TaskTitleInput } from "../shared/ui/TaskTitleInput";
 import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
 import { TaskChecklistPanel } from "./TaskMechanics";
 import "./TaskerPage.css";
@@ -1348,16 +1349,11 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
       )}
       <div className="inspector-title-row">
         <TaskReferenceCopy task={task} />
-        <input
+        <TaskTitleInput
+          key={task.id}
           className="inspector-title"
           value={task.title}
-          onChange={(event) =>
-            queryClient.setQueryData(queryKey, {
-              ...task,
-              title: event.target.value,
-            })
-          }
-          onBlur={(event) => save.mutate({ title: event.target.value })}
+          onSave={(title) => save.mutate({ title })}
         />
       </div>
       <div className="task-properties">

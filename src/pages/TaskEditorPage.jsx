@@ -32,6 +32,7 @@ import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
 import { TaskKpiField } from "../shared/ui/TaskKpiField";
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { TaskReferenceCopy } from "../shared/ui/TaskReferenceCopy";
+import { TaskTitleInput } from "../shared/ui/TaskTitleInput";
 import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
 import {
   BlockerPanel,
@@ -186,15 +187,10 @@ export function TaskEditorPage() {
         </button>
         <AttachmentsButton scopeId={activeScope.id} type="task" id={task.id}/>
         <TaskReferenceCopy task={task} className="task-editor-reference" />
-        <input
+        <TaskTitleInput
+          key={task.id}
           value={task.title}
-          onChange={(event) =>
-            queryClient.setQueryData(queryKey, {
-              ...task,
-              title: event.target.value,
-            })
-          }
-          onBlur={(event) => save.mutate({ title: event.target.value })}
+          onSave={(title) => save.mutate({ title })}
         />
         <span className={`save-state ${save.isError || removeTask.isError ? "error" : ""}`}>
           {save.isPending

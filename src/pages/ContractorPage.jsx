@@ -170,9 +170,13 @@ export function ContractorPage() {
           <IconSearch size={17} />
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Найти актора…" />
         </label>
-        <button disabled={!options} onClick={() => setCreating(true)}>
+        {options?.can_manage_all !== false && <button disabled={!options} onClick={() => setCreating('virtual')}>
           <IconPlus size={17} />
-          {options?.can_manage_all === false ? 'Новый агент' : 'Новый актор'}
+          Новый пользователь
+        </button>}
+        <button disabled={!options || !options.types?.includes('agent')} onClick={() => setCreating('agent')}>
+          <IconRobot size={17} />
+          Новый агент
         </button>
       </header>
       <div className="contractor-layout">
@@ -238,6 +242,7 @@ export function ContractorPage() {
         <ContractorCreate
           scopeId={activeScope.id}
           options={options}
+          initialType={creating}
           onClose={() => setCreating(false)}
           onCreated={(contractor) => {
             queryClient.setQueryData(key, (current = []) => [contractor, ...current.filter((item) => item.id !== contractor.id)]);
@@ -392,21 +397,21 @@ function ContractorAccountTools({ scopeId, contractor, onChanged }) {
   );
 }
 
-function ContractorCreate({ scopeId, options, onClose, onCreated }) {
+function ContractorCreate({ scopeId, options, initialType, onClose, onCreated }) {
   const canManageAll = options?.can_manage_all !== false;
   const defaultRole = canManageAll ? 'member' : 'observer';
   const [form, setForm] = useState({
     name: '',
     position: '',
     preferred_language: 'ru',
-    type: canManageAll ? 'virtual' : 'agent',
-    is_executor: canManageAll,
+    type: canManageAll ? initialType : 'agent',
+    is_executor: canManageAll && initialType !== 'agent',
     role: defaultRole,
     project_access_mode: 'none',
     book_access_mode: 'none',
     permissions: permissionsForRole(defaultRole),
     project_ids: [],
-    can_act_as: canManageAll,
+    can_act_as: canManageAll && initialType === 'virtual',
   });
   const create = useMutation({
     mutationFn: () =>
@@ -417,8 +422,7 @@ function ContractorCreate({ scopeId, options, onClose, onCreated }) {
     onSuccess: onCreated,
   });
   const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }));
-  const changeType = (event) => {
-    const next = event.target.value;
+  const changeType = (next) => {
     setForm((current) => ({
       ...current,
       type: next,
@@ -438,13 +442,22 @@ function ContractorCreate({ scopeId, options, onClose, onCreated }) {
       >
         <header>
           <div>
-            <strong>{canManageAll ? 'Новый актор' : 'Новый агент'}</strong>
+            <strong>{form.type === 'agent' ? 'Новый агент' : 'Новый пользователь'}</strong>
             <small>Добавится в текущий скоуп</small>
           </div>
           <button type="button" onClick={onClose}>
             <IconX size={18} />
           </button>
         </header>
+        <fieldset className="contractor-create-types">
+          <legend>Тип аккаунта</legend>
+          {(options?.types ?? ['agent']).map((value) => (
+            <button key={value} type="button" aria-pressed={form.type === value}
+              disabled={!canManageAll} onClick={() => changeType(value)}>
+              <TypeIcon type={value} size={16} />{typeLabels[value]}
+            </button>
+          ))}
+        </fieldset>
         <label>
           Имя
           <input autoFocus required value={form.name} onChange={set('name')} placeholder="Имя коллеги или агента" />
@@ -462,16 +475,6 @@ function ContractorCreate({ scopeId, options, onClose, onCreated }) {
           </select>
         </label>
         <div className="contractor-form-row">
-          <label>
-            Тип
-            <select value={form.type} disabled={!canManageAll} onChange={changeType}>
-              {(options?.types ?? Object.keys(typeLabels)).map((value) => (
-                <option key={value} value={value}>
-                  {typeLabels[value]}
-                </option>
-              ))}
-            </select>
-          </label>
           <label>
             Роль
             <select
