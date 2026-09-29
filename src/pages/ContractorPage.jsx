@@ -1,3 +1,4 @@
+import { PhotoPanel, FileImage } from '../shared/ui/PhotoPanel';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -213,7 +214,7 @@ export function ContractorPage() {
               <button key={contractor.id} className={`contractor-row contractor-card--${contractor.type}`} onClick={() => setSelectedId(contractor.id)}>
                 <span className="contractor-person">
                   <i className="contractor-avatar">
-                    <TypeIcon type={contractor.type} />
+                    {contractor.profile?.avatar ? <FileImage scopeId={contractor.profile.avatar.scope_id} fileId={contractor.profile.avatar.file_id} alt={contractor.name}/> : <TypeIcon type={contractor.type} />}
                   </i>
                   <span>
                     <strong>{contractor.name}</strong>
@@ -706,6 +707,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
       <div hidden={contractor.type === 'agent' && editorTab !== 'profile'}>
       <section>
         <h2>Профиль</h2>
+        <PhotoPanel scopeId={scopeId} type="user" id={contractor.id} feature featuredId={contractor.profile?.avatar?.file_id} onChanged={async () => { await onChanged(); await check(); }}/>
         <div className="contractor-form-row">
           <label>
             Имя

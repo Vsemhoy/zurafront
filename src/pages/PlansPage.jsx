@@ -24,7 +24,7 @@ function Plans({ scope }) {
   useEffect(() => { const timer = setTimeout(() => setFilters((old) => ({ ...old, q: search, page: 1 })), 250); return () => clearTimeout(timer); }, [search]);
   const options = useQuery({ queryKey: ['plan-options', scope.id], queryFn: () => planApi.options(scope.id) });
   const list = useQuery({ queryKey: ['plans', scope.id, filters], queryFn: () => planApi.list(scope.id, filters) });
-  const refresh = () => { client.invalidateQueries({ queryKey: ['plans', scope.id] }); client.invalidateQueries({ queryKey: ['monthly-report', scope.id] }); };
+  const refresh = () => { client.invalidateQueries({ queryKey: ['plans', scope.id] }); client.invalidateQueries({ queryKey: ['plan-candidates', scope.id] }); client.invalidateQueries({ queryKey: ['monthly-report', scope.id] }); };
   const complete = useMutation({ mutationFn: ({ id, completed }) => planApi.save(scope.id, id, { completed }), onSuccess: refresh });
   const remove = useMutation({ mutationFn: (id) => planApi.remove(scope.id, id), onSuccess: refresh });
   const set = (key) => (event) => setFilters({ ...filters, [key]: event.target.value, page: 1, ...(key === 'year' ? { month: '' } : {}) });
@@ -89,13 +89,24 @@ function PlanEditor({ scopeId, item, options, onClose, onSaved }) {
     </div>
     {[['description', 'Описание'], ['resources', 'Ресурсы: люди, доступы, оборудование, бюджет'], ['expected_result', 'Ожидаемый результат'], ['impact', 'Положительный эффект / влияние'], ['actual_result', 'Фактический результат']].map(([key, label]) => <label key={key}>{label}<textarea rows={2} maxLength={key === 'description' ? 20000 : 10000} value={form[key] || ''} onChange={set(key)}/></label>)}
     <details className="plans-task-linker"><summary>Связанные задачи: {tasks.length}</summary>
-      <div className="plans-selected-tasks">{tasks.map((task) => <button type="button" key={task.id} onClick={() => setTasks(tasks.filter((t) => t.id !== task.id))}>{task.task_key} · {task.title}<IconX size={14}/></button>)}</div>
+      <div className="plans-selected-tasks">{tasks.map((task) => <button type="button" key={task.id} className={otherPlans(task, item.id).length ? 'plan-task-linked' : ''} onClick={() => setTasks(tasks.filter((t) => t.id !== task.id))}><span>{task.task_key} · {task.title}<TaskPlanHint task={task} currentId={item.id}/></span><IconX size={14}/></button>)}</div>
       <input aria-label="Найти задачу" placeholder="Найти задачу в этом проекте" value={search} onChange={(event) => setSearch(event.target.value)}/>
-      <div className="plans-candidates">{candidates.isPending ? 'Загружаю…' : candidates.data?.data?.map((task) => <button type="button" key={task.id} disabled={tasks.some((t) => t.id === task.id)} onClick={() => setTasks([...tasks, task])}>{task.task_key} · {task.title}{task.status === 'done' ? ' ✓' : ''}</button>)}</div>
+      <div className="plans-candidates">{candidates.isPending ? 'Загружаю…' : candidates.data?.data?.map((task) => <button type="button" key={task.id} className={otherPlans(task, item.id).length ? 'plan-task-linked' : ''} disabled={tasks.some((t) => t.id === task.id)} onClick={() => setTasks([...tasks, task])}><span>{task.task_key} · {task.title}{task.status === 'done' ? ' ✓' : ''}<TaskPlanHint task={task} currentId={item.id}/>{tasks.some((t) => t.id === task.id) && <small className="plan-task-current">✓ Выбрана в этом плане</small>}</span></button>)}</div>
       <div className="plans-pager"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}>Назад</button><span>{page} / {candidates.data?.meta?.last_page ?? 1}</span><button type="button" disabled={page >= (candidates.data?.meta?.last_page ?? 1)} onClick={() => setPage(page + 1)}>Далее</button></div>
     </details>
     <label className="plans-checkbox"><input type="checkbox" checked={form.completed} onChange={(event) => setForm({ ...form, completed: event.target.checked })}/>Выполнено — независимо от статусов задач</label>
     {(save.error || candidates.error) && <p role="alert" className="plans-error">{save.error?.message || candidates.error?.message}</p>}
     <footer><button type="button" onClick={onClose}>Отмена</button><button className="plans-primary" disabled={save.isPending}>{save.isPending ? 'Сохраняю…' : 'Сохранить'}</button></footer>
   </form></div>;
+}
+
+function otherPlans(task, currentId) {
+  return (task.linked_plans ?? []).filter((plan) => plan.id !== currentId);
+}
+
+function TaskPlanHint({ task, currentId }) {
+  const plans = otherPlans(task, currentId);
+  if (!plans.length) return null;
+  const description = plans.map((plan) => `${plan.title} · ${monthLabel(plan.month)}`).join('; ');
+  return <small className="plan-task-hint" title={description}>Уже в плане: {description}</small>;
 }
