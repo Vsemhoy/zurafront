@@ -12,7 +12,8 @@ import './ModuleRail.css';
 const modules = [
     ['/', 'Home', IconHome, true, '#6d28d9', '#ede9fe'],
     ['/tasks', 'Tasker', IconChecklist, false, '#1d4ed8', '#dbeafe'],
-    ['/planner', 'Planner', IconCalendarStats, false, '#0f766e', '#ccfbf1'],
+    ['/plans', 'Planner', IconCalendarStats, false, '#0f766e', '#ccfbf1'],
+    ['/planner', 'Календарь', IconCalendarStats, false, '#0f766e', '#ccfbf1'],
     ['/projects', 'Projector', IconFolder, false, '#be185d', '#fce7f3'],
     ['/contractors', 'Contractor', IconUsers, false, '#7c3aed', '#ede9fe'],
     ['/kpi', 'KPI', IconChartBar, false, '#9333ea', '#f3e8ff'],

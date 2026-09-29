@@ -27,7 +27,7 @@ export function DashboardPage() {
   const myKpi = data.kpi?.me;
 
   return <main className="crm-dashboard">
-    <header className="crm-hero"><div><small>{activeScope.name} · {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h1>Привет, {user?.name?.split(' ')[0] || 'бро'}</h1><p>{data.summary.my_open_tasks ? `В фокусе ${data.summary.my_open_tasks} задач${data.summary.my_overdue_tasks ? `, просрочено ${data.summary.my_overdue_tasks}` : ''}.` : 'Личный хвост разобран. Можно посмотреть, что происходит у команды.'}</p></div><nav><Link className="primary" to="/tasks"><IconPlus size={16}/>Новая задача</Link><Link to="/planner"><IconCalendarEvent size={16}/>Planner</Link><Link to="/kpi"><IconTargetArrow size={16}/>KPI</Link></nav></header>
+    <header className="crm-hero"><div><small>{activeScope.name} · {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h1>Привет, {user?.name?.split(' ')[0] || 'бро'}</h1><p>{data.summary.my_open_tasks ? `В фокусе ${data.summary.my_open_tasks} задач${data.summary.my_overdue_tasks ? `, просрочено ${data.summary.my_overdue_tasks}` : ''}.` : 'Личный хвост разобран. Можно посмотреть, что происходит у команды.'}</p></div><nav><Link className="primary" to="/tasks"><IconPlus size={16}/>Новая задача</Link><Link to="/plans"><IconCalendarEvent size={16}/>Planner</Link><Link to="/kpi"><IconTargetArrow size={16}/>KPI</Link></nav></header>
 
     <section className="crm-metrics">
       <Metric icon={IconClipboardList} value={data.summary.my_open_tasks} label="Мои активные" tone="blue" href="/tasks"/>
