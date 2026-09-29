@@ -16,6 +16,7 @@ const modules = [
     ['/projects', 'Projector', IconFolder, false, '#be185d', '#fce7f3'],
     ['/contractors', 'Contractor', IconUsers, false, '#7c3aed', '#ede9fe'],
     ['/kpi', 'KPI', IconChartBar, false, '#9333ea', '#f3e8ff'],
+    ['/reports', 'Reporter', IconBriefcase2, false, '#0369a1', '#e0f2fe'],
     ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
     ['/factor', 'Factor', IconBuildingFactory2, false, '#2b6cb0', '#ebf4ff'],
     ['/lore', 'Lore', IconBrain, false, '#4f46a5', '#eeecff'],
