@@ -82,7 +82,7 @@ function PlanEditor({ scopeId, item, options, onClose, onSaved }) {
     <div className="plans-editor-grid">
       <label>Месяц<input required type="month" min="2000-01" max="2099-12" value={form.month} onChange={set('month')}/></label>
       <label>Проект<select value={form.project_id || ''} onChange={changeProject}><option value="">Без проекта</option>{options?.projects.map((p) => <option key={p.id} value={p.id}>{p.key} · {p.title}</option>)}</select></label>
-      <label>Исполнитель<select value={form.assignee_id || ''} onChange={set('assignee_id')}><option value="">Не назначен</option>{options?.people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+      <label>Исполнитель<select value={form.assignee_id || ''} onChange={set('assignee_id')}><option value="">Не назначен</option>{form.assignee_id && !options?.people.some((person) => person.id === form.assignee_id) && <option value={form.assignee_id} disabled>{form.assignee?.name ?? "Прежний исполнитель"} · недоступен</option>}{options?.people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label>Важность<select value={form.priority} onChange={set('priority')}>{Object.entries(priorities).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       <label>Планируемое время, ч<input type="number" min="0" max="8760" step="any" value={form.hours} onChange={set('hours')}/></label>
       <label>Диапазон дат (необязательно)<span className="plans-dates"><input aria-label="Начало" type="date" value={form.starts_on || ''} onChange={set('starts_on')}/><input aria-label="Окончание" type="date" value={form.ends_on || ''} min={form.starts_on || undefined} onChange={set('ends_on')}/></span></label>

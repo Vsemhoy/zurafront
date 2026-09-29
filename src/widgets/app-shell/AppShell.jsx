@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconPlus, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
+import { IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconPlus, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
@@ -12,7 +12,7 @@ import './ModuleRail.css';
 const modules = [
     ['/', 'Home', IconHome, true, '#6d28d9', '#ede9fe'],
     ['/tasks', 'Tasker', IconChecklist, false, '#1d4ed8', '#dbeafe'],
-    ['/plans', 'Planner', IconCalendarStats, false, '#0f766e', '#ccfbf1'],
+    ['/plans', 'Planner', IconRoute, false, '#0f766e', '#ccfbf1'],
     ['/planner', 'Календарь', IconCalendarStats, false, '#0f766e', '#ccfbf1'],
     ['/projects', 'Projector', IconFolder, false, '#be185d', '#fce7f3'],
     ['/contractors', 'Contractor', IconUsers, false, '#7c3aed', '#ede9fe'],

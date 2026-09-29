@@ -405,7 +405,7 @@ function ChecklistItemEditor({ item, assignees, saving, deleting, error, onClose
           />
         </label>
         <div className="checklist-editor-fields">
-          <label>Исполнитель<select value={form.assignee_id} onChange={set("assignee_id")}><option value="">Не назначен</option>{assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.name}</option>)}</select></label>
+          <label>Исполнитель<select value={form.assignee_id} onChange={set("assignee_id")}><option value="">Не назначен</option>{form.assignee_id && !assignees.some((person) => person.id === form.assignee_id) && <option value={form.assignee_id} disabled>{item.assignee?.name ?? "Прежний исполнитель"} · недоступен</option>}{assignees.map((assignee) => <option key={assignee.id} value={assignee.id}>{assignee.name}</option>)}</select></label>
           <label>Срок<input type="date" value={form.due_at} onChange={set("due_at")}/></label>
         </div>
         {error && <p className="form-error">{error.message}</p>}

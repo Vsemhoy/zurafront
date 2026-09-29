@@ -1445,6 +1445,9 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           onChange={(event) => save.mutate({ customer_id: event.target.value || null })}
         >
           <option value="">Не указан</option>
+          {task.customer_id && !(assignable.people ?? assignable.assignees).some((user) => user.id === task.customer_id) && (
+            <option value={task.customer_id} disabled>{task.customer?.name ?? "Прежний заказчик"} · недоступен</option>
+          )}
           {(assignable.people ?? assignable.assignees).map((user) => (
             <option key={user.id} value={user.id}>{user.name}{user.position ? ` · ${user.position}` : ""}</option>
           ))}
@@ -1455,6 +1458,8 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
         assignees={assignable.assignees}
         agents={assignable.agents}
         assigneeId={task.assignee_id}
+        currentAssignee={task.assignee}
+        currentAgent={task.delegated_agent}
         agentDelegatable={Boolean(task.is_agent_delegatable)}
         delegatedAgentId={task.delegated_agent_id}
         projectId={task.project_id}

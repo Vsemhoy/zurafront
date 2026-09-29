@@ -281,7 +281,7 @@ function ContractorDeleteButton({ scopeId, contractor, onDeleted }) {
     onSuccess: onDeleted,
   });
   const confirmDelete = () => {
-    if (window.confirm(`Удалить «${contractor.name}»? Аккаунт будет заблокирован, токены отозваны, назначения сняты.`)) remove.mutate();
+    if (window.confirm(`Удалить «${contractor.name}»? Вход будет заблокирован, токены отозваны. Существующие назначения и история сохранятся.`)) remove.mutate();
   };
   return (
     <div className="contractor-delete">

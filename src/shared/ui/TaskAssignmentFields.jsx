@@ -7,6 +7,8 @@ export function TaskAssignmentFields({
   assigneeId,
   agentDelegatable = false,
   delegatedAgentId,
+  currentAssignee,
+  currentAgent,
   projectId,
   onChange,
 }) {
@@ -28,6 +30,9 @@ export function TaskAssignmentFields({
           }
         >
           <option value="">Не назначен</option>
+          {assigneeId && !eligibleAssignees.some((item) => item.id === assigneeId) && (
+            <option value={assigneeId} disabled>{currentAssignee?.name ?? "Прежний исполнитель"} · недоступен</option>
+          )}
           {eligibleAssignees.map((contractor) => (
             <option key={contractor.id} value={contractor.id}>
               {contractor.is_current ? "Я — " : ""}
@@ -65,6 +70,9 @@ export function TaskAssignmentFields({
             }
           >
             <option value="">Выберите агента</option>
+            {delegatedAgentId && !eligibleAgents.some((item) => item.id === delegatedAgentId) && (
+              <option value={delegatedAgentId} disabled>{currentAgent?.name ?? "Прежний агент"} · недоступен</option>
+            )}
             {eligibleAgents.map((agent) => (
               <option key={agent.id} value={agent.id}>
                 {agent.name}
