@@ -259,18 +259,9 @@ export function ContractorPage() {
           <div className="contractor-editor-stack">
             {selectedContractor.type !== 'agent' && <ContractorAccountTools scopeId={activeScope.id} contractor={selectedContractor} onChanged={refresh} />}
             <ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onClose={() => setSelectedId(null)} onChanged={refresh} />
+            {selectedContractor.id !== currentUser?.id && <ContractorDeleteButton key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onDeleted={() => { setSelectedId(null); refresh(); }} />}
           </div>
         </>
-      )}
-      {selectedContractor && selectedContractor.id !== currentUser?.id && activeScope && (
-        <ContractorDeleteButton
-          scopeId={activeScope.id}
-          contractor={selectedContractor}
-          onDeleted={() => {
-            setSelectedId(null);
-            refresh();
-          }}
-        />
       )}
     </main>
   );

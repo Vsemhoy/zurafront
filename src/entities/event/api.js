@@ -1,6 +1,19 @@
 import { apiRequest } from '../../api';
 
 export const eventApi = {
+  async calendar(scopeId, params, signal) {
+    const events = [];
+    let page = 1;
+    let lastPage = 1;
+    do {
+      const query = new URLSearchParams(Object.entries({ ...params, page, per_page: 200 }).filter(([, value]) => value !== '' && value != null));
+      const result = await apiRequest(`/scopes/${scopeId}/events/calendar?${query}`, { signal });
+      events.push(...result.data);
+      lastPage = result.meta.last_page;
+      page++;
+    } while (page <= lastPage);
+    return events;
+  },
   async list(scopeId, params = {}) { const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== '' && value != null)); return apiRequest(`/scopes/${scopeId}/events?${query}`); },
   async get(scopeId, eventId) { return (await apiRequest(`/scopes/${scopeId}/events/${eventId}`)).data; },
   async create(scopeId, payload) { return (await apiRequest(`/scopes/${scopeId}/events`, { method: 'POST', body: JSON.stringify(payload) })).data; },
