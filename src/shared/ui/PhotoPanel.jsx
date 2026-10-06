@@ -4,7 +4,7 @@ import { apiRequest } from '../../api';
 import { FilePreview } from './FilePreview';
 import './PhotoPanel.css';
 
-export function FileImage({ scopeId, fileId, alt = '', className = '' }) {
+export function FileImage({ scopeId, fileId, alt = '', className = '', style }) {
     const [loaded, setLoaded] = useState({});
     const identity = `${scopeId}:${fileId}`;
     const src = loaded.identity === identity ? loaded.src : null;
@@ -18,7 +18,7 @@ export function FileImage({ scopeId, fileId, alt = '', className = '' }) {
             .catch((error) => { if (!controller.signal.aborted && error.name !== 'AbortError') setLoaded({ identity, failed: true }); });
         return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
     }, [scopeId, fileId, identity]);
-    return src ? <img className={className} src={src} alt={alt}/> : <span className={className} title={failed ? 'Фото недоступно' : 'Загрузка фото'}>{failed ? 'Фото недоступно' : '…'}</span>;
+    return src ? <img className={className} src={src} alt={alt} style={style}/> : <span className={className} title={failed ? 'Фото недоступно' : 'Загрузка фото'}>{failed ? 'Фото недоступно' : '…'}</span>;
 }
 
 export function PhotoPanel({ scopeId, type, id, selectedId, onSelect, featuredId, onChanged, feature = false }) {

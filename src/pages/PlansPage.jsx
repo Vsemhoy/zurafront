@@ -24,7 +24,7 @@ function Plans({ scope }) {
   useEffect(() => { const timer = setTimeout(() => setFilters((old) => ({ ...old, q: search, page: 1 })), 250); return () => clearTimeout(timer); }, [search]);
   const options = useQuery({ queryKey: ['plan-options', scope.id], queryFn: () => planApi.options(scope.id) });
   const list = useQuery({ queryKey: ['plans', scope.id, filters], queryFn: () => planApi.list(scope.id, filters) });
-  const refresh = () => { client.invalidateQueries({ queryKey: ['plans', scope.id] }); client.invalidateQueries({ queryKey: ['plan-candidates', scope.id] }); client.invalidateQueries({ queryKey: ['monthly-report', scope.id] }); };
+  const refresh = () => { ['planner', 'tasks', 'task', 'kpi-stats'].forEach((key) => client.invalidateQueries({ queryKey: [key, scope.id] })); client.invalidateQueries({ queryKey: ['plans', scope.id] }); client.invalidateQueries({ queryKey: ['plan-candidates', scope.id] }); client.invalidateQueries({ queryKey: ['monthly-report', scope.id] }); };
   const complete = useMutation({ mutationFn: ({ id, completed }) => planApi.save(scope.id, id, { completed }), onSuccess: refresh });
   const remove = useMutation({ mutationFn: (id) => planApi.remove(scope.id, id), onSuccess: refresh });
   const set = (key) => (event) => setFilters({ ...filters, [key]: event.target.value, page: 1, ...(key === 'year' ? { month: '' } : {}) });
@@ -64,6 +64,9 @@ function Plans({ scope }) {
 function PlanEditor({ scopeId, item, options, onClose, onSaved }) {
   const [form, setForm] = useState({ title: '', description: '', resources: '', expected_result: '', impact: '', actual_result: '', priority: 2, starts_on: '', ends_on: '', ...item, completed: Boolean(item.completed_at), hours: item.estimated_minutes == null ? '' : item.estimated_minutes / 60 });
   const [tasks, setTasks] = useState(item.tasks ?? []);
+  const calendarDate = (task) => task.planned_on ?? (task.due_at?.slice(0, 7) === form.month ? task.due_at.slice(0, 10) : '');
+  const monthEnd = form.month ? new Date(Number(form.month.slice(0, 4)), Number(form.month.slice(5, 7)), 0).getDate() : 31;
+
   const [search, setSearch] = useState('');
   const [term, setTerm] = useState('');
   const [page, setPage] = useState(1);
@@ -73,8 +76,8 @@ function PlanEditor({ scopeId, item, options, onClose, onSaved }) {
   const save = useMutation({ mutationFn: () => planApi.save(scopeId, item.id, Object.fromEntries(Object.entries({
     ...form, project_id: form.project_id || null, assignee_id: form.assignee_id || null,
     starts_on: form.starts_on || null, ends_on: form.ends_on || null, estimated_minutes: form.hours === '' ? null : Math.round(Number(form.hours) * 60),
-    priority: Number(form.priority), task_ids: tasks.map((task) => task.id),
-  }).filter(([key]) => ['title', 'description', 'resources', 'expected_result', 'impact', 'actual_result', 'priority', 'month', 'starts_on', 'ends_on', 'project_id', 'assignee_id', 'estimated_minutes', 'task_ids', 'completed'].includes(key)))), onSuccess: onSaved });
+    priority: Number(form.priority), task_ids: tasks.map((task) => task.id), task_dates: Object.fromEntries(tasks.map((task) => [task.id, calendarDate(task)])),
+  }).filter(([key]) => ['title', 'description', 'resources', 'expected_result', 'impact', 'actual_result', 'priority', 'month', 'starts_on', 'ends_on', 'project_id', 'assignee_id', 'estimated_minutes', 'task_ids', 'task_dates', 'completed'].includes(key)))), onSuccess: onSaved });
   const set = (key) => (event) => setForm({ ...form, [key]: event.target.value });
   const changeProject = (event) => { if (tasks.length && !window.confirm('Сменить проект и убрать связи с прежними задачами? Сами задачи сохранятся.')) return; setForm({ ...form, project_id: event.target.value }); setTasks([]); setPage(1); };
   return <div className="plans-backdrop"><form role="dialog" aria-modal="true" aria-label="Редактор плановой единицы" className="plans-editor" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}><header><h2>{item.id ? 'Плановая единица' : 'Новая плановая единица'}</h2><button type="button" aria-label="Закрыть" onClick={onClose}><IconX size={18}/></button></header>
@@ -88,8 +91,9 @@ function PlanEditor({ scopeId, item, options, onClose, onSaved }) {
       <label>Диапазон дат (необязательно)<span className="plans-dates"><input aria-label="Начало" type="date" value={form.starts_on || ''} onChange={set('starts_on')}/><input aria-label="Окончание" type="date" value={form.ends_on || ''} min={form.starts_on || undefined} onChange={set('ends_on')}/></span></label>
     </div>
     {[['description', 'Описание'], ['resources', 'Ресурсы: люди, доступы, оборудование, бюджет'], ['expected_result', 'Ожидаемый результат'], ['impact', 'Положительный эффект / влияние'], ['actual_result', 'Фактический результат']].map(([key, label]) => <label key={key}>{label}<textarea rows={2} maxLength={key === 'description' ? 20000 : 10000} value={form[key] || ''} onChange={set(key)}/></label>)}
-    <details className="plans-task-linker"><summary>Связанные задачи: {tasks.length}</summary>
-      <div className="plans-selected-tasks">{tasks.map((task) => <button type="button" key={task.id} className={otherPlans(task, item.id).length ? 'plan-task-linked' : ''} onClick={() => setTasks(tasks.filter((t) => t.id !== task.id))}><span>{task.task_key} · {task.title}<TaskPlanHint task={task} currentId={item.id}/></span><IconX size={14}/></button>)}</div>
+    <details className="plans-task-linker" open><summary>Связанные задачи: {tasks.length}</summary>
+      <p>Для каждой задачи укажите дату в календаре в пределах месяца плана. Дата сохранится вместе с планом.</p>
+      <div className="plans-selected-tasks">{tasks.map((task) => <div className="plans-task-schedule" key={task.id}><button type="button" className={otherPlans(task, item.id).length ? 'plan-task-linked' : ''} onClick={() => setTasks(tasks.filter((t) => t.id !== task.id))}><span>{task.task_key} · {task.title}<TaskPlanHint task={task} currentId={item.id}/></span><IconX size={14}/></button><label>Дата в календаре<input required type="date" aria-label={'Дата задачи ' + (task.task_key || task.title)} min={form.month + '-01'} max={form.month + '-' + monthEnd} value={calendarDate(task)} onChange={(event) => setTasks(tasks.map((t) => t.id === task.id ? { ...t, planned_on: event.target.value } : t))}/></label></div>)}</div>
       <input aria-label="Найти задачу" placeholder="Найти задачу в этом проекте" value={search} onChange={(event) => setSearch(event.target.value)}/>
       <div className="plans-candidates">{candidates.isPending ? 'Загружаю…' : candidates.data?.data?.map((task) => <button type="button" key={task.id} className={otherPlans(task, item.id).length ? 'plan-task-linked' : ''} disabled={tasks.some((t) => t.id === task.id)} onClick={() => setTasks([...tasks, task])}><span>{task.task_key} · {task.title}{task.status === 'done' ? ' ✓' : ''}<TaskPlanHint task={task} currentId={item.id}/>{tasks.some((t) => t.id === task.id) && <small className="plan-task-current">✓ Выбрана в этом плане</small>}</span></button>)}</div>
       <div className="plans-pager"><button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}>Назад</button><span>{page} / {candidates.data?.meta?.last_page ?? 1}</span><button type="button" disabled={page >= (candidates.data?.meta?.last_page ?? 1)} onClick={() => setPage(page + 1)}>Далее</button></div>

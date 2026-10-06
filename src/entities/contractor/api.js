@@ -1,8 +1,8 @@
 import { apiRequest } from '../../api';
 
 export const contractorApi = {
-  async list(scopeId) { return (await apiRequest(`/scopes/${scopeId}/contractors`)).data; },
-  async options(scopeId) { return (await apiRequest(`/scopes/${scopeId}/contractors/options`)).data; },
+  async list(scopeId) { return (await apiRequest(`/scopes/${scopeId}/contractors?include_self=1`)).data; },
+  async options(scopeId) { return (await apiRequest(`/scopes/${scopeId}/contractors/options?include_self=1`)).data; },
   async assignable(scopeId) { return (await apiRequest(`/scopes/${scopeId}/contractors/assignable`)).data; },
   async create(scopeId, payload) { return (await apiRequest(`/scopes/${scopeId}/contractors`, { method: 'POST', body: JSON.stringify(payload) })).data; },
   async update(scopeId, contractorId, payload) { return (await apiRequest(`/scopes/${scopeId}/contractors/${contractorId}`, { method: 'PATCH', body: JSON.stringify(payload) })).data; },

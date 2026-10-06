@@ -1,0 +1,31 @@
+:root :is(
+    .header-actions .avatar,
+    .contractor-avatar,
+    .contractor-editor-icon,
+    .user-avatar,
+    .kpi-person-avatar,
+    .comment-avatar,
+    .task-comment-avatar,
+    .avatar-picker > .avatar-image,
+    .avatar-crop-preview,
+    .avatar-preset-grid > button
+) {
+    box-sizing: border-box;
+    border-radius: 50%;
+    border: 1px solid #00000042;
+    box-shadow: 1px 1px 5px gray;
+    overflow: hidden;
+}
+
+.avatar-crop-preview {
+    outline: none;
+}
+
+.header-actions > button.avatar {
+    background: transparent;
+    color: #506680;
+    width: auto;
+    aspect-ratio: 1;
+    flex-shrink: 0;
+    padding: 0;
+}

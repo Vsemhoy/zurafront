@@ -19,10 +19,11 @@
 }
 
 .kpi-tabs button.active { border-bottom-color: #6d28d9; color: #5b21b6; }
-.kpi-report-filters { display: flex; align-items: end; gap: 12px; margin-bottom: 10px; background: #fff; padding: 11px 12px; }
+.kpi-report-filters { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin-bottom: 10px; background: #fff; padding: 11px 12px; }
 .kpi-report-filters label { display: grid; gap: 4px; color: #68758a; font-size: 10px; font-weight: 700; }
 .kpi-report-filters select, .kpi-report-filters input { height: 32px; border: 1px solid #cbd3df; background: #fff; padding: 0 8px; }
 .kpi-report-filters > label { min-width: 280px; }
+.kpi-report-filters > .kpi-completion-filter { min-width: 160px; }
 .kpi-month { display: flex; align-items: end; gap: 4px; margin-left: auto; }
 .kpi-month > button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #cbd3df; background: #f6f8fb; color: #536176; }
 .kpi-report, .kpi-report-state { background: #fff; }
@@ -40,7 +41,10 @@
 .kpi-report-areas > article > header b { font-size: 10px; }
 .kpi-report-areas > article > div { display: grid; margin-top: 7px; }
 .kpi-report-areas a { display: grid; grid-template-columns: 82px minmax(0, 1fr) 82px; align-items: center; gap: 8px; border-top: 1px solid #eef1f5; padding: 7px 5px; color: inherit; text-decoration: none; }
-.kpi-report-areas a:hover { background: #f6f4ff; }
+.kpi-report-areas a.kpi-task--completed { background: #f0f8f3; }
+.kpi-report-areas a.kpi-task--incomplete { background: #fff0f0; }
+.kpi-report-areas a:hover { box-shadow: inset 0 0 0 1px #cbd3df; }
+.kpi-report-areas .kpi-task-state { text-align: right; }
 .kpi-report-areas a code { color: #5b21b6; font-size: 10px; font-weight: 700; }
 .kpi-report-areas a span { min-width: 0; display: grid; }
 .kpi-report-areas a strong { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
@@ -54,5 +58,6 @@
     .kpi-month label { flex: 1; }
     .kpi-report > header { grid-template-columns: 38px 1fr; }
     .kpi-report-areas a { grid-template-columns: 72px minmax(0, 1fr); }
+    .kpi-report-areas .kpi-task-state { grid-column: 2; text-align: left; }
     .kpi-report-areas a time { display: none; }
 }

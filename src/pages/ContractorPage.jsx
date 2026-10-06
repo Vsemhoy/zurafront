@@ -1,4 +1,5 @@
-import { PhotoPanel, FileImage } from '../shared/ui/PhotoPanel';
+import { AvatarImage } from '../shared/ui/AvatarImage';
+import { AvatarPicker } from '../shared/ui/AvatarPicker';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -164,7 +165,7 @@ export function ContractorPage() {
       <header className="contractor-toolbar">
         <div>
           <IconUsers size={20} />
-          <h1>{options?.can_manage_all === false ? 'Мои агенты' : 'Contractor'}</h1>
+          <h1>{options?.can_manage_all === false ? 'Мой профиль и агенты' : 'Contractor'}</h1>
           <small>{contractors.length} акторов</small>
         </div>
         <label>
@@ -184,7 +185,7 @@ export function ContractorPage() {
         <aside className="contractor-filters">
           <strong>Типы</strong>
           {(options?.can_manage_all === false
-            ? [['agent', 'Агенты', counts.agent]]
+            ? [['all', 'Мой профиль и агенты', contractors.length], ['agent', 'Агенты', counts.agent]]
             : [
                 ['all', 'Все', contractors.length],
                 ['real', 'Реальные', counts.real],
@@ -192,7 +193,7 @@ export function ContractorPage() {
                 ['agent', 'Агенты', counts.agent],
               ]
           ).map(([value, label, count]) => (
-            <button key={value} className={type === value || (options?.can_manage_all === false && type === 'all') ? 'active' : ''} onClick={() => setType(value)}>
+            <button key={value} className={type === value ? 'active' : ''} onClick={() => setType(value)}>
               <span>{label}</span>
               <i>{count}</i>
             </button>
@@ -214,7 +215,7 @@ export function ContractorPage() {
               <button key={contractor.id} className={`contractor-row contractor-card--${contractor.type}`} onClick={() => setSelectedId(contractor.id)}>
                 <span className="contractor-person">
                   <i className="contractor-avatar">
-                    {contractor.profile?.avatar ? <FileImage scopeId={contractor.profile.avatar.scope_id} fileId={contractor.profile.avatar.file_id} alt={contractor.name}/> : <TypeIcon type={contractor.type} />}
+                    {contractor.profile?.avatar ? <AvatarImage avatar={contractor.profile.avatar} name={contractor.name}/> : <TypeIcon type={contractor.type} />}
                   </i>
                   <span>
                     <strong>{contractor.name}</strong>
@@ -257,9 +258,8 @@ export function ContractorPage() {
         <>
           <div className="contractor-backdrop" onClick={() => setSelectedId(null)} />
           <div className="contractor-editor-stack">
-            {selectedContractor.type !== 'agent' && <ContractorAccountTools scopeId={activeScope.id} contractor={selectedContractor} onChanged={refresh} />}
             <ContractorEditor key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onClose={() => setSelectedId(null)} onChanged={refresh} />
-            {selectedContractor.id !== currentUser?.id && <ContractorDeleteButton key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onDeleted={() => { setSelectedId(null); refresh(); }} />}
+            {selectedContractor.can_manage && selectedContractor.id !== currentUser?.id && <ContractorDeleteButton key={selectedId} scopeId={activeScope.id} contractor={selectedContractor} onDeleted={() => { setSelectedId(null); refresh(); }} />}
           </div>
         </>
       )}
@@ -293,18 +293,7 @@ function ContractorAccountTools({ scopeId, contractor, onChanged }) {
     email: contractor.email ?? '',
     password: '',
   });
-  const saveAccess = useMutation({
-    mutationFn: (bookAccessMode) =>
-      contractorApi.updateAccess(scopeId, contractor.id, {
-        role: contractor.role,
-        project_access_mode: contractor.project_access_mode,
-        book_access_mode: bookAccessMode,
-        project_ids: contractor.projects.map((project) => project.id),
-        permissions: permissionsWithBookAccess(contractor.permissions, bookAccessMode),
-        can_act_as: contractor.can_act_as,
-      }),
-    onSuccess: onChanged,
-  });
+
   const saveLogin = useMutation({
     mutationFn: () =>
       contractorApi.update(scopeId, contractor.id, {
@@ -326,20 +315,14 @@ function ContractorAccountTools({ scopeId, contractor, onChanged }) {
   return (
     <>
       <div className="contractor-account-tools">
-        <label>
-          Доступ к Booker
-          <select value={contractor.book_access_mode ?? 'none'} disabled={saveAccess.isPending} onChange={(event) => saveAccess.mutate(event.target.value)}>
-            <option value="none">Запретить</option>
-            <option value="projects">Только книги доступных проектов</option>
-            <option value="all">Все книги скоупа</option>
-          </select>
-        </label>
+
         <label className="contractor-executor-toggle">
           <input type="checkbox" checked={contractor.is_executor} disabled={saveExecutor.isPending} onChange={(event) => saveExecutor.mutate(event.target.checked)} />
           <span>Исполнитель</span>
         </label>
         <button onClick={() => setLoginOpen(true)}>{contractor.type === 'virtual' ? 'Оживить и разрешить вход' : 'Сменить пароль'}</button>
-        {(saveAccess.isPending || saveExecutor.isPending) && <small>сохраняю…</small>}
+        {saveExecutor.isPending && <small>сохраняю…</small>}
+        {saveExecutor.error && <small role="alert" className="contractor-error">{saveExecutor.error.message}</small>}
       </div>
       {loginOpen && (
         <div className="contractor-modal-backdrop contractor-login-backdrop" onMouseDown={() => setLoginOpen(false)}>
@@ -458,14 +441,7 @@ function ContractorCreate({ scopeId, options, initialType, onClose, onCreated })
           Должность
           <input value={form.position} onChange={set('position')} placeholder="Системный администратор" />
         </label>
-        <label>
-          Язык работы
-          <select value={form.preferred_language} onChange={set('preferred_language')}>
-            <option value="ru">Русский</option>
-            <option value="en">English</option>
-            <option value="zh">中文</option>
-          </select>
-        </label>
+
         <div className="contractor-form-row">
           <label>
             Роль
@@ -583,7 +559,6 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
       contractorApi.update(scopeId, contractor.id, {
         name: form.name,
         position: form.position || null,
-        preferred_language: form.preferred_language,
         status: form.status,
         email: form.email || null,
         username: form.username || null,
@@ -684,11 +659,11 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
     <aside className="contractor-editor">
       <header>
         <div className={`contractor-editor-icon contractor-card--${contractor.type}`}>
-          <TypeIcon type={contractor.type} />
+          <AvatarImage avatar={contractor.profile?.avatar} name={contractor.name}/>
         </div>
-        <div>
+        <div className="contractor-editor-identity">
           <strong>{contractor.name}</strong>
-          <small>{typeLabels[contractor.type]}</small><AttachmentsButton scopeId={scopeId} type="user" id={contractor.id}/>
+          <small>{statusLabels[contractor.status]}</small><AttachmentsButton scopeId={scopeId} type="user" id={contractor.id}/>
         </div>
         <button onClick={onClose}>
           <IconX size={19} />
@@ -698,7 +673,8 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
       <div hidden={contractor.type === 'agent' && editorTab !== 'profile'}>
       <section>
         <h2>Профиль</h2>
-        <PhotoPanel scopeId={scopeId} type="user" id={contractor.id} feature featuredId={contractor.profile?.avatar?.file_id} onChanged={async () => { await onChanged(); await check(); }}/>
+        <AvatarPicker scopeId={scopeId} contractor={contractor} onChanged={async () => { await onChanged(); await check(); }}/>
+        <fieldset className="contractor-edit-fields" disabled={!contractor.can_manage}>
         <div className="contractor-form-row">
           <label>
             Имя
@@ -736,23 +712,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
             placeholder="Кто есть кто"
           />
         </label>
-        <label>
-          Язык работы
-          <select
-            value={form.preferred_language}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                preferred_language: event.target.value,
-              }))
-            }
-          >
-            <option value="ru">Русский</option>
-            <option value="en">English</option>
-            <option value="zh">中文</option>
-          </select>
-          <small>Этот язык попадёт в инструкцию агенту.</small>
-        </label>
+
         <div className="contractor-form-row">
           <label>
             Логин
@@ -782,7 +742,12 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
         <button className="contractor-secondary" onClick={() => saveProfile.mutate()}>
           Сохранить профиль
         </button>
+        </fieldset>
       </section>
+      {contractor.can_manage && contractor.type !== 'agent' && <section className="contractor-account-section">
+        <ContractorAccountTools scopeId={scopeId} contractor={contractor} onChanged={onChanged}/>
+      </section>}
+      <fieldset className="contractor-edit-fields" disabled={!contractor.can_manage}>
       <section>
         <h2>Доступ к скоупам</h2>
         <div className="contractor-scope-list">
@@ -894,7 +859,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
             );
           })}
         </div>
-        {contractor.type === 'virtual' && (
+      {contractor.type === 'virtual' && (
           <label className="contractor-checkbox">
             <input
               type="checkbox"
@@ -923,6 +888,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
           </button>
         </section>
       )}
+      </fieldset>
       </div>
       {contractor.type === 'agent' && editorTab === 'connections' && (
         <section>

@@ -9,6 +9,7 @@ import '@mantine/notifications/styles.css';
 import './i18n';
 import './index.css';
 import App from './App.jsx';
+import './shared/ui/AvatarFrame.css';
 const queryClient = new QueryClient();
 const theme = createTheme({
     primaryColor: 'blue',

@@ -4,7 +4,8 @@
     top: auto;
     right: auto;
     width: 100%;
-    grid-template-columns: minmax(150px, 1fr) auto auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: end;
     gap: 6px;
     border: 0;
@@ -35,6 +36,22 @@
     overflow: visible;
     padding: 8px 0 0;
     box-shadow: none;
+}
+
+.contractor-editor > header {
+    grid-template-columns: 44px minmax(0, 1fr) 32px;
+}
+
+.contractor-editor-stack > .contractor-editor > header > .contractor-editor-identity {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.contractor-editor-stack .contractor-editor-icon {
+    width: 44px;
+    height: 44px;
 }
 
 .contractor-account-tools label { gap: 2px; font-size: 9px; }
