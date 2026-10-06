@@ -21,6 +21,7 @@ export const bookApi = {
     createPageComment: (scopeId, bookId, pageId, content, parentId = null) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/comments`, json('POST', { content, parent_id: parentId }))),
     deletePageComment: (scopeId, bookId, pageId, commentId) => apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/comments/${commentId}`, { method: 'DELETE' }),
     createBlock: (scopeId, bookId, pageId, payload) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/blocks`, json('POST', payload))),
+    deleteBlock: (scopeId, bookId, pageId, groupId) => apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/blocks/${groupId}`, { method: 'DELETE' }),
     reorderBlocks: (scopeId, bookId, pageId, items) => apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/blocks/reorder`, json('POST', { items })),
     createVersion: (scopeId, bookId, pageId, groupId, payload) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/blocks/${groupId}/versions`, json('POST', payload))),
     acquireEditing: (scopeId, bookId, pageId) => data(apiRequest(`/scopes/${scopeId}/books/${bookId}/pages/${pageId}/editing`, json('POST', {}))),
