@@ -1,9 +1,11 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { IconEdit, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { IconChevronDown, IconEdit, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { planApi } from '../entities/plan/api';
+import { isPlanOverdue, isPlanTaskOverdue } from '../entities/plan/overdue';
+import { taskStatusMap } from '../entities/task/statuses';
 import './PlansPage.css';
 
 const priorities = { 1: 'Низкая', 2: 'Обычная', 3: 'Важная', 4: 'Очень важная', 5: 'Критическая' };
@@ -20,6 +22,7 @@ function Plans({ scope }) {
   const client = useQueryClient();
   const [filters, setFilters] = useState({ year: new Date().getFullYear(), month: '', assignee_id: '', project_id: '', status: '', q: '', page: 1 });
   const [editing, setEditing] = useState(null);
+  const [expandedPlans, setExpandedPlans] = useState(new Set());
   const [search, setSearch] = useState('');
   useEffect(() => { const timer = setTimeout(() => setFilters((old) => ({ ...old, q: search, page: 1 })), 250); return () => clearTimeout(timer); }, [search]);
   const options = useQuery({ queryKey: ['plan-options', scope.id], queryFn: () => planApi.options(scope.id) });
@@ -29,6 +32,12 @@ function Plans({ scope }) {
   const remove = useMutation({ mutationFn: (id) => planApi.remove(scope.id, id), onSuccess: refresh });
   const set = (key) => (event) => setFilters({ ...filters, [key]: event.target.value, page: 1, ...(key === 'year' ? { month: '' } : {}) });
   const items = list.data?.items ?? [];
+  const toggleTasks = (id) => setExpandedPlans((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    return next;
+  });
   return <main className="plans-page">
     <header className="plans-heading"><div><small>{scope.name} · планирование результатов</small><h1>Planner</h1></div><Link to="/planner">Календарь</Link><button className="plans-primary" onClick={() => setEditing({ month: filters.month || (Number(filters.year) === new Date().getFullYear() ? monthNow() : `${filters.year}-01`), project_id: filters.project_id, assignee_id: filters.assignee_id })}><IconPlus size={16}/>Новая плановая единица</button></header>
     <div className="plans-filters">
@@ -44,15 +53,30 @@ function Plans({ scope }) {
     {list.isPending ? <p>Загружаю план…</p> : <div className="plans-scroll"><table className="plans-table"><thead><tr><th>Готово</th><th>План / результат</th><th>Проект</th><th>Исполнитель</th><th>Задачи</th><th>Оценка / диапазон</th><th>Важность</th><th/></tr></thead><tbody>
       {items.map((item, index) => <Fragment key={item.id}>
         {(index === 0 || items[index - 1].month !== item.month) && <tr className="plans-month-row"><th colSpan={8}>{monthLabel(item.month)}</th></tr>}
-        <tr className={item.completed_at ? 'plans-done' : ''}>
+        <tr className={item.completed_at ? 'plans-done' : isPlanOverdue(item) ? 'plans-overdue' : ''}>
           <td><input type="checkbox" aria-label={`Выполнено: ${item.title}`} checked={Boolean(item.completed_at)} disabled={complete.isPending} onChange={(event) => complete.mutate({ id: item.id, completed: event.target.checked })}/></td>
           <td><button className="plans-title" onClick={() => setEditing(item)}>{item.title}</button><p>{item.expected_result || 'Ожидаемый результат не указан'}</p><details><summary>Описание, ресурсы и эффект</summary>{[['Описание', item.description], ['Ресурсы', item.resources], ['Положительный эффект', item.impact], ['Фактический результат', item.actual_result]].map(([label, value]) => value && <p key={label}><b>{label}:</b> {value}</p>)}{item.completed_at && <p>Завершил {item.completer?.name || '—'} · {new Date(item.completed_at).toLocaleString('ru-RU')}</p>}</details></td>
           <td>{item.project?.key || 'Без проекта'}{item.project?.include_in_reports === false && <small>Вне отчётности</small>}</td>
           <td>{item.assignee?.name || 'Не назначен'}</td>
-          <td><details><summary>{item.completed_tasks_count} / {item.tasks_count}</summary>{item.tasks.map((task) => <Link key={task.id} to={`/tasks/${task.id}/edit`}>{task.status === 'done' ? '✓ ' : ''}{task.task_key || 'Задача'} · {task.title}</Link>)}</details></td>
+          <td><button type="button" className="plans-tasks-toggle" disabled={!item.tasks.length} aria-label={`Связанные задачи: ${item.title}`} aria-expanded={expandedPlans.has(item.id)} aria-controls={`plan-tasks-${item.id}`} onClick={() => toggleTasks(item.id)}><IconChevronDown size={14}/><span>{item.completed_tasks_count} / {item.tasks_count}</span></button></td>
           <td>{duration(item.estimated_minutes)}<small>{[item.starts_on, item.ends_on].filter(Boolean).join(' — ') || 'Без точных дат'}</small></td>
           <td>{priorities[item.priority]}</td>
           <td><div className="plans-actions"><button title="Редактировать" onClick={() => setEditing(item)}><IconEdit size={16}/></button><button title="Удалить план, сохранив задачи" disabled={remove.isPending} onClick={() => window.confirm('Удалить плановую единицу? Связанные задачи останутся.') && remove.mutate(item.id)}><IconTrash size={16}/></button></div></td>
+        </tr>
+        <tr className="plans-tasks-row" hidden={!expandedPlans.has(item.id)}>
+          <td colSpan={8}>
+            <div id={`plan-tasks-${item.id}`} className="plans-tasks-block" role="region" aria-label={`Задачи плана: ${item.title}`}>
+              <ul className="plans-child-tasks">{item.tasks.map((task) => {
+                const overdue = isPlanTaskOverdue(task);
+                return <li key={task.id}><Link className={`plans-child-task${overdue ? ' plans-child-task--overdue' : ''}${task.status === 'done' ? ' plans-child-task--done' : ''}`} to={`/tasks/${task.id}/edit`}>
+                  <span className="plans-child-task-code">{task.task_key || 'Задача'}</span>
+                  <span className="plans-child-task-title">{task.title}</span>
+                  <span className="plans-child-task-status">{task.status === 'done' ? '✓ ' : ''}{taskStatusMap[task.status]?.label || task.status}</span>
+                  <span className="plans-child-task-date">{overdue && <span>Просрочена · </span>}{task.due_at ? <time dateTime={task.due_at.slice(0, 10)}>{task.due_at.slice(0, 10).split('-').reverse().join('.')}</time> : 'Без даты'}</span>
+                </Link></li>;
+              })}</ul>
+            </div>
+          </td>
         </tr>
       </Fragment>)}
     </tbody></table>{!items.length && <p>На этот период планов нет.</p>}</div>}
