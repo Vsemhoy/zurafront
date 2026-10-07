@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   IconAdjustments,
+  IconCalendarEvent,
   IconBook2,
   IconChecklist,
   IconCode,
@@ -19,6 +20,8 @@ import './SearchPage.css';
 
 const entityTypes = [
   ['task', 'Задачи', IconChecklist],
+  ['lore', 'ЛОР', IconFileText],
+  ['event', 'Ивентор', IconCalendarEvent],
   ['project', 'Проекты', IconFolder],
   ['book', 'Книги', IconBook2],
   ['book_page', 'Страницы', IconFileText],
@@ -27,7 +30,7 @@ const entityTypes = [
 
 const statusOptions = [
   ['todo', 'К выполнению'],
-  ['planned', 'Запланировано'],
+  ['scheduled', 'Запланировано'],
   ['in_progress', 'В работе'],
   ['review', 'Проверка'],
   ['done', 'Готово'],
@@ -36,6 +39,10 @@ const statusOptions = [
   ['active', 'Проект: активный'],
   ['on_hold', 'Проект: на паузе'],
   ['completed', 'Проект: завершён'],
+  ['draft', 'Черновик'],
+  ['published', 'Опубликовано'],
+  ['archived', 'В архиве'],
+  ['cancelled', 'Отменено'],
 ];
 
 export function SearchPage() {
@@ -43,23 +50,38 @@ export function SearchPage() {
   const scopeId = activeScope?.id;
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
-  const [types, setTypes] = useState([]);
-  const [projectId, setProjectId] = useState('');
-  const [userId, setUserId] = useState('');
-  const [status, setStatus] = useState('');
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
-
+  const requestedMode = params.get('type');
+  const mode = requestedMode === 'all' || entityTypes.some(([type]) => type === requestedMode) ? requestedMode : 'task';
+  const projectId = params.get('project_id') || '';
+  const userId = params.get('user_id') || '';
+  const taskMode = ['task', 'all'].includes(mode);
+  const completedBy = taskMode ? params.get('completed_by') || '' : '';
+  const createdBy = taskMode ? params.get('created_by') || '' : '';
+  const status = params.get('status') || '';
+  const dateFrom = params.get('date_from') || '';
+  const dateTo = params.get('date_to') || '';
+  const updateParam = (key, value) => setParams((current) => {
+    const next = new URLSearchParams(current);
+    next.set('type', mode);
+    if (value) next.set(key, value); else next.delete(key);
+    return next;
+  });
+  const selectMode = (type) => setParams((current) => {
+    const next = new URLSearchParams(current);
+    next.set('type', type);
+    if (!['task', 'all'].includes(type)) {
+      next.delete('completed_by');
+      next.delete('created_by');
+    }
+    next.delete('status');
+    return next;
+  });
   const filters = useMemo(() => ({
-    q: query,
-    types: types.join(','),
-    project_id: projectId,
-    user_id: userId,
-    status,
-    date_from: dateFrom,
-    date_to: dateTo,
-    limit: 200,
-  }), [dateFrom, dateTo, projectId, query, status, types, userId]);
+    q: query, types: mode === 'all' ? '' : mode,
+    project_id: projectId, user_id: userId,
+    completed_by: completedBy, created_by: createdBy,
+    status, date_from: dateFrom, date_to: dateTo, limit: 200,
+  }), [query, mode, projectId, userId, completedBy, createdBy, status, dateFrom, dateTo]);
 
   const search = useQuery({
     queryKey: ['global-search', scopeId, filters],
@@ -78,31 +100,25 @@ export function SearchPage() {
   });
   const users = Array.isArray(userOptions?.people) ? userOptions.people : [];
 
+  const visibleStatuses = { task: ['todo', 'scheduled', 'in_progress', 'review', 'done', 'blocked', 'cancelled'], project: ['planning', 'active', 'on_hold', 'completed'], lore: ['draft', 'scheduled', 'active', 'cancelled'], event: ['draft', 'published', 'archived'] };
+  const statuses = mode === 'all' ? statusOptions : statusOptions.filter(([value]) => visibleStatuses[mode]?.includes(value));
   const counts = Object.fromEntries((search.data?.facets ?? []).map((facet) => [facet.type, facet.count]));
-  const hasFilters = Boolean(types.length || projectId || userId || status || dateFrom || dateTo);
-  const toggleType = (type) => setTypes((current) => current.includes(type) ? current.filter((item) => item !== type) : [...current, type]);
-  const reset = () => {
-    setTypes([]);
-    setProjectId('');
-    setUserId('');
-    setStatus('');
-    setDateFrom('');
-    setDateTo('');
-  };
+  const hasFilters = Boolean(projectId || userId || completedBy || createdBy || status || dateFrom || dateTo);
+  const reset = () => setParams(query ? { q: query, type: mode } : { type: mode });
   return (
     <main className="search-page">
       <header className="search-page-header">
         <div><IconSearch size={22} /><span><small>По всему скоупу</small><h1>Поиск</h1></span></div>
-        <SearchForm key={query} query={query} onSearch={(next) => setParams(next ? { q: next } : {})} />
+        <SearchForm key={query} query={query} onSearch={(next) => updateParam('q', next)} />
       </header>
 
       <section className="search-type-filters">
-        <button className={!types.length ? 'active' : ''} onClick={() => setTypes([])}>
-          Всё <small>{search.data?.total ?? 0}</small>
+        <button className={mode === 'all' ? 'active' : ''} onClick={() => selectMode('all')}>
+          Всё {mode === 'all' && search.data && <small>{search.data.total}</small>}
         </button>
         {entityTypes.map(([type, label, Icon]) => (
-          <button key={type} className={types.includes(type) ? 'active' : ''} onClick={() => toggleType(type)}>
-            <Icon size={14} />{label}<small>{counts[type] ?? 0}</small>
+          <button key={type} className={mode === type ? 'active' : ''} onClick={() => selectMode(type)}>
+            <Icon size={14} />{label}{search.data && (mode === type || mode === 'all') && <small>{counts[type] ?? 0}</small>}
           </button>
         ))}
       </section>
@@ -110,11 +126,16 @@ export function SearchPage() {
       <div className="search-layout">
         <aside className="search-refinements">
           <header><IconAdjustments size={16} /><strong>Уточнить</strong>{hasFilters && <button onClick={reset}>Сбросить</button>}</header>
-          <label>Проект<select value={projectId} onChange={(event) => setProjectId(event.target.value)}><option value="">Все проекты</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}</option>)}</select></label>
-          <label>Участник<select value={userId} onChange={(event) => setUserId(event.target.value)}><option value="">Все участники</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}{user.position ? ` · ${user.position}` : ''}</option>)}</select></label>
-          <label>Статус<select value={status} onChange={(event) => setStatus(event.target.value)}><option value="">Любой статус</option>{statusOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <div className="search-date-range"><label>Создано от<input type="date" value={dateFrom} onChange={(event) => setDateFrom(event.target.value)} /></label><label>до<input type="date" min={dateFrom || undefined} value={dateTo} onChange={(event) => setDateTo(event.target.value)} /></label></div>
-          <p>Поиск учитывает только доступные вам проекты и книги.</p>
+          <label>Проект<select value={projectId} onChange={(event) => updateParam('project_id', event.target.value)}><option value="">Все проекты</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}</option>)}</select></label>
+          <label>Участник<select value={userId} onChange={(event) => updateParam('user_id', event.target.value)}><option value="">Все участники</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}{user.position ? ` · ${user.position}` : ''}</option>)}</select></label>
+          {['task', 'all'].includes(mode) && <>
+            <label>Выполнил<select value={completedBy} onChange={(event) => updateParam('completed_by', event.target.value)}><option value="">Любой исполнитель</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
+            <label>Поставил задачу<select value={createdBy} onChange={(event) => updateParam('created_by', event.target.value)}><option value="">Любой автор</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
+            {completedBy && <p>Только завершённые задачи выбранного исполнителя.</p>}
+          </>}
+          {statuses.length > 0 && <label>Статус<select value={status} onChange={(event) => updateParam('status', event.target.value)}><option value="">Любой статус</option>{statuses.map(([value, label]) => <option key={value} value={value}>{mode === 'lore' && value === 'active' ? 'Действует' : mode === 'lore' && value === 'scheduled' ? 'Запланировано' : label}</option>)}</select></label>}
+          <div className="search-date-range"><label>Создано от<input type="date" value={dateFrom} onChange={(event) => updateParam('date_from', event.target.value)} /></label><label>до<input type="date" min={dateFrom || undefined} value={dateTo} onChange={(event) => updateParam('date_to', event.target.value)} /></label></div>
+          <p>Поиск учитывает ваши права доступа к записям.</p>
         </aside>
 
         <section className="search-results">
@@ -149,7 +170,7 @@ function SearchResult({ item, query }) {
       <header><strong><Highlight value={item.title} query={query} /></strong><small>{config?.[1] ?? item.type}</small></header>
       {item.subtitle && <div className="search-result-subtitle">{item.subtitle}</div>}
       {item.snippet && <p><Highlight value={item.snippet} query={query} /></p>}
-      <footer>{item.meta?.status && <span>{item.meta.status}</span>}{item.meta?.project?.title && <span><i style={{ background: item.meta.project.color }} />{item.meta.project.key} · {item.meta.project.title}</span>}<time>{formatDate(item.updated_at)}</time></footer>
+      <footer>{item.type === 'task' && item.meta?.status === 'done' && item.meta?.user?.name && <span>Выполнил: {item.meta.user.name}</span>}{item.meta?.status && <span>{item.meta.status}</span>}{item.meta?.project?.title && <span><i style={{ background: item.meta.project.color }} />{item.meta.project.key} · {item.meta.project.title}</span>}<time>{formatDate(item.updated_at)}</time></footer>
     </span>
   </Link>;
 }
@@ -162,7 +183,7 @@ function Highlight({ value, query }) {
 }
 
 function SearchWelcome() {
-  return <div className="search-welcome"><IconSearch size={38} /><h2>Найдём что угодно</h2><p>Ищем в названиях, описаниях и результатах задач и проектов, а также по книгам, страницам и содержимому блоков Booker.</p></div>;
+  return <div className="search-welcome"><IconSearch size={38} /><h2>Найдём что угодно</h2><p>Ищем в названиях, описаниях и результатах задач и проектов, а также по книгам, страницам, блокам Booker, записям ЛОР и событиям Ивентора.</p></div>;
 }
 
 function formatDate(value) {
