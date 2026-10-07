@@ -1,3 +1,5 @@
+import { DepartmentField } from '../shared/ui/DepartmentField';
+import { departmentApi } from '../entities/department/api';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,7 +28,7 @@ function SortableProjectCard({ project, onOpen, disabled }) {
         <strong>{project.title}</strong>
         <p title={project.description ?? ""}>{project.description || "Описание проекта пока не задано."}</p>
         <footer>
-          <span>{project.tasks_count ?? 0} задач</span>
+          <span>{project.tasks_count ?? 0} задач</span>{project.department && <span>{project.department.name}</span>}
           <span><IconBook2 size={13} />{project.books_count ?? 0} книг</span>
           <span title={creatorName(project)}>{creatorName(project)}</span>
           <span title={project.visibility === "private" ? "Только создатель" : "Участники скоупа"}>{project.visibility === "private" ? <IconLock size={13} /> : <IconUsers size={13} />}</span>
@@ -43,6 +45,8 @@ export function ProjectorPage() {
   const queryClient = useQueryClient();
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState("");
+  const departmentId = params.get('department') || '';
+  const { data: departmentsData } = useQuery({ queryKey: ['departments', scopeId], queryFn: () => departmentApi.list(scopeId), enabled: Boolean(scopeId) });
   const [creatorId, setCreatorId] = useState("all");
   const [selected, setSelected] = useState(null);
   const [creating, setCreating] = useState(false);
@@ -65,7 +69,7 @@ export function ProjectorPage() {
     return [...unique.entries()].sort((left, right) => left[1].localeCompare(right[1]));
   }, [projects]);
   const needle = search.trim().toLowerCase();
-  const rows = orderedProjects.filter((project) => (creatorId === "all" || project.created_by === creatorId) && `${project.key} ${project.title} ${project.description ?? ""}`.toLowerCase().includes(needle));
+  const rows = orderedProjects.filter((project) => (creatorId === "all" || project.created_by === creatorId) && (!departmentId || project.department_id === departmentId || project.departments?.some((item) => item.id === departmentId)) && `${project.key} ${project.title} ${project.description ?? ""}`.toLowerCase().includes(needle));
   const reorder = useMutation({
     mutationFn: (ids) => projectApi.reorder(scopeId, ids),
     onSuccess: (saved) => {
@@ -104,6 +108,7 @@ export function ProjectorPage() {
         <div><small>Управление проектами</small><h1>Projector</h1></div>
         <label><IconSearch size={16} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Проект или литерал…" /></label>
         <label className="projector-creator-filter"><span>Создатель</span><select value={creatorId} onChange={(event) => setCreatorId(event.target.value)}><option value="all">Все</option>{creators.map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>
+        <label className="projector-creator-filter"><span>Отдел</span><select value={departmentId} onChange={(event) => setParams((current) => { const next = new URLSearchParams(current); if (event.target.value) next.set('department', event.target.value); else next.delete('department'); return next; })}><option value="">Все отделы</option>{departmentsData?.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <button onClick={() => setCreating(true)}><IconFolderPlus size={17} />Новый проект</button>
       </header>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={dragEnd}>
@@ -126,6 +131,7 @@ function ProjectEditor({ scopeId, projectId, onClose, onSaved }) {
   const { data: project } = useQuery({ queryKey: ["project", scopeId, projectId], queryFn: () => projectApi.get(scopeId, projectId), enabled: Boolean(projectId) });
   const { data: books = [] } = useQuery({ queryKey: ["books", scopeId], queryFn: () => bookApi.books(scopeId) });
   const [draft, setDraft] = useState(projectId ? null : empty);
+  const { data: departmentData } = useQuery({ queryKey: ['departments', scopeId], queryFn: () => departmentApi.list(scopeId) });
   const form = draft ?? (project ? { ...empty, ...project } : null);
   const save = useMutation({ mutationFn: (payload) => projectId ? projectApi.update(scopeId, projectId, payload) : projectApi.create(scopeId, payload), onSuccess: (saved) => { queryClient.invalidateQueries({ queryKey: ["project", scopeId, projectId] }); onSaved(); if (!projectId) onClose(); else setDraft({ ...empty, ...saved }); } });
   const attach = useMutation({ mutationFn: ({ book, checked }) => bookApi.updateBook(scopeId, book.id, { project_id: checked ? projectId : null }), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["books", scopeId] }); queryClient.invalidateQueries({ queryKey: ["project", scopeId, projectId] }); onSaved(); } });
@@ -139,8 +145,10 @@ function ProjectEditor({ scopeId, projectId, onClose, onSaved }) {
   return <><div className="projector-backdrop" onClick={onClose} /><aside className="projector-editor">
     <header><div><small>{projectId ? form.key : "Новый"}</small><h2>{projectId ? "Редактор проекта" : "Создание проекта"}</h2><AttachmentsButton scopeId={scopeId} type="project" id={projectId}/></div><button onClick={onClose}><IconX size={18} /></button></header>
     <form onSubmit={(event) => { event.preventDefault(); save.mutate({ ...form, priority: Number(form.priority), sort_order: Number(form.sort_order), key: form.key.toUpperCase() }); }}>
+      <DepartmentField scopeId={scopeId} value={form.department_id} onChange={(department_id) => setDraft({ ...form, department_id })}/>
+      <fieldset><legend>Участвующие отделы</legend>{departmentData?.departments.map((department) => { const ids = form.department_ids ?? form.departments?.map((item) => item.id) ?? []; return <label className="projector-book" key={department.id}><input type="checkbox" checked={ids.includes(department.id)} onChange={(event) => setDraft({ ...form, department_ids: event.target.checked ? [...ids, department.id] : ids.filter((id) => id !== department.id) })}/>{department.name}</label>; })}</fieldset>
       <label>Название<input autoFocus required value={form.title} onChange={set("title")} /></label>
-      <label className="projector-privacy">Приватность<select value={form.visibility} onChange={set("visibility")}><option value="private">Только создатель</option><option value="scope">Участники скоупа с доступом к проекту</option></select><small>{form.visibility === "private" ? "Проект и его задачи скрыты от коллег." : "Проект и задачи видны участникам согласно их доступам."}</small></label>
+      <label className="projector-privacy">Приватность<select value={form.visibility} onChange={set("visibility")}><option value="private">Только создатель</option><option value="scope">Участники скоупа с доступом к проекту</option></select><small>{form.visibility === "private" ? "Проект закрыт. Задачи, направленные отделу, доступны их участникам." : "Проект и задачи видны участникам согласно их доступам."}</small></label>
       <label className="projector-book"><input type="checkbox" checked={form.include_in_reports} onChange={setChecked("include_in_reports")} /><span>Учитывать в отчётности и KPI<small>Если выключено, задачи и план проекта остаются рабочими, но не попадают в новые отчёты. Сохранённые Excel не меняются.</small></span></label>
       <fieldset><legend>Модули проекта</legend><label className="projector-book"><input type="checkbox" checked={form.show_in_tasker} onChange={setChecked("show_in_tasker")} /><span>Показывать проект в Tasker</span></label><label className="projector-book"><input type="checkbox" checked={form.show_in_eventor} onChange={setChecked("show_in_eventor")} /><span>Показывать проект в Eventor</span></label><label className="projector-book"><input type="checkbox" checked={form.event_comments_enabled} onChange={setChecked("event_comments_enabled")} /><span>Разрешить комментарии к событиям</span></label></fieldset>
       <div className="projector-form-grid"><label>Литерал<input required maxLength="12" value={form.key} disabled={Boolean(projectId)} onChange={set("key")} /></label><label>Цвет<input type="color" value={form.color} onChange={set("color")} /></label><label>Статус<select value={form.status} onChange={set("status")}><option value="planning">Планируется</option><option value="active">Активный</option><option value="on_hold">На паузе</option><option value="completed">Завершён</option><option value="archived">Архив</option></select></label><label>Приоритет<input type="number" min="1" max="5" value={form.priority} onChange={set("priority")} /></label></div>

@@ -1,3 +1,4 @@
+import { DepartmentField } from '../shared/ui/DepartmentField';
 import { lazy, Suspense, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -383,7 +384,8 @@ export function TaskEditorPage() {
               ))}
             </select>
           </label>
-          <TaskKpiField scopeId={activeScope.id} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
+          <DepartmentField scopeId={activeScope.id} value={task.department_id} onChange={(department_id) => save.mutate({ department_id })}/>
+      <TaskKpiField userId={task.assignee_id} month={task.due_at?.slice(0, 7)} scopeId={activeScope.id} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
           <TaskAssignmentFields
             assignees={assignable.assignees}
             agents={assignable.agents}
@@ -393,6 +395,7 @@ export function TaskEditorPage() {
             agentDelegatable={Boolean(task.is_agent_delegatable)}
             delegatedAgentId={task.delegated_agent_id}
             projectId={task.project_id}
+            departmentId={task.department_id}
             onChange={(payload) => save.mutate(payload)}
           />
           <section className="task-tail-panel">

@@ -79,3 +79,5 @@
     .crm-dashboard-side { grid-template-columns: 1fr; }.crm-dashboard-side > :last-child { grid-column: auto; }.crm-task-row { grid-template-columns: 3px 65px minmax(0, 1fr); }.crm-task-row em { display: none; }
     .crm-recent > div { grid-template-columns: 1fr; }.crm-recent article { border-right: 0; border-bottom: 1px solid #e6eaf0; }
 }
+
+.crm-claim{margin:0 12px 12px;padding:6px 10px;border:1px solid #ccd7e4;border-radius:5px;background:#f0f8f3;cursor:pointer}

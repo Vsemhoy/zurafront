@@ -1,3 +1,5 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { departmentApi } from '../entities/department/api';
 import { useQuery } from '@tanstack/react-query';
 import { IconAlertTriangle, IconArrowRight, IconBook2, IconBriefcase2, IconRoute, IconCheck, IconClipboardList, IconMessageCircle, IconPlus, IconTargetArrow, IconUsers } from '@tabler/icons-react';
 import { Link } from 'react-router-dom';
@@ -41,6 +43,9 @@ export function DashboardPage() {
         <DashboardSection title="Мои задачи" icon={IconClipboardList} count={data.my_tasks.length} href="/tasks">
           <div className="crm-task-list">{data.my_tasks.map((task) => <TaskRow key={task.id} task={task}/>)}{!data.my_tasks.length && <Empty icon={IconCheck}>Активных задач нет.</Empty>}</div>
         </DashboardSection>
+        <TaskUpdates updates={data.task_updates ?? []}/>
+        {[['Мне поставили', data.assigned_to_me], ['Я поставил', data.created_by_me], ['Недавно выполнено', data.recently_completed]].map(([title, tasks]) => <DashboardSection key={title} title={title} icon={IconClipboardList} count={tasks?.length ?? 0}><div className="crm-task-list">{tasks?.map((task) => <TaskRow key={task.id} task={task}/>)}{!tasks?.length && <Empty icon={IconCheck}>Задач пока нет.</Empty>}</div></DashboardSection>)}
+        <DepartmentQueue scopeId={activeScope.id} tasks={data.department_queue ?? []} canClaim={data.can_claim}/>
         <RecentWorkspace recent={data.recent}/>
       </div>
 
@@ -62,8 +67,8 @@ function DashboardSection({ title, icon: Icon, count, href, children }) {
 }
 
 function TaskRow({ task }) {
-  const overdue = task.due_at && new Date(task.due_at) < new Date();
-  return <Link className="crm-task-row" to={`/tasks/${task.id}/edit`}><i style={{ background: task.project?.color || '#98a2b3' }}/><code>{task.task_key}</code><span><strong>{task.title}</strong><small>{task.project ? `${task.project.key} · ${task.project.title}` : 'Без проекта'}</small></span><em className={`task-status task-status--${task.status}`}>{statusLabels[task.status] || task.status}</em><time className={overdue ? 'overdue' : ''}>{task.due_at ? shortDate(task.due_at) : 'без срока'}</time></Link>;
+  const overdue = !['done', 'cancelled'].includes(task.status) && task.due_at && new Date(task.due_at) < new Date();
+  return <Link className="crm-task-row" to={`/tasks/${task.id}/edit`}><i style={{ background: task.project?.color || '#98a2b3' }}/><code>{task.task_key}</code><span><strong>{task.title}</strong><small>{task.project ? `${task.project.key} · ${task.project.title}` : 'Без проекта'}{task.creator && ` · от ${task.creator.name}`}{task.assignee && ` → ${task.assignee.name}`}{task.department && ` · ${task.department.name}`}</small></span><em className={`task-status task-status--${task.status}`}>{statusLabels[task.status] || task.status}</em><time className={overdue ? 'overdue' : ''}>{task.due_at ? shortDate(task.due_at) : 'без срока'}</time></Link>;
 }
 
 function MyKpiCard({ kpi, month }) {
@@ -88,4 +93,13 @@ function RecentColumn({ title, icon: Icon, href, children }) {
 
 function Empty({ icon: Icon, children }) {
   return <div className="crm-empty"><Icon size={19}/><span>{children}</span></div>;
+}
+
+function TaskUpdates({ updates }) {
+  return <DashboardSection title="Обновления моих задач" icon={IconMessageCircle}><div className="crm-comments">{updates.map((item) => item.task && <Link key={item.id} to={`/tasks/${item.task.id}/edit`}><header><strong>{item.actor?.name || 'Удалённый сотрудник'} · {item.message}{item.status && `: ${statusLabels[item.status] || item.status}`}</strong><time>{relativeDate(item.created_at)}</time></header><p>{item.task.task_key} · {item.task.title}</p></Link>)}{!updates.length && <Empty icon={IconCheck}>Новых действий коллег пока нет.</Empty>}</div></DashboardSection>;
+}
+function DepartmentQueue({ scopeId, tasks, canClaim }) {
+  const client = useQueryClient();
+  const claim = useMutation({ mutationFn: (id) => departmentApi.claim(scopeId, id), onSuccess: () => { client.invalidateQueries({ queryKey: ['dashboard', scopeId] }); client.invalidateQueries({ queryKey: ['tasks', scopeId] }); } });
+  return <DashboardSection title="Очередь моего отдела" icon={IconUsers} count={tasks.length}>{claim.error && <p role="alert">{claim.error.message}</p>}{tasks.map((task) => <div key={task.id}><TaskRow task={task}/>{canClaim && <button className="crm-claim" disabled={claim.isPending} onClick={() => claim.mutate(task.id)}>Взять себе</button>}</div>)}{!tasks.length && <Empty icon={IconCheck}>Неназначенных задач нет.</Empty>}</DashboardSection>;
 }

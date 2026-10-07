@@ -35,3 +35,5 @@
         border-radius: 3px 3px 0 0;
     }
 }
+
+.module-rail > a.module-people{margin-top:auto;border-top:1px solid #dce3ec;border-radius:0;padding-top:14px;min-height:48px;flex-shrink:0}@media(max-width:680px){.module-rail > a.module-people{margin-top:0;margin-left:12px;border-top:0;border-left:1px solid #dce3ec;padding-top:0;padding-left:12px;min-height:0}}
