@@ -16,7 +16,6 @@ const modules = [
     ['/plans', 'Planner', IconRoute, false, '#0f766e', '#ccfbf1'],
     ['/planner', 'Календарь', IconCalendarStats, false, '#0f766e', '#ccfbf1'],
     ['/projects', 'Projector', IconFolder, false, '#be185d', '#fce7f3'],
-    ['/contractors', 'Contractor', IconUsers, false, '#7c3aed', '#ede9fe'],
     ['/kpi', 'KPI', IconChartBar, false, '#9333ea', '#f3e8ff'],
     ['/reports', 'Reporter', IconBriefcase2, false, '#0369a1', '#e0f2fe'],
     ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
@@ -24,6 +23,8 @@ const modules = [
     ['/lore', 'Lore', IconBrain, false, '#4f46a5', '#eeecff'],
     ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
     ['/files', 'Filer', IconFiles, false, '#366a91', '#e2eef7'],
+    ['/contractors', 'Пользователи', IconUsers, false, '#7c3aed', '#ede9fe'],
+    ['/departments', 'Отделы', IconBuildingFactory2, false, '#0369a1', '#e0f2fe'],
 ];
 function ScopeMenu({ scopes, active, onSelect, onClose }) {
     const queryClient = useQueryClient();
@@ -62,7 +63,7 @@ export function AppShell() {
     const submitSearch = (event) => {
         event.preventDefault();
         const query = headerSearch.trim();
-        if (query.length >= 2) navigate(`/search?q=${encodeURIComponent(query)}`);
+        if (query.length >= 2) navigate(`/search?type=task&q=${encodeURIComponent(query)}`);
     };
-    return <div className="app-shell"><aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end, color, tint]) => <NavLink key={to} to={to} end={end} title={label} aria-label={label} style={{ '--module-color': color, '--module-tint': tint }} className={({ isActive }) => isActive ? 'active' : ''}><Icon size={21}/></NavLink>)}</aside><header className="app-header"><button className="scope-pill" onClick={() => setScopeOpen(true)}><i />{activeScope?.name ?? 'Скоуп не выбран'}<IconChevronDown size={16}/></button>{user?.acting_as && <div className="persona-chip"><IconUser size={15}/><span>От имени <strong>{user.acting_as.name}</strong></span><button title="Вернуться к себе" disabled={stopActing.isPending} onClick={() => stopActing.mutate()}><IconX size={14}/></button></div>}<form className="command-search" onSubmit={submitSearch}><IconSearch size={19}/><input ref={searchRef} value={headerSearch} onChange={(event) => setHeaderSearch(event.target.value)} placeholder={t('search')}/></form><div className="header-actions"><button className={`monitoring-trigger ${location.pathname === '/monitoring' ? 'active' : ''}`} aria-label="Мониторинг сервера" title="Мониторинг сервера" onClick={() => navigate('/monitoring')}><IconActivity /></button><button aria-label="Notifications"><IconBell /></button><LanguageMenu /><button className="avatar" onClick={() => void logout()} title={user?.name}>{user?.avatar ? <AvatarImage avatar={user.avatar} name={user.name}/> : user?.name.slice(0, 2).toUpperCase()}</button></div></header><Outlet context={{ activeScope }}/>{scopeOpen && <ScopeMenu scopes={scopes} active={activeScope} onSelect={(scope) => setActiveScopeId(scope.id)} onClose={() => setScopeOpen(false)}/>}<footer className="status-bar"><span><i />{t('status')}</span><span>Zuratax v2.1</span></footer></div>;
+    return <div className="app-shell"><aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end, color, tint]) => <NavLink key={to} to={to} end={end} title={label} aria-label={label} style={{ '--module-color': color, '--module-tint': tint }} className={({ isActive }) => `${isActive ? 'active' : ''} ${to === '/contractors' ? 'module-people' : ''}`}><Icon size={21}/></NavLink>)}</aside><header className="app-header"><button className="scope-pill" onClick={() => setScopeOpen(true)}><i />{activeScope?.name ?? 'Скоуп не выбран'}<IconChevronDown size={16}/></button>{user?.acting_as && <div className="persona-chip"><IconUser size={15}/><span>От имени <strong>{user.acting_as.name}</strong></span><button title="Вернуться к себе" disabled={stopActing.isPending} onClick={() => stopActing.mutate()}><IconX size={14}/></button></div>}<form className="command-search" onSubmit={submitSearch}><IconSearch size={19}/><input ref={searchRef} value={headerSearch} onChange={(event) => setHeaderSearch(event.target.value)} placeholder={t('search')}/></form><div className="header-actions"><button className={`monitoring-trigger ${location.pathname === '/monitoring' ? 'active' : ''}`} aria-label="Мониторинг сервера" title="Мониторинг сервера" onClick={() => navigate('/monitoring')}><IconActivity /></button><button aria-label="Notifications"><IconBell /></button><LanguageMenu /><button className="avatar" onClick={() => void logout()} title={user?.name}>{user?.avatar ? <AvatarImage avatar={user.avatar} name={user.name}/> : user?.name.slice(0, 2).toUpperCase()}</button></div></header><Outlet context={{ activeScope }}/>{scopeOpen && <ScopeMenu scopes={scopes} active={activeScope} onSelect={(scope) => setActiveScopeId(scope.id)} onClose={() => setScopeOpen(false)}/>}<footer className="status-bar"><span><i />{t('status')}</span><span>Zuratax v2.1</span></footer></div>;
 }

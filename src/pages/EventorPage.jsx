@@ -1,3 +1,4 @@
+import { useSearchParams } from 'react-router-dom';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -35,7 +36,13 @@ export function EventorPage() {
   const [view, setView] = useState(() => localStorage.getItem('zuratax:eventor-view') || 'flow');
   const [filters, setFilters] = useState({ q: '', project_id: '', type_id: '', created_by: '', requester_id: '', importance: '' });
   const [month, setMonth] = useState(() => startMonth(new Date()));
-  const [selectedId, setSelectedId] = useState(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedId = searchParams.get('event');
+  const setSelectedId = (id) => setSearchParams((current) => {
+    const next = new URLSearchParams(current);
+    if (id) next.set('event', id); else next.delete('event');
+    return next;
+  });
   const [commentsId, setCommentsId] = useState(null);
   const [createDate, setCreateDate] = useState(null);
   const [createOpen, setCreateOpen] = useState(false);

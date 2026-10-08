@@ -10,10 +10,11 @@ export function TaskAssignmentFields({
   currentAssignee,
   currentAgent,
   projectId,
+  departmentId,
   onChange,
 }) {
   const eligibleAssignees = assignees.filter((item) =>
-    contractorCanAccessProject(item, projectId),
+    departmentId || contractorCanAccessProject(item, projectId),
   );
   const eligibleAgents = agents.filter((item) =>
     contractorCanAccessProject(item, projectId),

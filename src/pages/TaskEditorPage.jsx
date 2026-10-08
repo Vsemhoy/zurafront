@@ -1,3 +1,4 @@
+import { DepartmentField } from '../shared/ui/DepartmentField';
 import { lazy, Suspense, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -366,7 +367,10 @@ function TaskEditor({ activeScope, taskId }) {
               ))}
             </select>
           </label>
-          <TaskKpiField disabled={deleted} scopeId={activeScope.id} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
+          <fieldset className="task-frozen-fields" disabled={deleted}>
+            <DepartmentField scopeId={activeScope.id} value={task.department_id} onChange={(department_id) => save.mutate({ department_id })}/>
+          </fieldset>
+          <TaskKpiField disabled={deleted} userId={task.assignee_id} month={task.due_at?.slice(0, 7)} scopeId={activeScope.id} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
           <fieldset className="task-frozen-fields" disabled={frozen}><TaskAssignmentFields
             assignees={assignable.assignees}
             agents={assignable.agents}
@@ -376,6 +380,7 @@ function TaskEditor({ activeScope, taskId }) {
             agentDelegatable={Boolean(task.is_agent_delegatable)}
             delegatedAgentId={task.delegated_agent_id}
             projectId={task.project_id}
+            departmentId={task.department_id}
             onChange={(payload) => save.mutate(payload)}
           />
           </fieldset><section className="task-tail-panel">

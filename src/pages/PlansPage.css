@@ -17,17 +17,19 @@
 .plans-table .plans-tasks-row > td { padding: 0 8px 8px; }
 .plans-tasks-block { padding: 8px; background: #f4f6fa; border-radius: 7px; }
 .plans-child-tasks { display: flex; flex-direction: column; gap: 5px; list-style: none; margin: 0; padding: 0; }
-.plans-child-task { display: grid; grid-template-columns: 95px minmax(0, 1fr) 135px 160px; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 6px; background: #fff; color: #243247; text-decoration: none; }
-.plans-child-task:hover { box-shadow: inset 0 0 0 1px #b8c9df; }
+.plans-child-task { box-shadow: 1px 1px 5px gray; display: grid; grid-template-columns: 95px minmax(0, 1fr) minmax(100px, 180px) 135px 160px; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 6px; background: #fff; color: #243247; text-decoration: none; }
+.plans-child-task:hover { box-shadow: 1px 1px 5px gray, inset 0 0 0 1px #b8c9df; }
 .plans-child-task:focus-visible, .plans-tasks-toggle:focus-visible { outline: 2px solid #03a9f4; outline-offset: 2px; }
 .plans-child-task-code { font-size: 12px; font-weight: 500; color: #68758a; overflow-wrap: anywhere; }
 .plans-child-task-title { min-width: 0; overflow-wrap: anywhere; }
-.plans-child-task-status, .plans-child-task-date { font-size: 12px; color: #68758a; }
+.plans-child-task-assignee, .plans-child-task-status, .plans-child-task-date { font-size: 12px; color: #68758a; }
 .plans-child-task--done { background: #eef8f0; }
 .plans-child-task--overdue { background: #ffe4e5; color: #a52c39; }
 .plans-child-task--overdue :is(.plans-child-task-code, .plans-child-task-status, .plans-child-task-date) { color: #a52c39; }
 @media (max-width: 700px) {
   .plans-child-task { grid-template-columns: 80px minmax(0, 1fr); }
+  .plans-child-task-assignee { grid-column: 1 / -1; overflow-wrap: anywhere; }
+  .plans-child-task-assignee:empty { display: none; }
   .plans-child-task-status { grid-column: 1; }
   .plans-child-task-date { grid-column: 2; }
 }

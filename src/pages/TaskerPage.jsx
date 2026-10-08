@@ -1,3 +1,5 @@
+import { departmentApi } from '../entities/department/api';
+import { DepartmentField } from '../shared/ui/DepartmentField';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import {
   Fragment,
@@ -153,12 +155,13 @@ function groupListTasks(tasks) {
 
 function taskKpiTooltip(task, tasks) {
   if (!task.kpi || !task.kpi_id) return "KPI не назначен";
-  const completedAt = taskCompletionDate(task);
+  if (task.kpi_profile_eligible === false) return "KPI не входит в профиль исполнителя за месяц задачи";
+  const completedAt = task.due_at ? new Date(task.due_at) : null;
   const minimum = Number(task.kpi.minimum_completed_tasks ?? 1);
   let completed = 0;
   if (completedAt && task.assignee_id) {
     completed = tasks.filter((candidate) => {
-      const candidateDate = taskCompletionDate(candidate);
+      const candidateDate = candidate.due_at ? new Date(candidate.due_at) : null;
       return candidate.status === "done" &&
         candidate.kpi_id === task.kpi_id &&
         candidate.assignee_id === task.assignee_id &&
@@ -549,6 +552,7 @@ function CreateDialog({
         ? taskApi.create(scopeId, {
             title: form.title,
             project_id: form.project_id || null,
+            department_id: (form.department_id ?? projects.find((item) => item.id === form.project_id)?.department_id) || null,
             priority: Number(form.priority),
             status: initialStatus,
             description: form.description || null,
@@ -690,10 +694,12 @@ function CreateDialog({
                 </select>
               </label>
             </div>
+            <DepartmentField scopeId={scopeId} value={form.department_id ?? projects.find((item) => item.id === form.project_id)?.department_id} onChange={(department_id) => setForm((current) => ({ ...current, department_id: department_id || '', assignee_id: '' }))}/>
             <TaskAssignmentFields
               assignees={assignable.assignees}
               agents={assignable.agents}
               assigneeId={form.assignee_id}
+              departmentId={form.department_id ?? projects.find((item) => item.id === form.project_id)?.department_id}
               agentDelegatable={form.is_agent_delegatable}
               delegatedAgentId={form.delegated_agent_id}
               projectId={form.project_id || null}
@@ -1334,7 +1340,10 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           ))}
         </select>
       </label>
-      <TaskKpiField disabled={deleted} scopeId={scopeId} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
+      <fieldset className="task-frozen-fields" disabled={deleted}>
+        <DepartmentField scopeId={scopeId} value={task.department_id} onChange={(department_id) => save.mutate({ department_id })}/>
+      </fieldset>
+      <TaskKpiField disabled={deleted} userId={task.assignee_id} month={task.due_at?.slice(0, 7)} scopeId={scopeId} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
       <fieldset className="task-frozen-fields" disabled={frozen}><TaskAssignmentFields
         assignees={assignable.assignees}
         agents={assignable.agents}
@@ -1344,6 +1353,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
         agentDelegatable={Boolean(task.is_agent_delegatable)}
         delegatedAgentId={task.delegated_agent_id}
         projectId={task.project_id}
+        departmentId={task.department_id}
         onChange={(payload) => save.mutate(payload)}
       />
       </fieldset><nav className="content-switch">
@@ -1406,6 +1416,8 @@ export function TaskerPage() {
   const { taskId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const departmentFilter = searchParams.get('department') || '';
+  const departmentOptions = useQuery({ queryKey: ['departments', activeScope?.id], queryFn: () => departmentApi.list(activeScope.id), enabled: Boolean(activeScope) });
   const [view, setView] = useState("board");
   const [create, setCreate] = useState(null);
   const [editingProjectId, setEditingProjectId] = useState(null);
@@ -1631,11 +1643,12 @@ export function TaskerPage() {
       selected === "all" ||
       (selected === "none" ? !value : selected === value);
     return (
+      (!departmentFilter || task.department_id === departmentFilter) &&
       matches(peopleFilters.assignee, assigneeId) &&
       matches(peopleFilters.creator, creatorId) &&
       matches(peopleFilters.customer, customerId)
     );
-  }), [peopleFilters, tasks]);
+  }), [peopleFilters, tasks, departmentFilter]);
   const taskCounts = useMemo(() => {
     const counts = { all: peopleFilteredTasks.length };
     peopleFilteredTasks.forEach((task) => {
@@ -1825,6 +1838,7 @@ export function TaskerPage() {
             </div>
           )}
         </div>
+        <label className="task-department-filter">Отдел<select value={departmentFilter} onChange={(event) => setSearchParams((current) => { const next = new URLSearchParams(current); if (event.target.value) next.set('department', event.target.value); else next.delete('department'); return next; })}><option value="">Все отделы</option>{departmentOptions.data?.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <div className="task-filter-picker" ref={filtersRef}>
           <button
             type="button"

@@ -71,6 +71,7 @@ function Plans({ scope }) {
                 return <li key={task.id}><Link className={`plans-child-task${overdue ? ' plans-child-task--overdue' : ''}${task.status === 'done' ? ' plans-child-task--done' : ''}`} to={`/tasks/${task.id}/edit`}>
                   <span className="plans-child-task-code">{task.task_key || 'Задача'}</span>
                   <span className="plans-child-task-title">{task.title}</span>
+                  <span className="plans-child-task-assignee">{task.status === 'done' ? task.assignee?.name || 'Исполнитель не указан' : ''}</span>
                   <span className="plans-child-task-status">{task.status === 'done' ? '✓ ' : ''}{taskStatusMap[task.status]?.label || task.status}</span>
                   <span className="plans-child-task-date">{overdue && <span>Просрочена · </span>}{task.due_at ? <time dateTime={task.due_at.slice(0, 10)}>{task.due_at.slice(0, 10).split('-').reverse().join('.')}</time> : 'Без даты'}</span>
                 </Link></li>;
