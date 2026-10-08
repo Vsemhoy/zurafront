@@ -120,11 +120,11 @@ export const taskApi = {
     return (await apiRequest(`/scopes/${scopeId}/tasks/${taskId}/comments`))
       .data;
   },
-  async createComment(scopeId, taskId, content, parentId = null) {
+  async createComment(scopeId, taskId, content, parentId = null, kind = 'comment') {
     return (
       await apiRequest(`/scopes/${scopeId}/tasks/${taskId}/comments`, {
         method: "POST",
-        body: JSON.stringify({ content, parent_id: parentId }),
+        body: JSON.stringify({ content, parent_id: parentId, kind }),
       })
     ).data;
   },
@@ -133,6 +133,9 @@ export const taskApi = {
       `/scopes/${scopeId}/tasks/${taskId}/comments/${commentId}`,
       { method: "DELETE" },
     );
+  },
+  async updateComment(scopeId, taskId, commentId, payload) {
+    return (await apiRequest(`/scopes/${scopeId}/tasks/${taskId}/comments/${commentId}`, { method: 'PATCH', body: JSON.stringify(payload) })).data;
   },
   async activity(scopeId, taskId) {
     return (await apiRequest(`/scopes/${scopeId}/tasks/${taskId}/activity`))

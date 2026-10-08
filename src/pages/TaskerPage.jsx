@@ -15,7 +15,6 @@ import {
   IconArrowUpRight,
   IconArrowsMaximize,
   IconColumns,
-  IconCornerUpLeft,
   IconFolder,
   IconFolders,
   IconEdit,
@@ -50,6 +49,9 @@ import { TaskChecklistPanel } from "./TaskMechanics";
 import "./TaskerPage.css";
 import "./TaskInteractions.css";
 import "./Subtasks.css";
+import { useTaskUpdate } from '../entities/task/useTaskUpdate';
+import { TaskDiscussion } from '../shared/ui/TaskDiscussion';
+import { commentIndicator } from '../entities/task/comments';
 import "./Relations.css";
 import "./TaskProjects.css";
 const CompactMarkdownEditor = lazy(
@@ -458,6 +460,15 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments }) {
               {task.is_agent_delegatable && <b aria-label="Можно делегировать агенту">+</b>}
             </span>
           )}
+          <button type="button" draggable="false" className={`task-card-comments task-card-comments--${commentIndicator(task)}`}
+            title={Number(task.unanswered_questions_count ?? 0) > 0 ? `Неотвеченные вопросы: ${task.unanswered_questions_count}` : `Комментарии: ${task.comments_count ?? 0}`}
+            aria-label={`Открыть комментарии задачи ${taskReference(task)}`}
+            onMouseDown={(event) => event.stopPropagation()}
+            onDragStart={(event) => { event.preventDefault(); event.stopPropagation(); }}
+            onKeyDown={(event) => event.stopPropagation()}
+            onClick={(event) => { event.stopPropagation(); onComments(); }}>
+            <IconMessageCircle size={14}/>
+          </button>
           <button
             type="button"
             draggable="false"
@@ -484,28 +495,7 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments }) {
         <small className={`task-priority task-priority--${task.priority}`}>
           {blocked ? "Заблокировано" : priorityLabel(task.priority)}
         </small>
-        {Number(task.comments_count ?? 0) > 0 && (
-          <button
-            type="button"
-            draggable="false"
-            className="task-card-comments"
-            title={`Открыть комментарии · ${task.comments_count}`}
-            aria-label={`Открыть комментарии задачи ${taskReference(task)}`}
-            onMouseDown={(event) => event.stopPropagation()}
-            onDragStart={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-            }}
-            onKeyDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onComments();
-            }}
-          >
-            <IconMessageCircle size={14} />
-            {task.comments_count}
-          </button>
-        )}
+
         {task.due_at && (
           <time>{new Date(task.due_at).toLocaleDateString()}</time>
         )}
@@ -515,129 +505,17 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments }) {
 }
 
 function TaskCommentsSidebar({ scope, task, onClose }) {
-  const user = useAuth((state) => state.user);
-  const queryClient = useQueryClient();
-  const [content, setContent] = useState("");
-  const [replyTo, setReplyTo] = useState(null);
-  const commentsKey = ["task-comments", scope.id, task.id];
-  const {
-    data: comments = [],
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: commentsKey,
-    queryFn: () => taskApi.comments(scope.id, task.id),
-  });
-  const refreshComments = () => {
-    queryClient.invalidateQueries({ queryKey: commentsKey });
-    queryClient.invalidateQueries({ queryKey: ["tasks", scope.id] });
-    queryClient.invalidateQueries({ queryKey: ["task-activity", scope.id, task.id] });
-  };
-  const send = useMutation({
-    mutationFn: () =>
-      taskApi.createComment(scope.id, task.id, content.trim(), replyTo?.id ?? null),
-    onSuccess: () => {
-      setContent("");
-      setReplyTo(null);
-      refreshComments();
-    },
-  });
-  const remove = useMutation({
-    mutationFn: (commentId) => taskApi.deleteComment(scope.id, task.id, commentId),
-    onSuccess: refreshComments,
-  });
   useEffect(() => {
-    const closeOnEscape = (event) => {
-      if (event.key === "Escape") onClose();
-    };
+    const closeOnEscape = (event) => { if (event.key === "Escape") onClose(); };
     document.addEventListener("keydown", closeOnEscape);
     return () => document.removeEventListener("keydown", closeOnEscape);
   }, [onClose]);
-
-  return (
-    <div className="task-comments-backdrop" onMouseDown={onClose}>
-      <aside
-        className="task-comments-sidebar"
-        aria-label={`Комментарии задачи ${taskReference(task)}`}
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <header>
-          <div>
-            <code>{taskReference(task)}</code>
-            <h2>Комментарии</h2>
-            <p>{task.title}</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Закрыть комментарии">
-            <IconX size={18} />
-          </button>
-        </header>
-        <div className="task-comments-list">
-          {isLoading && <p className="task-comments-state">Загружаю комментарии…</p>}
-          {error && <p className="form-error">{error.message}</p>}
-          {comments.map((comment) => (
-            <article key={comment.id} className={comment.parent_id ? "is-reply" : ""}>
-              <span className="task-comment-avatar">
-                {comment.created_by?.name?.slice(0, 2).toUpperCase() ?? "??"}
-              </span>
-              <div>
-                <header>
-                  <strong>{comment.created_by?.name ?? "Неизвестный автор"}</strong>
-                  <time>{new Date(comment.created_at).toLocaleString()}</time>
-                </header>
-                <p>{comment.content}</p>
-                <footer>
-                  <button type="button" onClick={() => setReplyTo(comment)}>
-                    <IconCornerUpLeft size={13} />Ответить
-                  </button>
-                  {(comment.created_by?.id === user?.id || task.created_by === user?.id || scope.owner_id === user?.id) && (
-                    <button
-                      type="button"
-                      className="delete"
-                      disabled={remove.isPending}
-                      onClick={() => window.confirm("Удалить комментарий?") && remove.mutate(comment.id)}
-                    >
-                      <IconTrash size={13} />Удалить
-                    </button>
-                  )}
-                </footer>
-              </div>
-            </article>
-          ))}
-          {!isLoading && !error && comments.length === 0 && (
-            <p className="task-comments-state">Комментариев пока нет.</p>
-          )}
-        </div>
-        <form
-          className="task-comments-compose"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (content.trim()) send.mutate();
-          }}
-        >
-          {replyTo && (
-            <div>
-              <span>Ответ для <strong>{replyTo.created_by?.name ?? "автора"}</strong></span>
-              <button type="button" onClick={() => setReplyTo(null)} aria-label="Отменить ответ">
-                <IconX size={13} />
-              </button>
-            </div>
-          )}
-          <textarea
-            rows="4"
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            placeholder="Написать комментарий…"
-          />
-          {(send.error || remove.error) && (
-            <p className="form-error">{send.error?.message ?? remove.error?.message}</p>
-          )}
-          <button type="submit" disabled={!content.trim() || send.isPending}>
-            {send.isPending ? "Отправляю…" : "Отправить"}
-          </button>
-        </form>
-      </aside>
-    </div>
-  );
+  return <div className="task-comments-backdrop" onMouseDown={onClose}>
+    <aside className="task-comments-sidebar" aria-label={`Комментарии задачи ${taskReference(task)}`} onMouseDown={(event) => event.stopPropagation()}>
+      <header><div><code>{taskReference(task)}</code><h2>Комментарии</h2><p>{task.title}</p></div><button type="button" onClick={onClose} aria-label="Закрыть комментарии"><IconX size={18}/></button></header>
+      <TaskDiscussion key={`${scope.id}:${task.id}`} scope={scope} task={task}/>
+    </aside>
+  </div>;
 }
 
 function CreateDialog({
@@ -1115,7 +993,7 @@ function SubtasksPanel({ task, scopeId, refresh }) {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (title.trim()) create.mutate();
+          if (!['done', 'cancelled'].includes(task.status) && title.trim()) create.mutate();
         }}
       >
         <IconPlus size={17} />
@@ -1123,8 +1001,9 @@ function SubtasksPanel({ task, scopeId, refresh }) {
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Добавить настоящую подзадачу…"
+          disabled={['done', 'cancelled'].includes(task.status)}
         />
-        <button disabled={!title.trim() || create.isPending}>Добавить</button>
+        <button disabled={['done', 'cancelled'].includes(task.status) || !title.trim() || create.isPending}>Добавить</button>
       </form>
       {create.error && <p className="form-error">{create.error.message}</p>}
     </section>
@@ -1268,13 +1147,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
     queryClient.invalidateQueries({ queryKey });
     queryClient.invalidateQueries({ queryKey: ["tasks", scopeId] });
   };
-  const save = useMutation({
-    mutationFn: (payload) => taskApi.update(scopeId, taskId, payload),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(queryKey, updated);
-      queryClient.invalidateQueries({ queryKey: ["tasks", scopeId] });
-    },
-  });
+  const save = useTaskUpdate(scopeId, taskId);
   const detach = useMutation({
     mutationFn: () => taskApi.detach(scopeId, taskId),
     onSuccess: refresh,
@@ -1303,9 +1176,11 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
       </aside>
     );
   const activePane = ["description", "agent_notes", "result"].includes(pane) ? pane : "description";
+  const frozen = ['done', 'cancelled'].includes(task.status);
+  const deleted = task.status === 'cancelled';
   return (
     <aside className="task-inspector">
-      <header className="inspector-header"><AttachmentsButton scopeId={scopeId} type="task" id={task.id}/>
+      <header className="inspector-header"><AttachmentsButton scopeId={scopeId} type="task" id={task.id} readOnly={frozen}/>
         <div>
           <button
             type="button"
@@ -1320,7 +1195,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
             <button
               className="detach-task"
               onClick={() => detach.mutate()}
-              disabled={detach.isPending}
+              disabled={frozen || detach.isPending}
             >
               <IconArrowUpRight size={16} />
               Выделить в задачу
@@ -1352,10 +1227,12 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
         <TaskTitleInput
           key={task.id}
           className="inspector-title"
+          readOnly={frozen}
           value={task.title}
           onSave={(title) => save.mutate({ title })}
         />
       </div>
+      {frozen && <p className="task-freeze-note">{deleted ? 'Восстановите задачу сменой статуса для редактирования.' : 'Выполнено: доступны проект, KPI и обсуждение. Остальные правки — после возврата в работу.'}</p>}
       <div className="task-properties">
         <label>
           Статус
@@ -1379,6 +1256,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           Проект
           <select
             value={task.project_id ?? ""}
+            disabled={deleted}
             onChange={(event) => {
               const projectId = event.target.value || null;
               const assignee = assignable.assignees.find(
@@ -1389,11 +1267,11 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
               );
               save.mutate({
                 project_id: projectId,
-                ...(assignee &&
+                ...(!frozen && assignee &&
                 !contractorCanAccessProject(assignee, projectId)
                   ? { assignee_id: null }
                   : {}),
-                ...(agent &&
+                ...(!frozen && agent &&
                 !contractorCanAccessProject(agent, projectId)
                   ? { delegated_agent_id: null }
                   : {}),
@@ -1412,6 +1290,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           Приоритет
           <select
             value={task.priority}
+            disabled={frozen}
             onChange={(event) =>
               save.mutate({ priority: Number(event.target.value) })
             }
@@ -1428,6 +1307,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           <input
             type="date"
             value={task.due_at ? String(task.due_at).slice(0, 10) : ""}
+            disabled={frozen}
             onChange={(event) =>
               save.mutate({
                 due_at: event.target.value
@@ -1442,6 +1322,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
         Заказчик
         <select
           value={task.customer_id ?? ""}
+          disabled={frozen}
           onChange={(event) => save.mutate({ customer_id: event.target.value || null })}
         >
           <option value="">Не указан</option>
@@ -1453,8 +1334,8 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           ))}
         </select>
       </label>
-      <TaskKpiField scopeId={scopeId} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
-      <TaskAssignmentFields
+      <TaskKpiField disabled={deleted} scopeId={scopeId} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
+      <fieldset className="task-frozen-fields" disabled={frozen}><TaskAssignmentFields
         assignees={assignable.assignees}
         agents={assignable.agents}
         assigneeId={task.assignee_id}
@@ -1465,7 +1346,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
         projectId={task.project_id}
         onChange={(payload) => save.mutate(payload)}
       />
-      <nav className="content-switch">
+      </fieldset><nav className="content-switch">
         <button
           className={activePane === "description" ? "active" : ""}
           onClick={() => setPane("description")}
@@ -1484,7 +1365,8 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
       </nav>
       <Suspense fallback={<div className="md-loading">Загружаю Markdown…</div>}>
         <CompactMarkdownEditor
-          key={activePane}
+          key={`${scopeId}:${task.id}:${activePane}`}
+          readOnly={frozen}
           value={task[activePane] ?? ""}
           toolbarOpen={formattingOpen}
           onToolbarOpenChange={setFormattingOpen}
@@ -1495,24 +1377,25 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
                 ? "Важные заметки и ответы агента…"
               : "Добавьте описание задачи…"
           }
-          onSave={(markdown) => save.mutate({ [activePane]: markdown })}
+          onSave={(markdown) => save.mutateAsync({ [activePane]: markdown })}
         />
       </Suspense>
       <TaskChecklistPanel task={task} scopeId={scopeId} refresh={refresh} assignees={assignable.assignees}/>
       <SubtasksPanel task={task} scopeId={scopeId} refresh={refresh} />
-      <RelationsPanel task={task} scopeId={scopeId} />
+      <fieldset className="task-frozen-fields" disabled={frozen}><RelationsPanel task={task} scopeId={scopeId} /></fieldset>
       {detach.error && (
         <p className="form-error">
           {detach.error.message}
         </p>
       )}
       {save.error && <p className="form-error">{save.error.message}</p>}
-      <BlockerPanel
+      <fieldset className="task-frozen-fields" disabled={frozen}><BlockerPanel
         task={task}
         scopeId={scopeId}
         taskId={taskId}
         refresh={refresh}
       />
+      </fieldset>
     </aside>
   );
 }
@@ -2199,7 +2082,8 @@ export function TaskerPage() {
       {commentsTask && activeScope && (
         <TaskCommentsSidebar
           scope={activeScope}
-          task={commentsTask}
+          key={`${activeScope.id}:${commentsTask.id}`}
+          task={tasks.find((item) => item.id === commentsTask.id) ?? commentsTask}
           onClose={() => setCommentsTask(null)}
         />
       )}
@@ -2217,6 +2101,7 @@ export function TaskerPage() {
             onClick={() => navigate("/tasks")}
           />
           <TaskInspector
+            key={`${activeScope.id}:${taskId}`}
             scopeId={activeScope.id}
             taskId={taskId}
             projects={projects}

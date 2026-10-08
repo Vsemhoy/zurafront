@@ -21,7 +21,7 @@ export function FileImage({ scopeId, fileId, alt = '', className = '', style }) 
     return src ? <img className={className} src={src} alt={alt} style={style}/> : <span className={className} title={failed ? 'Фото недоступно' : 'Загрузка фото'}>{failed ? 'Фото недоступно' : '…'}</span>;
 }
 
-export function PhotoPanel({ scopeId, type, id, selectedId, onSelect, featuredId, onChanged, feature = false }) {
+export function PhotoPanel({ scopeId, type, id, selectedId, onSelect, featuredId, onChanged, feature = false, readOnly = false }) {
     const client = useQueryClient();
     const [page, setPage] = useState(1);
     const [busy, setBusy] = useState(false);
@@ -61,15 +61,15 @@ export function PhotoPanel({ scopeId, type, id, selectedId, onSelect, featuredId
         catch (failure) { setError(failure.message); }
         finally { setBusy(false); }
     };
-    return <section className="photo-panel"><header><strong>{type === 'user' ? 'Фото профиля' : 'Фотографии'}</strong><label className="photo-upload">{busy ? 'Обрабатываю…' : 'Добавить фото'}<input disabled={busy} type="file" multiple={!onSelect && type !== 'user'} accept="image/jpeg,image/png,image/webp" onChange={(event) => upload(event.target)}/></label></header>
+    return <section className="photo-panel"><header><strong>{type === 'user' ? 'Фото профиля' : 'Фотографии'}</strong>{!readOnly && <label className="photo-upload">{busy ? 'Обрабатываю…' : 'Добавить фото'}<input disabled={busy} type="file" multiple={!onSelect && type !== 'user'} accept="image/jpeg,image/png,image/webp" onChange={(event) => upload(event.target)}/></label>}</header>
         <small>JPEG, PNG, WebP · до 20 МБ и 24 Мп · сжатие WebP, {type === 'user' ? '512' : '2000'} px. Оригинал не сохраняется; для него используйте «Файлы».</small>
         {(error || query.error) && <p role="alert" className="photo-error">{error || query.error.message}</p>}
         {query.isPending && <p>Загружаю…</p>}
         <div className="photo-grid">{query.data?.data.map((file) => <article key={file.id} className={selectedId === file.id || featuredId === file.id ? 'is-selected' : ''}>
             <button type="button" className="photo-open" onClick={() => onSelect ? onSelect(file) : setPreview(file)}><FileImage scopeId={scopeId} fileId={file.id} alt={file.description || file.name}/></button>
             <small>{file.name}</small>
-            {feature && <button type="button" disabled={busy} onClick={() => mark(file)}>{featuredId === file.id ? '✓ Убрать выбор' : type === 'user' ? 'На аватарку' : 'Сделать обложкой'}</button>}
-            {file.can_manage && !onSelect && <button type="button" disabled={busy} onClick={() => remove(file)}>Удалить</button>}
+            {feature && !readOnly && <button type="button" disabled={busy} onClick={() => mark(file)}>{featuredId === file.id ? '✓ Убрать выбор' : type === 'user' ? 'На аватарку' : 'Сделать обложкой'}</button>}
+            {file.can_manage && !onSelect && !readOnly && <button type="button" disabled={busy} onClick={() => remove(file)}>Удалить</button>}
         </article>)}</div>
         {!query.isPending && !query.data?.data.length && <p>Фотографий пока нет.</p>}
         {(page > 1 || query.data?.meta.has_more) && <footer><button disabled={page === 1} onClick={() => setPage(page - 1)}>Назад</button><span>{page}</span><button disabled={!query.data?.meta.has_more} onClick={() => setPage(page + 1)}>Далее</button></footer>}

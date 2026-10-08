@@ -290,6 +290,7 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
         </small>
       </header>
       <div className="checklist-items">
+        <fieldset className="task-frozen-fields" disabled={['done', 'cancelled'].includes(task.status)}>
         {items.map((item) => (
           <label className={item.completed_at ? "completed" : ""} key={item.id}>
             <input
@@ -334,11 +335,12 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
             )}
           </label>
         ))}
+        </fieldset>
       </div>
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (title.trim()) add.mutate();
+          if (!['done', 'cancelled'].includes(task.status) && title.trim()) add.mutate();
         }}
       >
         <IconPlus size={17} />
@@ -346,8 +348,9 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Добавить пункт…"
+          disabled={['done', 'cancelled'].includes(task.status)}
         />
-        <button disabled={!title.trim() || add.isPending}>Добавить</button>
+        <button disabled={['done', 'cancelled'].includes(task.status) || !title.trim() || add.isPending}>Добавить</button>
       </form>
       {(add.error || convert.error) && (
         <p className="form-error">{add.error?.message ?? convert.error?.message}</p>
@@ -458,7 +461,7 @@ export function SubtasksPanel({ task, scopeId, refresh }) {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (title.trim()) create.mutate();
+          if (!['done', 'cancelled'].includes(task.status) && title.trim()) create.mutate();
         }}
       >
         <IconPlus size={17} />
@@ -466,8 +469,9 @@ export function SubtasksPanel({ task, scopeId, refresh }) {
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="Добавить настоящую подзадачу…"
+          disabled={['done', 'cancelled'].includes(task.status)}
         />
-        <button disabled={!title.trim() || create.isPending}>Добавить</button>
+        <button disabled={['done', 'cancelled'].includes(task.status) || !title.trim() || create.isPending}>Добавить</button>
       </form>
       {create.error && <p className="form-error">{create.error.message}</p>}
     </section>

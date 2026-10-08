@@ -25,7 +25,7 @@ export function FilerPage() {
     </nav><FilePanel key={`${activeScope.id}:${category}:${type}:${id}`} scopeId={activeScope.id} category={category} subjectType={type} subjectId={id}/></div></main>;
 }
 
-export function FilePanel({ scopeId, category = '', subjectType = '', subjectId = '' }) {
+export function FilePanel({ scopeId, category = '', subjectType = '', subjectId = '', readOnly = false }) {
     const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
     const [query, setQuery] = useState('');
@@ -61,15 +61,15 @@ export function FilePanel({ scopeId, category = '', subjectType = '', subjectId 
         try { await apiRequest(`${endpoint(scopeId)}/${file.id}`, { method: 'DELETE' }); await refresh(); }
         catch (failure) { setActionError(failure.message); } finally { setBusy(null); }
     };
-    return <section className="filer-panel"><header className="filer-tools"><input aria-label="Поиск файлов" placeholder="Найти файл…" value={search} onChange={(event) => setSearch(event.target.value)}/><button className="filer-primary" onClick={() => setUploading(true)}><IconPlus size={16}/>Загрузить</button></header>
+    return <section className="filer-panel"><header className="filer-tools"><input aria-label="Поиск файлов" placeholder="Найти файл…" value={search} onChange={(event) => setSearch(event.target.value)}/>{!readOnly && <button className="filer-primary" onClick={() => setUploading(true)}><IconPlus size={16}/>Загрузить</button>}</header>
         {subjectId && <p className="filer-caption">Вложения выбранного объекта · <Link to="/files">Вся библиотека</Link></p>}
         {(error || actionError) && <p className="filer-error" role="alert">{actionError || error.message}</p>}
         {isPending ? <p className="filer-empty">Загружаю файлы…</p> : !error && !data?.data.length ? <p className="filer-empty">Файлов пока нет. Загрузите первый файл.</p> : null}
         {Boolean(data?.data.length) && <div className="filer-table-wrap"><table className="filer-table"><thead><tr><th>Файл</th><th>Раздел / связи</th><th>Размер</th><th>Автор / дата</th><th>Действия</th></tr></thead><tbody>{data.data.map((file) => <tr key={file.id}>
-            <td><button className="filer-name" onClick={() => setPreview(file)}>{file.name}</button><FileDescription key={`${file.id}:${file.description ?? ''}`} file={file} scopeId={scopeId} onSaved={refresh}/><small>{file.visibility === 'private' ? 'Личный' : file.attachments.length ? 'По доступу к связям' : 'Общий в скоупе'}</small></td>
+            <td><button className="filer-name" onClick={() => setPreview(file)}>{file.name}</button><FileDescription key={`${file.id}:${file.description ?? ''}`} file={readOnly ? { ...file, can_manage: false } : file} scopeId={scopeId} onSaved={refresh}/><small>{file.visibility === 'private' ? 'Личный' : file.attachments.length ? 'По доступу к связям' : 'Общий в скоупе'}</small></td>
             <td><span>{fileCategories[file.category]}</span><div className="filer-links">{file.attachments.map((attachment) => <Link key={`${attachment.type}:${attachment.id}`} to={attachmentHref(attachment)}>{subjectTypes[attachment.type]}: {attachment.title}</Link>)}</div></td>
             <td>{sizeLabel(file.size)}</td><td>{file.creator?.name || '—'}<small>{new Date(file.created_at).toLocaleDateString()}</small></td>
-            <td><div className="filer-actions"><button title="Посмотреть" aria-label="Посмотреть" onClick={() => setPreview(file)}><IconEye size={16}/></button><button title="Скачать" aria-label="Скачать" disabled={busy === file.id} onClick={() => download(file)}><IconDownload size={16}/></button>{file.can_manage && <><button title="Связать с объектом" aria-label="Связать с объектом" onClick={() => setLinking(file)}><IconLink size={16}/></button><button title="Удалить файл" aria-label="Удалить файл" disabled={busy === file.id} onClick={() => remove(file)}><IconTrash size={16}/></button></>}</div></td>
+            <td><div className="filer-actions"><button title="Посмотреть" aria-label="Посмотреть" onClick={() => setPreview(file)}><IconEye size={16}/></button><button title="Скачать" aria-label="Скачать" disabled={busy === file.id} onClick={() => download(file)}><IconDownload size={16}/></button>{file.can_manage && !readOnly && <><button title="Связать с объектом" aria-label="Связать с объектом" onClick={() => setLinking(file)}><IconLink size={16}/></button><button title="Удалить файл" aria-label="Удалить файл" disabled={busy === file.id} onClick={() => remove(file)}><IconTrash size={16}/></button></>}</div></td>
         </tr>)}</tbody></table></div>}
         <footer className="filer-pagination"><button disabled={page === 1 || isPending} onClick={() => setPage(page - 1)}>Назад</button><span>Страница {page}</span><button disabled={!data?.meta.has_more || isPending} onClick={() => setPage(page + 1)}>Далее</button></footer>
         {uploading && <FileUploadModal scopeId={scopeId} category={category || subjectType || 'general'} subjectType={subjectType} subjectId={subjectId} onClose={() => setUploading(false)} onUploaded={refresh}/>}

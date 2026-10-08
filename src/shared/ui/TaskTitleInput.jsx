@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-export function TaskTitleInput({ value, onSave, className }) {
+export function TaskTitleInput({ value, onSave, className, readOnly = false }) {
   const [draft, setDraft] = useState(value);
   const editing = useRef(false);
 
@@ -12,12 +12,13 @@ export function TaskTitleInput({ value, onSave, className }) {
     <input
       aria-label="Название задачи"
       className={className}
-      value={draft}
+      value={readOnly ? value : draft}
+      readOnly={readOnly}
       onFocus={() => { editing.current = true; }}
       onChange={(event) => setDraft(event.target.value)}
       onBlur={() => {
         editing.current = false;
-        if (draft !== value) onSave(draft);
+        if (!readOnly && draft !== value) onSave(draft);
       }}
     />
   );

@@ -11,14 +11,14 @@ import {
   IconHistory,
   IconLink,
   IconMessage,
-  IconCornerUpLeft,
+
   IconRobot,
   IconTargetArrow,
   IconTrash,
 } from "@tabler/icons-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
-import { useAuth } from "../auth";
+import { TaskDiscussion } from "../shared/ui/TaskDiscussion";
 import { contractorApi } from "../entities/contractor/api";
 import { bookApi } from "../entities/book/api";
 import { entityLinkApi } from "../entities/link/api";
@@ -27,6 +27,7 @@ import { factApi } from "../entities/fact/api";
 import { plannerApi } from "../entities/planner/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
+import { useTaskUpdate } from "../entities/task/useTaskUpdate";
 import { priorityLabel } from "../entities/task/model";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
 import { TaskKpiField } from "../shared/ui/TaskKpiField";
@@ -54,14 +55,17 @@ const tabs = [
 export function TaskEditorPage() {
   const { activeScope } = useWorkspace();
   const { taskId } = useParams();
+  if (!activeScope) return <main className="task-editor-state">Выберите скоуп.</main>;
+  return <TaskEditor key={`${activeScope.id}:${taskId}`} activeScope={activeScope} taskId={taskId}/>;
+}
+
+function TaskEditor({ activeScope, taskId }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState("content");
   const [document, setDocument] = useState("description");
   const [creatingResult, setCreatingResult] = useState(false);
-  const [comment, setComment] = useState("");
-  const [replyTo, setReplyTo] = useState(null);
-  const user = useAuth((state) => state.user);
+
   const queryKey = ["task", activeScope?.id, taskId];
   const {
     data: task,
@@ -82,24 +86,13 @@ export function TaskEditorPage() {
     queryFn: () => contractorApi.assignable(activeScope.id),
     enabled: Boolean(activeScope),
   });
-  const commentsKey = ["task-comments", activeScope?.id, taskId];
-  const { data: comments = [], isLoading: commentsLoading } = useQuery({
-    queryKey: commentsKey,
-    queryFn: () => taskApi.comments(activeScope.id, taskId),
-    enabled: Boolean(activeScope && task && tab === "discussion"),
-  });
+
   const { data: activity = [], isLoading: activityLoading } = useQuery({
     queryKey: ["task-activity", activeScope?.id, taskId],
     queryFn: () => taskApi.activity(activeScope.id, taskId),
     enabled: Boolean(activeScope && task && tab === "history"),
   });
-  const save = useMutation({
-    mutationFn: (payload) => taskApi.update(activeScope.id, taskId, payload),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(queryKey, updated);
-      queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
-    },
-  });
+  const save = useTaskUpdate(activeScope.id, taskId);
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey });
     queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
@@ -124,26 +117,7 @@ export function TaskEditorPage() {
       queryClient.invalidateQueries({ queryKey: ["task-activity", activeScope.id, taskId] });
     },
   });
-  const sendComment = useMutation({
-    mutationFn: () => taskApi.createComment(activeScope.id, taskId, comment, replyTo?.id ?? null),
-    onSuccess: () => {
-      setComment("");
-      setReplyTo(null);
-      queryClient.invalidateQueries({ queryKey: commentsKey });
-      queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
-      queryClient.invalidateQueries({
-        queryKey: ["task-activity", activeScope.id, taskId],
-      });
-    },
-  });
-  const removeComment = useMutation({
-    mutationFn: (commentId) => taskApi.deleteComment(activeScope.id, taskId, commentId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: commentsKey });
-      queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
-      queryClient.invalidateQueries({ queryKey: ["task-activity", activeScope.id, taskId] });
-    },
-  });
+
 
   if (isLoading)
     return <main className="task-editor-state">Открываю редактор…</main>;
@@ -153,6 +127,8 @@ export function TaskEditorPage() {
         {error?.message ?? "Задача не найдена"}
       </main>
     );
+  const frozen = ['done', 'cancelled'].includes(task.status);
+  const deleted = task.status === 'cancelled';
   const hasStoredResult = Boolean(task.result?.trim());
   const hasResult = hasStoredResult || creatingResult;
   const activeDocument = document === "agent_notes" ? "agent_notes" : document === "result" && hasResult ? "result" : "description";
@@ -170,7 +146,7 @@ export function TaskEditorPage() {
           <button
             className="editor-detach"
             onClick={() => detach.mutate()}
-            disabled={detach.isPending}
+            disabled={frozen || detach.isPending}
           >
             <IconArrowUpRight size={17} />
             Выделить в задачу
@@ -185,11 +161,12 @@ export function TaskEditorPage() {
         >
           <IconTrash size={16}/>{removeTask.isPending ? "Удаляю…" : task.status === "cancelled" ? "Удалить навсегда" : "В удалённые"}
         </button>
-        <AttachmentsButton scopeId={activeScope.id} type="task" id={task.id}/>
+        <AttachmentsButton scopeId={activeScope.id} type="task" id={task.id} readOnly={frozen}/>
         <TaskReferenceCopy task={task} className="task-editor-reference" />
         <TaskTitleInput
           key={task.id}
           value={task.title}
+          readOnly={frozen}
           onSave={(title) => save.mutate({ title })}
         />
         <span className={`save-state ${save.isError || removeTask.isError ? "error" : ""}`}>
@@ -202,6 +179,7 @@ export function TaskEditorPage() {
               : "Сохранено"}
         </span>
       </header>
+      {frozen && <p className="task-freeze-note">{deleted ? 'Задача удалена. Восстановите её сменой статуса для редактирования.' : 'Задача выполнена: доступны проект, KPI и обсуждение. Для остальных правок верните её в работу.'}</p>}
       <nav className="editor-tabs">
         {tabs.map(([value, label, Icon]) => (
           <button
@@ -258,8 +236,9 @@ export function TaskEditorPage() {
             }
           >
             <MarkdownEditor
-              key={activeDocument}
+              key={`${activeScope.id}:${task.id}:${activeDocument}`}
               variant="full"
+              readOnly={frozen}
               value={task[activeDocument]}
               toolbarInitiallyOpen
               hideToolbarTrigger
@@ -270,8 +249,8 @@ export function TaskEditorPage() {
                     ? "Зафиксируйте фактический результат работы…"
                     : "Важные комментарии, ответы и выводы агента…"
               }
-              onSave={(markdown) => {
-                save.mutate({ [activeDocument]: markdown });
+              onSave={async (markdown) => {
+                await save.mutateAsync({ [activeDocument]: markdown });
                 if (activeDocument === "result" && !markdown) {
                   setCreatingResult(false);
                   setDocument("description");
@@ -309,6 +288,7 @@ export function TaskEditorPage() {
               Проект
               <select
                 value={task.project_id ?? ""}
+                disabled={deleted}
                 onChange={(event) => {
                   const projectId = event.target.value || null;
                   const assignee = assignable.assignees.find(
@@ -319,11 +299,11 @@ export function TaskEditorPage() {
                   );
                   save.mutate({
                     project_id: projectId,
-                    ...(assignee &&
+                    ...(!frozen && assignee &&
                     !contractorCanAccessProject(assignee, projectId)
                       ? { assignee_id: null }
                       : {}),
-                    ...(agent &&
+                    ...(!frozen && agent &&
                     !contractorCanAccessProject(agent, projectId)
                       ? { delegated_agent_id: null }
                       : {}),
@@ -342,6 +322,7 @@ export function TaskEditorPage() {
               Приоритет
               <select
                 value={task.priority}
+                disabled={frozen}
                 onChange={(event) =>
                   save.mutate({ priority: Number(event.target.value) })
                 }
@@ -357,6 +338,7 @@ export function TaskEditorPage() {
               Плановая дата
               <input
                 type="date"
+                disabled={frozen}
                 value={task.due_at ? String(task.due_at).slice(0, 10) : ""}
                 onChange={(event) =>
                   save.mutate({
@@ -372,6 +354,7 @@ export function TaskEditorPage() {
             Заказчик
             <select
               value={task.customer_id ?? ""}
+              disabled={frozen}
               onChange={(event) => save.mutate({ customer_id: event.target.value || null })}
             >
               <option value="">Не указан</option>
@@ -383,8 +366,8 @@ export function TaskEditorPage() {
               ))}
             </select>
           </label>
-          <TaskKpiField scopeId={activeScope.id} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
-          <TaskAssignmentFields
+          <TaskKpiField disabled={deleted} scopeId={activeScope.id} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
+          <fieldset className="task-frozen-fields" disabled={frozen}><TaskAssignmentFields
             assignees={assignable.assignees}
             agents={assignable.agents}
             assigneeId={task.assignee_id}
@@ -395,9 +378,9 @@ export function TaskEditorPage() {
             projectId={task.project_id}
             onChange={(payload) => save.mutate(payload)}
           />
-          <section className="task-tail-panel">
+          </fieldset><section className="task-tail-panel">
             <header><div><IconCalendarEvent size={18}/><h2>Хвост задачи</h2></div><small>{task.planner_tails?.length ?? 0}</small></header>
-            <div>{(task.planner_tails ?? []).map((tail) => <article key={tail.id}><time dateTime={tail.planned_on}>{new Date(`${tail.planned_on}T00:00:00`).toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}</time><button title="Удалить этот хвост" disabled={removeTail.isPending} onClick={() => removeTail.mutate(tail.id)}><IconTrash size={15}/>Удалить</button></article>)}</div>
+            <div>{(task.planner_tails ?? []).map((tail) => <article key={tail.id}><time dateTime={tail.planned_on}>{new Date(`${tail.planned_on}T00:00:00`).toLocaleDateString("ru-RU", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}</time><button title="Удалить этот хвост" disabled={frozen || removeTail.isPending} onClick={() => removeTail.mutate(tail.id)}><IconTrash size={15}/>Удалить</button></article>)}</div>
             {!task.planner_tails?.length && <p>Дополнительных дней планирования пока нет.</p>}
             {removeTail.error && <p className="form-error">{removeTail.error.message}</p>}
           </section>
@@ -419,97 +402,29 @@ export function TaskEditorPage() {
               {detach.error?.message ?? save.error?.message}
             </p>
           )}
-          <BlockerPanel
+          <fieldset className="task-frozen-fields" disabled={frozen}><BlockerPanel
             task={task}
             scopeId={activeScope.id}
             taskId={task.id}
             refresh={refresh}
           />
+          </fieldset>
         </section>
       )}
 
       {tab === "links" && (
         <section className="editor-simple editor-relations">
+          <fieldset className="task-frozen-fields" disabled={frozen}>
           <RelationsPanel task={task} scopeId={activeScope.id} />
           <BookerLinksPanel task={task} scopeId={activeScope.id} />
           <TaskEntityLinksPanel task={task} scopeId={activeScope.id} />
+          </fieldset>
         </section>
       )}
       {tab === "discussion" && (
         <section className="editor-discussion">
           <h2>Обсуждение</h2>
-          <div className="comment-list">
-            {commentsLoading && <p>Загружаю комментарии…</p>}
-            {comments.map((item) => (
-              <article key={item.id} className={item.parent_id ? "is-reply" : ""}>
-                <span className="comment-avatar">
-                  {item.created_by?.name?.slice(0, 2).toUpperCase() ?? "??"}
-                </span>
-                <div>
-                  <header>
-                    <strong>
-                      {item.created_by?.name ?? "Неизвестный автор"}
-                    </strong>
-                    <time>{new Date(item.created_at).toLocaleString()}</time>
-                  </header>
-                  <p>{item.content}</p>
-                  <footer className="comment-actions">
-                    <button type="button" onClick={() => setReplyTo(item)}>
-                      <IconCornerUpLeft size={14} /> Ответить
-                    </button>
-                    {(item.created_by?.id === user?.id || task.created_by === user?.id || activeScope.owner_id === user?.id) && (
-                      <button
-                        type="button"
-                        className="comment-delete"
-                        disabled={removeComment.isPending}
-                        onClick={() => window.confirm("Удалить комментарий?") && removeComment.mutate(item.id)}
-                      >
-                        <IconTrash size={14} /> Удалить
-                      </button>
-                    )}
-                  </footer>
-                </div>
-              </article>
-            ))}
-            {!commentsLoading && comments.length === 0 && (
-              <p className="comments-empty">
-                Комментариев пока нет. Можно начать с контекста, который не
-                поместился в описание.
-              </p>
-            )}
-          </div>
-          <form
-            className="comment-compose"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (comment.trim()) sendComment.mutate();
-            }}
-          >
-            {replyTo && (
-              <div className="comment-replying">
-                <span>Ответ для <strong>{replyTo.created_by?.name ?? "автора"}</strong></span>
-                <button type="button" onClick={() => setReplyTo(null)} aria-label="Отменить ответ">×</button>
-              </div>
-            )}
-            <textarea
-              rows="4"
-              value={comment}
-              onChange={(event) => setComment(event.target.value)}
-              placeholder="Написать комментарий…"
-            />
-            {sendComment.error && (
-              <p className="form-error">{sendComment.error.message}</p>
-            )}
-            {removeComment.error && (
-              <p className="form-error">{removeComment.error.message}</p>
-            )}
-            <footer>
-              <small>Вложения и @упоминания добавим следующим слоем</small>
-              <button disabled={!comment.trim() || sendComment.isPending}>
-                {sendComment.isPending ? "Отправляю…" : "Отправить"}
-              </button>
-            </footer>
-          </form>
+          <TaskDiscussion key={`${activeScope.id}:${task.id}`} scope={activeScope} task={task}/>
         </section>
       )}
       {tab === "history" && (
