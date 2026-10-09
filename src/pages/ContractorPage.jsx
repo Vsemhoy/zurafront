@@ -1,7 +1,7 @@
 import { AvatarImage } from '../shared/ui/AvatarImage';
 import { AvatarPicker } from '../shared/ui/AvatarPicker';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createPortal } from 'react-dom';
 import { IconActivity, IconCopy, IconKey, IconPlus, IconRobot, IconSearch, IconTrash, IconUser, IconUserCog, IconUsers, IconX } from '@tabler/icons-react';
@@ -9,6 +9,9 @@ import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { contractorApi } from '../entities/contractor/api';
 import { projectApi } from '../entities/project/api';
+import { departmentApi } from '../entities/department/api';
+import { filterContractors } from '../entities/contractor/filters';
+import { DepartmentFilter } from '../shared/ui/DepartmentFilter';
 import './ContractorPage.css';
 import './ContractorModalFix.css';
 import './ContractorAccountTools.css';
@@ -123,9 +126,16 @@ export function ContractorPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [type, setType] = useState('all');
+  const [departmentSelection, setDepartmentSelection] = useState(null);
+  const departmentId = departmentSelection?.scopeId === activeScope?.id ? departmentSelection?.id ?? '' : '';
   const [selectedId, setSelectedId] = useState(null);
   const [creating, setCreating] = useState(false);
   const key = ['contractors', activeScope?.id];
+  const departmentOptions = useQuery({
+    queryKey: ['departments', activeScope?.id],
+    queryFn: () => departmentApi.list(activeScope.id),
+    enabled: Boolean(activeScope),
+  });
   const { data: options } = useQuery({
     queryKey: ['contractor-options', activeScope?.id],
     queryFn: () => contractorApi.options(activeScope.id),
@@ -140,9 +150,9 @@ export function ContractorPage() {
     queryFn: () => contractorApi.list(activeScope.id),
     enabled: Boolean(activeScope),
   });
-  const filtered = contractors.filter((item) => (type === 'all' || item.type === type) && `${item.name} ${item.email ?? ''} ${item.username ?? ''}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = filterContractors(contractors, { type, search, departmentId, departments: departmentOptions.data?.departments });
   const selectedContractor = contractors.find((item) => item.id === selectedId) ?? null;
-  const counts = useMemo(() => Object.fromEntries(['real', 'virtual', 'agent'].map((item) => [item, contractors.filter((contractor) => contractor.type === item).length])), [contractors]);
+  const counts = Object.fromEntries(['real', 'virtual', 'agent'].map((item) => [item, contractors.filter((contractor) => contractor.type === item).length]));
   const refresh = () =>
     Promise.all([
       queryClient.invalidateQueries({ queryKey: key }),
@@ -183,6 +193,8 @@ export function ContractorPage() {
       </header>
       <div className="contractor-layout">
         <aside className="contractor-filters">
+          <DepartmentFilter departments={departmentOptions.data?.departments} value={departmentId}
+            onChange={(id) => setDepartmentSelection({ scopeId: activeScope?.id, id })} />
           <strong>Типы</strong>
           {(options?.can_manage_all === false
             ? [['all', 'Мой профиль и агенты', contractors.length], ['agent', 'Агенты', counts.agent]]
@@ -203,6 +215,7 @@ export function ContractorPage() {
           {!activeScope && <div className="contractor-state">Выберите скоуп.</div>}
           {isLoading && <div className="contractor-state">Загружаю акторов…</div>}
           {error && <div className="contractor-state contractor-error">{error.message}</div>}
+          {departmentOptions.error && <div role="alert" className="contractor-error">Не удалось загрузить отделы: {departmentOptions.error.message}</div>}
           <div className="contractor-table">
             <div className="contractor-table-head">
               <span>Человек</span>

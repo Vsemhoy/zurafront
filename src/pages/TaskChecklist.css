@@ -1,0 +1,76 @@
+.checklist .checklist-items { min-width: 0; }
+.checklist .checklist-items > .task-frozen-fields { display: contents; border: 0; margin: 0; padding: 0; min-width: 0; }
+.checklist .checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px 3px;
+}
+.checklist .checklist-item-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
+}
+.checklist .checklist-item-main > input[type='checkbox'] {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+}
+.checklist .checklist-item-main > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+.checklist .checklist-item-main strong { overflow-wrap: anywhere; white-space: normal; }
+.checklist .checklist-item-main small { flex-wrap: wrap; }
+.checklist .checklist-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.checklist .checklist-item-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #78869a;
+  opacity: 1;
+}
+.checklist .checklist-item-actions button:hover:not(:disabled) { color: #075aaf; background: #edf3fb; }
+.checklist .checklist-item-actions button:disabled { opacity: .45; cursor: default; }
+.checklist .checklist-item-actions button:focus-visible { outline: 2px solid #075aaf; outline-offset: 1px; }
+
+/* Keep the modal vertical even if list/form styles are loaded later. */
+form.checklist-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+form.checklist-editor > header,
+form.checklist-editor > label,
+form.checklist-editor > footer,
+.checklist-editor-fields,
+.checklist-editor-fields > label { min-width: 0; }
+form.checklist-editor textarea {
+  min-width: 0;
+  min-height: 140px;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+form.checklist-editor input,
+form.checklist-editor select { min-width: 0; max-width: 100%; }

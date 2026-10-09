@@ -1,4 +1,5 @@
 .contractor-content { overflow-x: auto; }
+.contractor-filters .department-filter { width: 100%; height: 32px; flex-shrink: 0; padding: 0 8px; font-size: 12px; font-weight: 500; }
 .contractor-table { min-width: 680px; border-top: 1px solid #dfe4eb; background: #fff; }
 .contractor-table-head,
 .contractor-row { display: grid; grid-template-columns: minmax(240px, 1.7fr) 105px 105px 100px minmax(100px, .7fr); align-items: center; gap: 8px; }
@@ -18,6 +19,7 @@
 .contractor-row-access small { display: flex; align-items: center; gap: 2px; color: #6b778a; }
 
 @media (max-width: 700px) {
+  .contractor-filters .department-filter { width: 160px; }
   .contractor-table { min-width: 620px; }
   .contractor-table-head,
   .contractor-row { grid-template-columns: minmax(220px, 1.6fr) 90px 95px 90px 90px; }

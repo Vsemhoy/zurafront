@@ -1148,6 +1148,7 @@ export function TaskInspector({ scopeId, taskId, projects, assignable, onClose }
   const navigate = useNavigate();
   const [pane, setPane] = useState("description");
   const [formattingOpen, setFormattingOpen] = useState(false);
+  const [markdownControls, setMarkdownControls] = useState(null);
   const queryKey = ["task", scopeId, taskId];
   const {
     data: task,
@@ -1363,7 +1364,7 @@ export function TaskInspector({ scopeId, taskId, projects, assignable, onClose }
         departmentId={task.department_id}
         onChange={(payload) => save.mutate(payload)}
       />
-      </fieldset><nav className="content-switch">
+      </fieldset><div className="task-content-header"><nav className="content-switch" aria-label="Контент задачи">
         <button
           className={activePane === "description" ? "active" : ""}
           onClick={() => setPane("description")}
@@ -1380,10 +1381,13 @@ export function TaskInspector({ scopeId, taskId, projects, assignable, onClose }
           Результат
         </button>
       </nav>
+      <div className="task-content-controls" ref={setMarkdownControls} />
+      </div>
       <Suspense fallback={<div className="md-loading">Загружаю Markdown…</div>}>
         <CompactMarkdownEditor
           key={`${scopeId}:${task.id}:${activePane}`}
           readOnly={frozen}
+          controlsContainer={markdownControls}
           value={task[activePane] ?? ""}
           toolbarOpen={formattingOpen}
           onToolbarOpenChange={setFormattingOpen}

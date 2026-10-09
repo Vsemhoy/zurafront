@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { IconCode, IconEye, IconTools } from '@tabler/icons-react';
 import {
     BlockTypeSelect,
@@ -28,7 +29,7 @@ import '../../pages/MarkdownEditor.css';
 import { createMarkdownDraft } from './markdownDraft';
 import MarkdownRenderer from './MarkdownRenderer';
 
-export default function CompactMarkdownEditor({ value, placeholder, onChange, onSave, readOnly = false, hideToolbarTrigger = false, toolbarInitiallyOpen = false, toolbarOpen: controlledToolbarOpen, onToolbarOpenChange, variant = 'compact' }) {
+export default function CompactMarkdownEditor({ value, placeholder, onChange, onSave, readOnly = false, hideToolbarTrigger = false, toolbarInitiallyOpen = false, toolbarOpen: controlledToolbarOpen, onToolbarOpenChange, variant = 'compact', controlsContainer }) {
     const [internalToolbarOpen, setInternalToolbarOpen] = useState(toolbarInitiallyOpen);
     const toolbarOpen = controlledToolbarOpen ?? internalToolbarOpen;
     const [sourceOpen, setSourceOpen] = useState(false);
@@ -51,11 +52,12 @@ export default function CompactMarkdownEditor({ value, placeholder, onChange, on
         onToolbarOpenChange?.(next);
     };
     if (readOnly) return <section className={`compact-md compact-md--${variant} compact-md--readonly`}><MarkdownRenderer>{value || 'Контент пока не добавлен.'}</MarkdownRenderer></section>;
-    return <section className={`compact-md compact-md--${variant} ${toolbarOpen && !sourceOpen ? 'compact-md--toolbar' : ''} ${sourceOpen ? 'compact-md--source' : ''}`}>
-        <div className="md-editor-controls">
+    const controls = <div className="md-editor-controls">
             {!hideToolbarTrigger && !sourceOpen && <button type="button" className="md-toolbar-trigger" onClick={toggleToolbar} title={toolbarOpen ? 'Скрыть инструменты Markdown' : 'Показать инструменты Markdown'} aria-pressed={toolbarOpen}><IconTools size={16}/><span>{toolbarOpen ? 'Скрыть панель' : 'Форматирование'}</span></button>}
             <button type="button" className="md-source-trigger" onClick={toggleSource} title={sourceOpen ? 'Вернуться к визуальному редактору' : 'Редактировать исходный Markdown'} aria-pressed={sourceOpen}>{sourceOpen ? <IconEye size={16}/> : <IconCode size={16}/>}<span>{sourceOpen ? 'Визуально' : 'Исходник'}</span></button>
-        </div>
+        </div>;
+    return <section className={`compact-md compact-md--${variant} ${toolbarOpen && !sourceOpen ? 'compact-md--toolbar' : ''} ${sourceOpen ? 'compact-md--source' : ''}`}>
+        {controlsContainer ? createPortal(controls, controlsContainer) : controls}
         {sourceOpen ? <textarea className="md-source-input" value={source} placeholder={placeholder} spellCheck="false" onChange={(event) => {
             setSource(event.target.value);
             draft.change(event.target.value);

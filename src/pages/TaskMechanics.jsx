@@ -18,6 +18,7 @@ import { taskApi } from "../entities/task/api";
 import "./TaskerPage.css";
 import "./Subtasks.css";
 import "./Relations.css";
+import "./TaskChecklist.css";
 
 export function BlockerPanel({ task, scopeId, taskId, refresh }) {
   const [creating, setCreating] = useState(false);
@@ -292,7 +293,8 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
       <div className="checklist-items">
         <fieldset className="task-frozen-fields" disabled={['done', 'cancelled'].includes(task.status)}>
         {items.map((item) => (
-          <label className={item.completed_at ? "completed" : ""} key={item.id}>
+          <div className={`checklist-item ${item.completed_at ? "completed" : ""}`} key={item.id}>
+            <label className="checklist-item-main">
             <input
               type="checkbox"
               checked={Boolean(item.completed_at)}
@@ -310,7 +312,10 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
                 </small>
               )}
             </span>
+            </label>
+            <div className="checklist-item-actions">
             <button
+              type="button"
               className="edit-checklist-item"
               title="Редактировать пункт"
               onClick={(event) => {
@@ -322,6 +327,7 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
             </button>
             {!task.parent_id && (
               <button
+                type="button"
                 className="convert-item"
                 title="Преобразовать в подзадачу"
                 onClick={(event) => {
@@ -333,7 +339,8 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
                 <IconSubtask size={15} />
               </button>
             )}
-          </label>
+            </div>
+          </div>
         ))}
         </fieldset>
       </div>
@@ -352,11 +359,12 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
         />
         <button disabled={['done', 'cancelled'].includes(task.status) || !title.trim() || add.isPending}>Добавить</button>
       </form>
-      {(add.error || convert.error) && (
-        <p className="form-error">{add.error?.message ?? convert.error?.message}</p>
+      {(add.error || toggle.error || convert.error) && (
+        <p className="form-error">{add.error?.message ?? toggle.error?.message ?? convert.error?.message}</p>
       )}
       {editingItem && (
         <ChecklistItemEditor
+          key={editingItem.id}
           item={editingItem}
           assignees={assignees}
           saving={update.isPending}
