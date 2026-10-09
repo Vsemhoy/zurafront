@@ -1,3 +1,4 @@
+import { CommentAuthor } from '../shared/ui/CommentAuthor';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { departmentApi } from '../entities/department/api';
 import { useQuery } from '@tanstack/react-query';
@@ -80,7 +81,7 @@ function TeamKpi({ people }) {
 }
 
 function BookComments({ comments }) {
-  return <DashboardSection title="Комментарии Booker" icon={IconMessageCircle} count={comments.length} href="/books"><div className="crm-comments">{comments.map((comment) => <Link to={comment.href} key={comment.id}><header><strong>{comment.creator?.name || 'Кто-то'}</strong><time>{relativeDate(comment.created_at)}</time></header><p>{comment.content}</p><small><IconBook2 size={12}/>{comment.book.title}{comment.page ? ` / ${comment.page.title}` : ''}</small></Link>)}{!comments.length && <Empty icon={IconMessageCircle}>Новых комментариев в доступных книгах нет.</Empty>}</div></DashboardSection>;
+  return <DashboardSection title="Комментарии Booker" icon={IconMessageCircle} count={comments.length} href="/books"><div className="crm-comments">{comments.map((comment) => <Link to={comment.href} key={comment.id}><header><CommentAuthor author={comment.creator}/><time>{relativeDate(comment.created_at)}</time></header><p>{comment.content}</p><small><IconBook2 size={12}/>{comment.book.title}{comment.page ? ` / ${comment.page.title}` : ''}</small></Link>)}{!comments.length && <Empty icon={IconMessageCircle}>Новых комментариев в доступных книгах нет.</Empty>}</div></DashboardSection>;
 }
 
 function RecentWorkspace({ recent }) {

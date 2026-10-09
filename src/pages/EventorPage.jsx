@@ -1,3 +1,4 @@
+import { CommentAuthor } from '../shared/ui/CommentAuthor';
 import { useSearchParams } from 'react-router-dom';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
@@ -177,7 +178,7 @@ function EventComments({ scopeId, eventId, onClose }) {
   const key = ['event-comments', scopeId, eventId];
   const { data: comments = [], isLoading, error } = useQuery({ queryKey: key, queryFn: () => eventApi.comments(scopeId, eventId) });
   const send = useMutation({ mutationFn: () => eventApi.comment(scopeId, eventId, content), onSuccess: () => { setContent(''); queryClient.invalidateQueries({ queryKey: key }); queryClient.invalidateQueries({ queryKey: ['events', scopeId] }); } });
-  return <aside className="event-comments"><header><div><small>Обсуждение</small><strong>Комментарии события</strong></div><button onClick={onClose}><IconX size={18}/></button></header><section>{isLoading && <p>Загружаю…</p>}{error && <p className="eventor-error">{error.message}</p>}{comments.map((comment) => <article key={comment.id}><header><strong>{comment.created_by?.name || 'Пользователь'}</strong><time>{new Date(comment.created_at).toLocaleString()}</time></header><p>{comment.content}</p></article>)}{!isLoading && !comments.length && <p className="event-comments-empty">Комментариев пока нет.</p>}</section><form onSubmit={(event) => { event.preventDefault(); if (content.trim()) send.mutate(); }}><textarea rows="3" value={content} onChange={(event) => setContent(event.target.value)} placeholder="Написать комментарий…"/><button disabled={send.isPending}><IconSend size={16}/></button></form></aside>;
+  return <aside className="event-comments"><header><div><small>Обсуждение</small><strong>Комментарии события</strong></div><button onClick={onClose}><IconX size={18}/></button></header><section>{isLoading && <p>Загружаю…</p>}{error && <p className="eventor-error">{error.message}</p>}{comments.map((comment) => <article key={comment.id}><header><CommentAuthor author={comment.created_by}/><time>{new Date(comment.created_at).toLocaleString()}</time></header><p>{comment.content}</p></article>)}{!isLoading && !comments.length && <p className="event-comments-empty">Комментариев пока нет.</p>}</section><form onSubmit={(event) => { event.preventDefault(); if (content.trim()) send.mutate(); }}><textarea rows="3" value={content} onChange={(event) => setContent(event.target.value)} placeholder="Написать комментарий…"/><button disabled={send.isPending}><IconSend size={16}/></button></form></aside>;
 }
 
 function EventDiagramEditor({ event, onClose, onSave }) {

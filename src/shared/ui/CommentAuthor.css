@@ -1,0 +1,4 @@
+.comment-author{display:inline-flex;align-items:center;gap:7px;min-width:0}
+.comment-author>.comment-avatar{width:28px;height:28px;border-radius:50%;font-size:9px}
+.comment-author>strong{min-width:0;overflow-wrap:anywhere;font:inherit;font-weight:600}
+.book-comment-list article>header,.booker-recent-comments article header,.event-comments article header,.crm-comments header{align-items:center;gap:8px}
