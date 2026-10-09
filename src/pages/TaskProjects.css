@@ -46,7 +46,7 @@
 }
 
 .task-board {
-  gap: 8px;
+  gap: 2px;
   grid-template-columns: repeat(
     var(--task-column-count, 4),
     minmax(210px, 1fr)

@@ -18,3 +18,27 @@
   background: #dce2ea;
   color: #1f2c3e;
 }
+
+.planner-card > .department-strip,
+.planner-unscheduled article > .department-strip {
+    display: block;
+    width: auto;
+    min-width: 0;
+    margin: 3px -6px -5px;
+    padding: 1px 6px;
+    border-radius: 0;
+    color: #243247;
+    font-size: 9px;
+    line-height: 1.3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.planner-card--tail > .department-strip { margin-bottom: -4px; }
+.planner-unscheduled article > .department-strip { margin-top: 0; margin-bottom: -6px; }
+.planner-unscheduled {
+  border-right: 1px solid #cbd3de;
+  border-top: 1px solid #cbd3de;
+  margin-left: -16px;
+  background: linear-gradient(178deg, #e9edf3 0%, #2bf59800 100%);
+}

@@ -1,3 +1,20 @@
+.app-shell > .module-rail {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #b8bec9 transparent;
+}
+
+.app-shell > .module-rail > * {
+    flex-shrink: 0;
+}
+
+.module-rail > a:focus-visible {
+    outline: 2px solid var(--module-color);
+    outline-offset: -2px;
+}
+
 .module-rail > a {
     position: relative;
     color: var(--module-color);
@@ -13,26 +30,97 @@
 .module-rail > a.active {
     background: var(--module-tint);
     color: var(--module-color);
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--module-color) 16%, transparent);
+    box-shadow: inset 0 0 9px 2px color-mix(in srgb, var(--module-color) 16%, transparent);
 }
 
 .module-rail > a.active::before {
     content: '';
     position: absolute;
-    left: -8px;
-    width: 3px;
-    height: 20px;
+    pointer-events: none;
+    right: -8px;
+    width: 1px;
+    height: 760px;
     border-radius: 0 3px 3px 0;
     background: var(--module-color);
+    background: linear-gradient(0deg,  #635cbf00 0.000%, var(--module-color)50.000%,  #ed63f700 100.000%);
+}
+.module-rail > a.active::after {
+    content: '';
+    position: absolute;
+    pointer-events: none;
+    right: -4px;
+    width: 2px;
+    height: 760px;
+    border-radius: 0 3px 3px 0;
+    background: var(--module-color);
+    background: linear-gradient(0deg,  #635cbf00 0.000%, var(--module-color)50.000%,  #ed63f700 100.000%);
+}
+
+@media (min-width: 681px) {
+    .app-shell > .module-rail > a {
+        width: 38px;
+        height: 38px;
+        border-radius: 3px;
+    }
+
+    .app-shell > .module-rail {
+        width: 44px;
+        padding: 9px 0;
+        gap: 6px;
+        scrollbar-width: none;
+    }
+
+    .app-shell:has(> .module-rail) {
+        padding-left: 44px;
+    }
+
+    .app-shell > .app-header,
+    .app-shell > .status-bar {
+        left: 44px;
+    }
+
+    .module-rail .brand--compact .brand__mark {
+        width: 40px;
+        height: 30px;
+        font-size: 15px;
+        background: linear-gradient(117deg, #003c87 0%, #005aaa 20%, #007ad7 40%, #009afb 60%, #00b9ff 80%, #00d8ef 100%);
+    }
+
+    .module-rail > a.active::before {
+        left: -3px;
+    }
 }
 
 @media (max-width: 680px) {
+    .app-shell > .module-rail {
+        justify-content: flex-start;
+        overflow-x: auto;
+        overflow-y: hidden;
+        height: calc(68px + env(safe-area-inset-bottom, 0px));
+        padding: 7px max(10px, env(safe-area-inset-right, 0px)) calc(7px + env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px));
+        scroll-padding-inline: 10px;
+    }
+
+    .app-shell > .module-rail > a {
+        width: 44px;
+        height: 44px;
+    }
+
+    .app-shell:has(> .module-rail) {
+        padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+    }
+
     .module-rail > a.active::before {
         inset: auto auto -7px 50%;
         width: 20px;
         height: 3px;
         transform: translateX(-50%);
         border-radius: 3px 3px 0 0;
+        background: var(--module-color);
+    }
+
+    .module-rail > a.active::after {
+        display: none;
     }
 }
 

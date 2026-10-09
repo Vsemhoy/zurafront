@@ -29,3 +29,5 @@
 .contractor-editor>header>.contractor-editor-identity{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}
 .contractor-editor-identity strong{overflow-wrap:anywhere}
 .contractor-editor-icon{width:44px;height:44px;border-radius:50%;overflow:hidden}
+
+.contractor-editor > header > button.contractor-editor-icon{padding:0;cursor:pointer;flex-shrink:0}.contractor-editor > header > button.contractor-editor-icon:focus-visible{outline:2px solid #075aaf;outline-offset:3px}

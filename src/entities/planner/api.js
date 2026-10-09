@@ -2,6 +2,7 @@ import { apiRequest } from '../../api';
 
 function queryString(filters) {
     const params = new URLSearchParams({ from: filters.from, to: filters.to });
+    if (filters.departmentId) params.set('department_id', filters.departmentId);
     for (const id of filters.projectIds ?? []) params.append('project_ids[]', id);
     for (const id of filters.assigneeIds ?? []) params.append('assignee_ids[]', id);
     for (const status of filters.statuses ?? []) params.append('statuses[]', status);

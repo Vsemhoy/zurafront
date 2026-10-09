@@ -1,3 +1,5 @@
+import { departmentColor } from '../entities/department/colors';
+import { DepartmentFilter } from '../shared/ui/DepartmentFilter';
 import { departmentApi } from '../entities/department/api';
 import { DepartmentField } from '../shared/ui/DepartmentField';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
@@ -331,6 +333,7 @@ function ProjectEditorDialog({ scopeId, project, onClose }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects", scopeId] });
       queryClient.invalidateQueries({ queryKey: ["tasks", scopeId] });
+    queryClient.invalidateQueries({ queryKey: ["planner", scopeId] });
       onClose();
     },
   });
@@ -425,7 +428,7 @@ function ProjectEditorDialog({ scopeId, project, onClose }) {
   );
 }
 
-function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments }) {
+function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments, showDepartment }) {
   const blocked = task.status === "blocked";
   return (
     <article
@@ -454,7 +457,7 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments }) {
         }
       }}
     >
-      <header>
+      <header style={showDepartment && task.department ? { background: departmentColor(task.department), outline: `7px solid ${departmentColor(task.department)}` } : undefined} title={showDepartment && task.department ? `Отдел ${task.department.name}` : undefined}>
         <code>{taskReference(task)}</code>
         <div className="task-card-actions">
           {task.assignee && (
@@ -526,6 +529,7 @@ function CreateDialog({
   projects,
   assignable,
   defaultProjectId,
+  defaultDepartmentId,
   initialStatus,
   onClose,
 }) {
@@ -535,6 +539,7 @@ function CreateDialog({
   const [form, setForm] = useState({
     title: "",
     key: "",
+    department_id: defaultDepartmentId || undefined,
     project_id:
       defaultProjectId !== undefined
         ? defaultProjectId
@@ -1138,7 +1143,7 @@ function RelationsPanel({ task, scopeId }) {
   );
 }
 
-function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
+export function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [pane, setPane] = useState("description");
@@ -1152,6 +1157,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey });
     queryClient.invalidateQueries({ queryKey: ["tasks", scopeId] });
+    queryClient.invalidateQueries({ queryKey: ["planner", scopeId] });
   };
   const save = useTaskUpdate(scopeId, taskId);
   const detach = useMutation({
@@ -1163,6 +1169,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["tasks", scopeId] });
+    queryClient.invalidateQueries({ queryKey: ["planner", scopeId] });
       onClose();
     },
   });
@@ -1324,7 +1331,7 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           />
         </label>
       </div>
-      <label className="task-customer-field">
+      <div className="task-customer-department-row"><label className="task-customer-field">
         Заказчик
         <select
           value={task.customer_id ?? ""}
@@ -1340,9 +1347,9 @@ function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
           ))}
         </select>
       </label>
-      <fieldset className="task-frozen-fields" disabled={deleted}>
-        <DepartmentField scopeId={scopeId} value={task.department_id} onChange={(department_id) => save.mutate({ department_id })}/>
-      </fieldset>
+
+        <DepartmentField className="task-customer-field" disabled={deleted} scopeId={scopeId} value={task.department_id} onChange={(department_id) => save.mutate({ department_id })}/>
+      </div>
       <TaskKpiField disabled={deleted} userId={task.assignee_id} month={task.due_at?.slice(0, 7)} scopeId={scopeId} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
       <fieldset className="task-frozen-fields" disabled={frozen}><TaskAssignmentFields
         assignees={assignable.assignees}
@@ -1416,7 +1423,14 @@ export function TaskerPage() {
   const { taskId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const departmentFilter = searchParams.get('department') || '';
+  const departmentStorageKey = `zuratax-task-department:${activeScope?.id ?? ''}`;
+  const departmentFilter = searchParams.get('department') ?? (activeScope ? localStorage.getItem(departmentStorageKey) || '' : '');
+  useEffect(() => {
+    if (activeScope) {
+      if (departmentFilter) localStorage.setItem(departmentStorageKey, departmentFilter);
+      else localStorage.removeItem(departmentStorageKey);
+    }
+  }, [activeScope, departmentFilter, departmentStorageKey]);
   const departmentOptions = useQuery({ queryKey: ['departments', activeScope?.id], queryFn: () => departmentApi.list(activeScope.id), enabled: Boolean(activeScope) });
   const [view, setView] = useState("board");
   const [create, setCreate] = useState(null);
@@ -1838,7 +1852,7 @@ export function TaskerPage() {
             </div>
           )}
         </div>
-        <label className="task-department-filter">Отдел<select value={departmentFilter} onChange={(event) => setSearchParams((current) => { const next = new URLSearchParams(current); if (event.target.value) next.set('department', event.target.value); else next.delete('department'); return next; })}><option value="">Все отделы</option>{departmentOptions.data?.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <DepartmentFilter departments={departmentOptions.data?.departments} value={departmentFilter} onChange={(value) => { if (value) localStorage.setItem(departmentStorageKey, value); else localStorage.removeItem(departmentStorageKey); setSearchParams((current) => { const next = new URLSearchParams(current); if (value) next.set('department', value); else next.delete('department'); return next; }); }}/>
         <div className="task-filter-picker" ref={filtersRef}>
           <button
             type="button"
@@ -1986,6 +2000,7 @@ export function TaskerPage() {
                     <TaskCard
                       key={task.id}
                       task={task}
+                      showDepartment={!departmentFilter}
                       status={status}
                       index={
                         visibleItems
@@ -2089,6 +2104,7 @@ export function TaskerPage() {
           projects={projects}
           assignable={assignable}
           defaultProjectId={defaultProjectId}
+          defaultDepartmentId={departmentFilter}
           initialStatus={create.status}
           onClose={() => setCreate(null)}
         />

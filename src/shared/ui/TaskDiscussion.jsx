@@ -4,6 +4,7 @@ import { IconCornerUpLeft, IconTrash, IconX } from '@tabler/icons-react';
 import { useAuth } from '../../auth';
 import { taskApi } from '../../entities/task/api';
 import { rootComment, threadedComments } from '../../entities/task/comments';
+import { AvatarImage } from './AvatarImage';
 import './TaskDiscussion.css';
 
 const kindLabels = { comment: 'Комментарий', question: 'Вопрос', answer: 'Ответ' };
@@ -43,7 +44,7 @@ export function TaskDiscussion({ scope, task }) {
       {query.isPending && <p>Загружаю комментарии…</p>}
       {query.error && <p role="alert">{query.error.message}</p>}
       {threadedComments(comments).map((comment) => <article key={comment.id} className={`task-discussion-comment ${comment.parent_id ? 'is-reply' : ''}`}>
-        <span className="task-comment-avatar">{comment.created_by?.name?.slice(0, 2).toUpperCase() ?? '??'}</span>
+        <span className="task-comment-avatar"><AvatarImage avatar={comment.created_by?.avatar} name={comment.created_by?.name ?? 'Неизвестный автор'} size={28}/></span>
         <div>
           <header><strong>{comment.created_by?.name ?? 'Неизвестный автор'}</strong><time>{new Date(comment.created_at).toLocaleString('ru-RU')}</time></header>
           <span className={`task-comment-kind task-comment-kind--${comment.kind ?? 'comment'} ${comment.is_answered ? 'is-answered' : ''}`}>{kindLabels[comment.kind] ?? 'Комментарий'}{comment.kind === 'question' ? comment.is_answered ? ' · Отвечен' : ' · Ждёт ответа' : ''}</span>

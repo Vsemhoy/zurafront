@@ -4,6 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "avatars:generate": "node scripts/generate-avatars.mjs",
+    "predev": "npm run avatars:generate",
+    "prebuild": "npm run avatars:generate",
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
@@ -33,6 +36,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
+    "sharp": "^0.35.5",
     "vite": "^8.2.2"
   }
 }
