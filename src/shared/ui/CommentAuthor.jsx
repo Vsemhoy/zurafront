@@ -4,7 +4,7 @@ import './CommentAuthor.css';
 export function CommentAuthor({ author }) {
   const name = author?.name || 'Неизвестный автор';
   return <span className="comment-author">
-    <AvatarImage avatar={author?.avatar} name={name} className="comment-avatar"/>
+    <AvatarImage avatar={author?.avatar} name={name} className="comment-avatar" size={28}/>
     <strong>{name}</strong>
   </span>;
 }
