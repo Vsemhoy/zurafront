@@ -351,7 +351,7 @@ function TaskEditor({ activeScope, taskId }) {
               />
             </label>
           </div>
-          <label className="task-customer-field">
+          <div className="task-customer-department-row"><label className="task-customer-field">
             Заказчик
             <select
               value={task.customer_id ?? ""}
@@ -367,9 +367,9 @@ function TaskEditor({ activeScope, taskId }) {
               ))}
             </select>
           </label>
-          <fieldset className="task-frozen-fields" disabled={deleted}>
-            <DepartmentField scopeId={activeScope.id} value={task.department_id} onChange={(department_id) => save.mutate({ department_id })}/>
-          </fieldset>
+
+            <DepartmentField className="task-customer-field" disabled={deleted} scopeId={activeScope.id} value={task.department_id} onChange={(department_id) => save.mutate({ department_id })}/>
+          </div>
           <TaskKpiField disabled={deleted} userId={task.assignee_id} month={task.due_at?.slice(0, 7)} scopeId={activeScope.id} value={task.kpi_id} onChange={(kpiId) => save.mutate({ kpi_id: kpiId })}/>
           <fieldset className="task-frozen-fields" disabled={frozen}><TaskAssignmentFields
             assignees={assignable.assignees}

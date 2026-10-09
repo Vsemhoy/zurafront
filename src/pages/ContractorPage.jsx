@@ -506,6 +506,8 @@ function ContractorCreate({ scopeId, options, initialType, onClose, onCreated })
 }
 
 function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
+  const [avatarVisible, setAvatarVisible] = useState(false);
+  const avatarTrigger = useRef(null);
   const { check } = useAuth();
   const queryClient = useQueryClient();
   const [plainToken, setPlainToken] = useState(null);
@@ -658,9 +660,9 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
   return (
     <aside className="contractor-editor">
       <header>
-        <div className={`contractor-editor-icon contractor-card--${contractor.type}`}>
+        <button type="button" ref={avatarTrigger} className={`contractor-editor-icon contractor-card--${contractor.type}`} aria-label="Настройки аватара" aria-expanded={avatarVisible} onClick={() => { setAvatarVisible((visible) => !visible); setEditorTab('profile'); }}>
           <AvatarImage avatar={contractor.profile?.avatar} name={contractor.name}/>
-        </div>
+        </button>
         <div className="contractor-editor-identity">
           <strong>{contractor.name}</strong>
           <small>{statusLabels[contractor.status]}</small><AttachmentsButton scopeId={scopeId} type="user" id={contractor.id}/>
@@ -673,7 +675,7 @@ function ContractorEditor({ scopeId, contractor, onClose, onChanged }) {
       <div hidden={contractor.type === 'agent' && editorTab !== 'profile'}>
       <section>
         <h2>Профиль</h2>
-        <AvatarPicker scopeId={scopeId} contractor={contractor} onChanged={async () => { await onChanged(); await check(); }}/>
+        {avatarVisible && <AvatarPicker scopeId={scopeId} contractor={contractor} onClose={() => { setAvatarVisible(false); avatarTrigger.current?.focus(); }} onChanged={async () => { await onChanged(); await check(); }}/>}
         <fieldset className="contractor-edit-fields" disabled={!contractor.can_manage}>
         <div className="contractor-form-row">
           <label>

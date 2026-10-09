@@ -21,7 +21,8 @@
     outline: none;
 }
 
-.header-actions > button.avatar {
+.header-actions > button.avatar,
+.header-actions > .avatar-menu-wrap > button.avatar {
     background: transparent;
     color: #506680;
     width: auto;

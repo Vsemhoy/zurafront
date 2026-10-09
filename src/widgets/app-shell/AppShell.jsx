@@ -1,7 +1,7 @@
 import { AvatarImage } from '../../shared/ui/AvatarImage';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconPlus, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
+import { IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconLogout, IconPlus, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
@@ -10,6 +10,7 @@ import { contractorApi } from '../../entities/contractor/api';
 import { Brand } from '../../shared/ui/Brand';
 import { LanguageMenu } from '../../shared/ui/LanguageMenu';
 import './ModuleRail.css';
+import './AvatarMenu.css';
 const modules = [
     ['/', 'Home', IconHome, true, '#6d28d9', '#ede9fe'],
     ['/tasks', 'Tasker', IconChecklist, false, '#1d4ed8', '#dbeafe'],
@@ -46,6 +47,7 @@ export function AppShell() {
     const { data: scopes = [] } = useQuery({ queryKey: ['scopes'], queryFn: scopeApi.list });
     const [activeScopeId, setActiveScopeId] = useState(() => localStorage.getItem('zuratax-active-scope'));
     const [scopeOpen, setScopeOpen] = useState(false);
+    const [avatarOpen, setAvatarOpen] = useState(false);
     const routeScopeId = location.pathname.match(/^\/lore\/([^/]+)\//)?.[1];
     const activeScope = scopes.find((scope) => scope.id === routeScopeId) ?? scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)
@@ -65,5 +67,5 @@ export function AppShell() {
         const query = headerSearch.trim();
         if (query.length >= 2) navigate(`/search?type=task&q=${encodeURIComponent(query)}`);
     };
-    return <div className="app-shell"><aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end, color, tint]) => <NavLink key={to} to={to} end={end} title={label} aria-label={label} style={{ '--module-color': color, '--module-tint': tint }} className={({ isActive }) => `${isActive ? 'active' : ''} ${to === '/contractors' ? 'module-people' : ''}`}><Icon size={21}/></NavLink>)}</aside><header className="app-header"><button className="scope-pill" onClick={() => setScopeOpen(true)}><i />{activeScope?.name ?? 'Скоуп не выбран'}<IconChevronDown size={16}/></button>{user?.acting_as && <div className="persona-chip"><IconUser size={15}/><span>От имени <strong>{user.acting_as.name}</strong></span><button title="Вернуться к себе" disabled={stopActing.isPending} onClick={() => stopActing.mutate()}><IconX size={14}/></button></div>}<form className="command-search" onSubmit={submitSearch}><IconSearch size={19}/><input ref={searchRef} value={headerSearch} onChange={(event) => setHeaderSearch(event.target.value)} placeholder={t('search')}/></form><div className="header-actions"><button className={`monitoring-trigger ${location.pathname === '/monitoring' ? 'active' : ''}`} aria-label="Мониторинг сервера" title="Мониторинг сервера" onClick={() => navigate('/monitoring')}><IconActivity /></button><button aria-label="Notifications"><IconBell /></button><LanguageMenu /><button className="avatar" onClick={() => void logout()} title={user?.name}>{user?.avatar ? <AvatarImage avatar={user.avatar} name={user.name}/> : user?.name.slice(0, 2).toUpperCase()}</button></div></header><Outlet context={{ activeScope }}/>{scopeOpen && <ScopeMenu scopes={scopes} active={activeScope} onSelect={(scope) => setActiveScopeId(scope.id)} onClose={() => setScopeOpen(false)}/>}<footer className="status-bar"><span><i />{t('status')}</span><span>Zuratax v2.1</span></footer></div>;
+    return <div className="app-shell"><aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end, color, tint]) => <NavLink key={to} to={to} end={end} title={label} aria-label={label} style={{ '--module-color': color, '--module-tint': tint }} className={({ isActive }) => `${isActive ? 'active' : ''} ${to === '/contractors' ? 'module-people' : ''}`}><Icon size={21}/></NavLink>)}</aside><header className="app-header"><button className="scope-pill" onClick={() => setScopeOpen(true)}><i />{activeScope?.name ?? 'Скоуп не выбран'}<IconChevronDown size={16}/></button>{user?.acting_as && <div className="persona-chip"><IconUser size={15}/><span>От имени <strong>{user.acting_as.name}</strong></span><button title="Вернуться к себе" disabled={stopActing.isPending} onClick={() => stopActing.mutate()}><IconX size={14}/></button></div>}<form className="command-search" onSubmit={submitSearch}><IconSearch size={19}/><input ref={searchRef} value={headerSearch} onChange={(event) => setHeaderSearch(event.target.value)} placeholder={t('search')}/></form><div className="header-actions"><button className={`monitoring-trigger ${location.pathname === '/monitoring' ? 'active' : ''}`} aria-label="Мониторинг сервера" title="Мониторинг сервера" onClick={() => navigate('/monitoring')}><IconActivity /></button><button aria-label="Notifications"><IconBell /></button><LanguageMenu /><div className="avatar-menu-wrap"><button className="avatar" onClick={() => setAvatarOpen(!avatarOpen)} title={user?.name} aria-expanded={avatarOpen}>{user?.avatar ? <AvatarImage avatar={user.avatar} name={user.name}/> : user?.name.slice(0, 2).toUpperCase()}</button>{avatarOpen && <div className="avatar-menu"><header><strong>{user?.name}</strong><small>{user?.email ?? user?.identity ?? ''}</small></header><button className="avatar-menu__item" onClick={() => { setAvatarOpen(false); void logout(); }}><IconLogout size={16}/><span>Логаут</span></button></div>}</div></div></header><Outlet context={{ activeScope }}/>{scopeOpen && <ScopeMenu scopes={scopes} active={activeScope} onSelect={(scope) => setActiveScopeId(scope.id)} onClose={() => setScopeOpen(false)}/>}<footer className="status-bar"><span><i />{t('status')}</span><span>Zuratax v2.1</span></footer></div>;
 }

@@ -8,6 +8,7 @@ export function taskUpdateOptions(client, updateTask) {
     onSuccess: (updated, { scopeId, taskId }) => {
       client.setQueryData(['task', scopeId, taskId], updated);
       client.invalidateQueries({ queryKey: ['tasks', scopeId] });
+      client.invalidateQueries({ queryKey: ['planner', scopeId] });
       client.invalidateQueries({ queryKey: ['task-activity', scopeId, taskId] });
     },
   };

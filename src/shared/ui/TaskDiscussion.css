@@ -1,4 +1,4 @@
-.task-discussion{display:flex;flex-direction:column;min-height:0;height:100%;color:#243247;font-size:12px}
+.task-discussion{display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;color:#243247;font-size:12px}
 .task-discussion-list{min-height:0;overflow:auto;flex:1;padding:10px 12px}
 .task-discussion-comment{display:grid;grid-template-columns:28px minmax(0,1fr);gap:8px;padding:10px 0;border-bottom:1px solid #dde3ec}
 .task-discussion-comment.is-reply{margin-left:28px}.task-discussion-comment>div{min-width:0}
@@ -12,14 +12,14 @@
 .task-discussion-comment footer button.delete{color:#a9443b}
 .task-comment-kind{display:inline-block;margin-top:5px;font-size:10px;color:#788393}
 .task-comment-kind--question{color:#c23943}.task-comment-kind--question.is-answered{color:#367d54}.task-comment-kind--answer{color:#2370c7}
-.task-discussion-compose{display:grid;gap:7px;border-top:1px solid #d4dce7;background:#fff;padding:12px}
+.task-discussion-compose{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;max-width:100%;box-sizing:border-box;gap:7px;border-top:1px solid #d4dce7;background:#fff;padding:12px}
 .task-discussion-compose label{display:flex;align-items:center;gap:8px;color:#68758a}
 .task-discussion-compose select,.task-discussion-compose textarea{font:inherit;box-sizing:border-box;min-width:0;border:1px solid #c8d2df;border-radius:4px;background:#fff;padding:6px}
 .task-discussion-compose textarea{width:100%;resize:vertical}.task-discussion-compose>button{justify-self:end;border:0;border-radius:4px;background:#075aaf;color:#fff;padding:7px 12px;cursor:pointer}
 .task-discussion button:disabled{opacity:.5;cursor:default}
 .task-discussion-reply{display:flex;align-items:center;gap:8px;color:#596a80}.task-discussion-reply span{min-width:0;overflow-wrap:anywhere;flex:1}.task-discussion-reply button{border:0;background:none;padding:3px}
 .task-discussion-readonly{padding:12px;border-top:1px solid #d4dce7;color:#7b8797}
-.task-comments-backdrop>.task-comments-sidebar{grid-template-rows:auto minmax(0,1fr)}
+.task-comments-backdrop>.task-comments-sidebar{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);min-width:0;box-sizing:border-box}
 .task-card-actions .task-card-comments{display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;padding:2px;color:#99a3b2}
 .task-card-comments--comments svg{color:#2370c7}.task-card-comments--question svg{color:#d43d48}.task-card-comments--empty svg{color:#99a3b2}
 .task-freeze-note{padding:8px 12px;background:#edf2f8;color:#667487;font-size:12px}
