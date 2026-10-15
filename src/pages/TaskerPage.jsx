@@ -979,7 +979,6 @@ function SubtasksPanel({ task, scopeId, refresh }) {
     },
   });
 
-  if (task.parent_id) return null;
   return (
     <section className="subtasks">
       <header>

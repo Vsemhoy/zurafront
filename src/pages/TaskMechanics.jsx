@@ -325,7 +325,6 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
             >
               <IconEdit size={14} />
             </button>
-            {!task.parent_id && (
               <button
                 type="button"
                 className="convert-item"
@@ -338,7 +337,6 @@ export function TaskChecklistPanel({ task, scopeId, refresh, assignees = [] }) {
               >
                 <IconSubtask size={15} />
               </button>
-            )}
             </div>
           </div>
         ))}
@@ -444,7 +442,6 @@ export function SubtasksPanel({ task, scopeId, refresh }) {
     },
   });
 
-  if (task.parent_id) return null;
   return (
     <section className="subtasks">
       <header>

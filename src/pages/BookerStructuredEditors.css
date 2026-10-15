@@ -5,11 +5,26 @@
     flex-direction: column;
 }
 
-.block-editor-modal .compact-md--full .md-toolbar-trigger {
+.block-editor-modal .compact-md--full > .md-editor-controls {
     position: static;
     align-self: flex-end;
-    order: -1;
-    margin-bottom: 4px;
+    flex: 0 0 auto;
+    margin-bottom: 6px;
+}
+
+.block-editor-modal .md-source-trigger span { display: inline; }
+
+.block-editor-modal .compact-md--source { background: #fff; }
+.block-editor-modal .compact-md--full > .md-source-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    min-height: 0;
+    max-width: 100%;
+    resize: none;
+    overflow: auto;
+    white-space: pre;
+    background: #f7f9fc;
+    color: #26354a;
 }
 
 .block-editor-modal .compact-md--full > .mdxeditor {

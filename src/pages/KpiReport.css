@@ -24,6 +24,11 @@
 .kpi-report-filters select, .kpi-report-filters input { height: 32px; border: 1px solid #cbd3df; background: #fff; padding: 0 8px; }
 .kpi-report-filters > label { min-width: 280px; }
 .kpi-report-filters > .kpi-completion-filter { min-width: 160px; }
+.kpi-person-select { display: flex; align-items: flex-end; gap: 8px; min-width: 0; }
+.kpi-person-select > label { flex: 1; min-width: 0; }
+.kpi-person-select select { width: 100%; max-width: 350px; }
+.kpi-person-select .kpi-filter-avatar { width: 32px; height: 32px; flex: 0 0 32px; }
+.kpi-person-avatar > .avatar-image { width: 100%; height: 100%; }
 .kpi-month { display: flex; align-items: end; gap: 4px; margin-left: auto; }
 .kpi-month > button { width: 32px; height: 32px; display: grid; place-items: center; border: 1px solid #cbd3df; background: #f6f8fb; color: #536176; }
 .kpi-report, .kpi-report-state { background: #fff; }

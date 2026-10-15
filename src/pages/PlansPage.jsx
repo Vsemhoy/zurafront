@@ -1,9 +1,12 @@
 import { Fragment, useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { IconChevronDown, IconEdit, IconPlus, IconTrash, IconX } from '@tabler/icons-react';
+import { IconChevronDown, IconEdit, IconPlus, IconRefresh, IconTrash, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
+import { useAuth } from '../auth';
 import { planApi } from '../entities/plan/api';
+import { defaultPlanFilters, loadPlanFilters, planFiltersKey, savePlanFilters } from '../entities/plan/filters';
+import { DepartmentField } from '../shared/ui/DepartmentField';
 import { isPlanOverdue, isPlanTaskOverdue } from '../entities/plan/overdue';
 import { taskStatusMap } from '../entities/task/statuses';
 import './PlansPage.css';
@@ -15,16 +18,19 @@ const duration = (value) => value == null ? '—' : `${Math.round(value / 60 * 1
 
 export function PlansPage() {
   const { activeScope } = useWorkspace();
-  return activeScope ? <Plans key={activeScope.id} scope={activeScope}/> : <main>Выберите скоуп.</main>;
+  const userId = useAuth((state) => state.user?.id);
+  return activeScope ? <Plans key={`${userId}:${activeScope.id}`} scope={activeScope} userId={userId}/> : <main>Выберите скоуп.</main>;
 }
 
-function Plans({ scope }) {
+function Plans({ scope, userId }) {
   const client = useQueryClient();
-  const [filters, setFilters] = useState({ year: new Date().getFullYear(), month: '', assignee_id: '', project_id: '', status: '', q: '', page: 1 });
+  const storageKey = planFiltersKey(userId, scope.id);
+  const [filters, setFilters] = useState(() => loadPlanFilters(storageKey));
   const [editing, setEditing] = useState(null);
   const [expandedPlans, setExpandedPlans] = useState(new Set());
-  const [search, setSearch] = useState('');
-  useEffect(() => { const timer = setTimeout(() => setFilters((old) => ({ ...old, q: search, page: 1 })), 250); return () => clearTimeout(timer); }, [search]);
+  const [search, setSearch] = useState(filters.q);
+  useEffect(() => { const timer = setTimeout(() => setFilters((old) => old.q === search ? old : ({ ...old, q: search, page: 1 })), 250); return () => clearTimeout(timer); }, [search]);
+  useEffect(() => savePlanFilters(storageKey, filters), [storageKey, filters]);
   const options = useQuery({ queryKey: ['plan-options', scope.id], queryFn: () => planApi.options(scope.id) });
   const list = useQuery({ queryKey: ['plans', scope.id, filters], queryFn: () => planApi.list(scope.id, filters) });
   const refresh = () => { ['planner', 'tasks', 'task', 'kpi-stats'].forEach((key) => client.invalidateQueries({ queryKey: [key, scope.id] })); client.invalidateQueries({ queryKey: ['plans', scope.id] }); client.invalidateQueries({ queryKey: ['plan-candidates', scope.id] }); client.invalidateQueries({ queryKey: ['monthly-report', scope.id] }); };
@@ -39,14 +45,16 @@ function Plans({ scope }) {
     return next;
   });
   return <main className="plans-page">
-    <header className="plans-heading"><div><small>{scope.name} · планирование результатов</small><h1>Planner</h1></div><Link to="/planner">Календарь</Link><button className="plans-primary" onClick={() => setEditing({ month: filters.month || (Number(filters.year) === new Date().getFullYear() ? monthNow() : `${filters.year}-01`), project_id: filters.project_id, assignee_id: filters.assignee_id })}><IconPlus size={16}/>Новая плановая единица</button></header>
+    <header className="plans-heading"><div><small>{scope.name} · планирование результатов</small><h1>Planner</h1></div><Link to="/planner">Календарь</Link><button className="plans-primary" onClick={() => setEditing({ month: filters.month || (Number(filters.year) === new Date().getFullYear() ? monthNow() : `${filters.year}-01`), project_id: filters.project_id, department_id: filters.department_id, assignee_id: filters.assignee_id })}><IconPlus size={16}/>Новая плановая единица</button></header>
     <div className="plans-filters">
       <label>Год<input type="number" min="2000" max="2099" value={filters.year} onChange={set('year')}/></label>
       <label>Месяц<select value={filters.month} onChange={set('month')}><option value="">Весь год</option>{Array.from({ length: 12 }, (_, i) => `${filters.year}-${String(i + 1).padStart(2, '0')}`).map((month) => <option key={month} value={month}>{monthLabel(month)}</option>)}</select></label>
       <label>Проект<select value={filters.project_id} onChange={set('project_id')}><option value="">Все проекты</option>{options.data?.projects.map((p) => <option key={p.id} value={p.id}>{p.key} · {p.title}</option>)}</select></label>
+      <label>Отдел<select value={filters.department_id} onChange={set('department_id')}><option value="">Все отделы</option>{options.data?.departments?.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}</select></label>
       <label>Исполнитель<select value={filters.assignee_id} onChange={set('assignee_id')}><option value="">Все</option>{options.data?.people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label>Выполнение<select value={filters.status} onChange={set('status')}><option value="">Все</option><option value="open">Не выполнено</option><option value="done">Выполнено</option></select></label>
-      <label>Поиск<input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Название плана"/></label>
+      <label>Поиск<input maxLength={150} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Название плана"/></label>
+      <button type="button" className="plans-reset-filters" onClick={() => { setFilters(defaultPlanFilters()); setSearch(''); }}><IconRefresh size={15}/>Сбросить</button>
     </div>
     <p className="plans-note">Выполнено {list.data?.done ?? 0} из {list.data?.total ?? 0}. Галочка завершает план, но не меняет задачи и календарь. Проекты вне отчётности здесь тоже видны.</p>
     {(list.error || options.error || complete.error || remove.error) && <p role="alert" className="plans-error">{list.error?.message || options.error?.message || complete.error?.message || remove.error?.message}</p>}
@@ -56,7 +64,7 @@ function Plans({ scope }) {
         <tr className={item.completed_at ? 'plans-done' : isPlanOverdue(item) ? 'plans-overdue' : ''}>
           <td><input type="checkbox" aria-label={`Выполнено: ${item.title}`} checked={Boolean(item.completed_at)} disabled={complete.isPending} onChange={(event) => complete.mutate({ id: item.id, completed: event.target.checked })}/></td>
           <td><button className="plans-title" onClick={() => setEditing(item)}>{item.title}</button><p>{item.expected_result || 'Ожидаемый результат не указан'}</p><details><summary>Описание, ресурсы и эффект</summary>{[['Описание', item.description], ['Ресурсы', item.resources], ['Положительный эффект', item.impact], ['Фактический результат', item.actual_result]].map(([label, value]) => value && <p key={label}><b>{label}:</b> {value}</p>)}{item.completed_at && <p>Завершил {item.completer?.name || '—'} · {new Date(item.completed_at).toLocaleString('ru-RU')}</p>}</details></td>
-          <td>{item.project?.key || 'Без проекта'}{item.project?.include_in_reports === false && <small>Вне отчётности</small>}</td>
+          <td>{item.project?.key || 'Без проекта'}{item.department && <small className="plans-department" style={{ backgroundColor: item.department.color }}>{item.department.name}</small>}{item.project?.include_in_reports === false && <small>Вне отчётности</small>}</td>
           <td>{item.assignee?.name || 'Не назначен'}</td>
           <td><button type="button" className="plans-tasks-toggle" disabled={!item.tasks.length} aria-label={`Связанные задачи: ${item.title}`} aria-expanded={expandedPlans.has(item.id)} aria-controls={`plan-tasks-${item.id}`} onClick={() => toggleTasks(item.id)}><IconChevronDown size={14}/><span>{item.completed_tasks_count} / {item.tasks_count}</span></button></td>
           <td>{duration(item.estimated_minutes)}<small>{[item.starts_on, item.ends_on].filter(Boolean).join(' — ') || 'Без точных дат'}</small></td>
@@ -99,10 +107,10 @@ function PlanEditor({ scopeId, item, options, onClose, onSaved }) {
   useEffect(() => { const key = (event) => { if (event.key === 'Escape') onClose(); }; document.addEventListener('keydown', key); return () => document.removeEventListener('keydown', key); }, [onClose]);
   const candidates = useQuery({ queryKey: ['plan-candidates', scopeId, form.project_id, term, page], queryFn: () => planApi.candidates(scopeId, { project_id: form.project_id || '', q: term, page }) });
   const save = useMutation({ mutationFn: () => planApi.save(scopeId, item.id, Object.fromEntries(Object.entries({
-    ...form, project_id: form.project_id || null, assignee_id: form.assignee_id || null,
+    ...form, project_id: form.project_id || null, department_id: form.department_id || null, assignee_id: form.assignee_id || null,
     starts_on: form.starts_on || null, ends_on: form.ends_on || null, estimated_minutes: form.hours === '' ? null : Math.round(Number(form.hours) * 60),
     priority: Number(form.priority), task_ids: tasks.map((task) => task.id), task_dates: Object.fromEntries(tasks.map((task) => [task.id, calendarDate(task)])),
-  }).filter(([key]) => ['title', 'description', 'resources', 'expected_result', 'impact', 'actual_result', 'priority', 'month', 'starts_on', 'ends_on', 'project_id', 'assignee_id', 'estimated_minutes', 'task_ids', 'task_dates', 'completed'].includes(key)))), onSuccess: onSaved });
+  }).filter(([key]) => ['title', 'description', 'resources', 'expected_result', 'impact', 'actual_result', 'priority', 'month', 'starts_on', 'ends_on', 'project_id', 'department_id', 'assignee_id', 'estimated_minutes', 'task_ids', 'task_dates', 'completed'].includes(key)))), onSuccess: onSaved });
   const set = (key) => (event) => setForm({ ...form, [key]: event.target.value });
   const changeProject = (event) => { if (tasks.length && !window.confirm('Сменить проект и убрать связи с прежними задачами? Сами задачи сохранятся.')) return; setForm({ ...form, project_id: event.target.value }); setTasks([]); setPage(1); };
   return <div className="plans-backdrop"><form role="dialog" aria-modal="true" aria-label="Редактор плановой единицы" className="plans-editor" onSubmit={(event) => { event.preventDefault(); save.mutate(); }}><header><h2>{item.id ? 'Плановая единица' : 'Новая плановая единица'}</h2><button type="button" aria-label="Закрыть" onClick={onClose}><IconX size={18}/></button></header>
@@ -110,6 +118,7 @@ function PlanEditor({ scopeId, item, options, onClose, onSaved }) {
     <div className="plans-editor-grid">
       <label>Месяц<input required type="month" min="2000-01" max="2099-12" value={form.month} onChange={set('month')}/></label>
       <label>Проект<select value={form.project_id || ''} onChange={changeProject}><option value="">Без проекта</option>{options?.projects.map((p) => <option key={p.id} value={p.id}>{p.key} · {p.title}</option>)}</select></label>
+      <DepartmentField scopeId={scopeId} value={form.department_id} onChange={(department_id) => setForm((current) => ({ ...current, department_id }))}/>
       <label>Исполнитель<select value={form.assignee_id || ''} onChange={set('assignee_id')}><option value="">Не назначен</option>{form.assignee_id && !options?.people.some((person) => person.id === form.assignee_id) && <option value={form.assignee_id} disabled>{form.assignee?.name ?? "Прежний исполнитель"} · недоступен</option>}{options?.people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
       <label>Важность<select value={form.priority} onChange={set('priority')}>{Object.entries(priorities).map(([key, label]) => <option key={key} value={key}>{label}</option>)}</select></label>
       <label>Планируемое время, ч<input type="number" min="0" max="8760" step="any" value={form.hours} onChange={set('hours')}/></label>

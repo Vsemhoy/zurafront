@@ -25,6 +25,17 @@ test('intentional deletion is saved, but repeated blur is not', async () => {
   assert.deepEqual(sent, [null]);
 });
 
+test('raw Markdown preserves code fences, tables and whitespace through visual normalization', async () => {
+  const draft = createMarkdownDraft('# Original');
+  const markdown = '# Heading\n\n```js\nconst value = "<raw>";\n\tconsole.log(value);\n```\n\n| A | B |\n| --- | --- |\n| **bold** | `code` |\n\n- [ ] Item\n\n';
+  draft.change(markdown);
+  draft.change('# Normalized visual content', true);
+  let saved;
+  await draft.save((value) => { saved = value; });
+  assert.equal(saved, markdown);
+  assert.equal(draft.markdown, markdown);
+});
+
 test('undoing edits back to the initial value does not save', async () => {
   const draft = createMarkdownDraft('Original');
   draft.change('Changed');
