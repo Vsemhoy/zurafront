@@ -33,6 +33,7 @@ import { priorityLabel } from "../entities/task/model";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
 import { TaskKpiField } from "../shared/ui/TaskKpiField";
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
+import { TaskDarklogs } from '../shared/ui/TaskDarklogs';
 import { TaskReferenceCopy } from "../shared/ui/TaskReferenceCopy";
 import { TaskTitleInput } from "../shared/ui/TaskTitleInput";
 import { contractorCanAccessProject } from "../shared/ui/taskAssignmentAccess";
@@ -424,6 +425,7 @@ function TaskEditor({ activeScope, taskId }) {
           <BookerLinksPanel task={task} scopeId={activeScope.id} />
           <TaskEntityLinksPanel task={task} scopeId={activeScope.id} />
           </fieldset>
+          <TaskDarklogs task={task} scopeId={activeScope.id}/>
         </section>
       )}
       {tab === "discussion" && (

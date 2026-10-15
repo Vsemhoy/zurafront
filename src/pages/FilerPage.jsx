@@ -7,11 +7,11 @@ import { useWorkspace } from '../app/workspace';
 import { FilePreview } from '../shared/ui/FilePreview';
 import './FilerPage.css';
 
-const fileCategories = { documentation: 'Документация', general: 'Общие файлы', task: 'Вложения задач', event: 'Вложения событий', book: 'Вложения Букера', project: 'Вложения проектов', user: 'Вложения контакторов' };
-const subjectTypes = { task: 'Задача', event: 'Событие', book: 'Книга', project: 'Проект', user: 'Контактор' };
+const fileCategories = { documentation: 'Документация', general: 'Общие файлы', task: 'Вложения задач', event: 'Вложения событий', book: 'Вложения Букера', project: 'Вложения проектов', user: 'Вложения контакторов', darklog: 'Вложения Дарклога' };
+const subjectTypes = { task: 'Задача', event: 'Событие', book: 'Книга', project: 'Проект', user: 'Контактор', darklog: 'Дарклог' };
 const sizeLabel = (value) => value >= 1048576 ? `${(value / 1048576).toFixed(1)} МБ` : `${Math.ceil(value / 1024)} КБ`;
 const endpoint = (scopeId) => `/scopes/${scopeId}/files`;
-const attachmentHref = (attachment) => ({ task: `/tasks/${attachment.id}/edit`, book: `/books/${attachment.id}`, project: '/projects', event: '/events', user: '/contractors' })[attachment.type];
+const attachmentHref = (attachment, scopeId) => ({ task: `/tasks/${attachment.id}/edit`, book: `/books/${attachment.id}`, project: '/projects', event: '/events', user: '/contractors', darklog: `/darklog/${scopeId}/${attachment.id}` })[attachment.type];
 
 export function FilerPage() {
     const { activeScope } = useWorkspace();
@@ -67,7 +67,7 @@ export function FilePanel({ scopeId, category = '', subjectType = '', subjectId 
         {isPending ? <p className="filer-empty">Загружаю файлы…</p> : !error && !data?.data.length ? <p className="filer-empty">Файлов пока нет. Загрузите первый файл.</p> : null}
         {Boolean(data?.data.length) && <div className="filer-table-wrap"><table className="filer-table"><thead><tr><th>Файл</th><th>Раздел / связи</th><th>Размер</th><th>Автор / дата</th><th>Действия</th></tr></thead><tbody>{data.data.map((file) => <tr key={file.id}>
             <td><button className="filer-name" onClick={() => setPreview(file)}>{file.name}</button><FileDescription key={`${file.id}:${file.description ?? ''}`} file={readOnly ? { ...file, can_manage: false } : file} scopeId={scopeId} onSaved={refresh}/><small>{file.visibility === 'private' ? 'Личный' : file.attachments.length ? 'По доступу к связям' : 'Общий в скоупе'}</small></td>
-            <td><span>{fileCategories[file.category]}</span><div className="filer-links">{file.attachments.map((attachment) => <Link key={`${attachment.type}:${attachment.id}`} to={attachmentHref(attachment)}>{subjectTypes[attachment.type]}: {attachment.title}</Link>)}</div></td>
+            <td><span>{fileCategories[file.category]}</span><div className="filer-links">{file.attachments.map((attachment) => <Link key={`${attachment.type}:${attachment.id}`} to={attachmentHref(attachment, scopeId)}>{subjectTypes[attachment.type]}: {attachment.title}</Link>)}</div></td>
             <td>{sizeLabel(file.size)}</td><td>{file.creator?.name || '—'}<small>{new Date(file.created_at).toLocaleDateString()}</small></td>
             <td><div className="filer-actions"><button title="Посмотреть" aria-label="Посмотреть" onClick={() => setPreview(file)}><IconEye size={16}/></button><button title="Скачать" aria-label="Скачать" disabled={busy === file.id} onClick={() => download(file)}><IconDownload size={16}/></button>{file.can_manage && !readOnly && <><button title="Связать с объектом" aria-label="Связать с объектом" onClick={() => setLinking(file)}><IconLink size={16}/></button><button title="Удалить файл" aria-label="Удалить файл" disabled={busy === file.id} onClick={() => remove(file)}><IconTrash size={16}/></button></>}</div></td>
         </tr>)}</tbody></table></div>}

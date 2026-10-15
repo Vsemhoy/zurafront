@@ -1,7 +1,7 @@
 import { AvatarImage } from '../../shared/ui/AvatarImage';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconLogout, IconPlus, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
+import { IconMoon, IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconLogout, IconPlus, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
@@ -21,6 +21,7 @@ const modules = [
     ['/reports', 'Reporter', IconBriefcase2, false, '#0369a1', '#e0f2fe'],
     ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
     ['/factor', 'Factor', IconBuildingFactory2, false, '#2b6cb0', '#ebf4ff'],
+    ['/darklog', 'Darklog', IconMoon, false, '#70556f', '#eee4ed'],
     ['/lore', 'Lore', IconBrain, false, '#4f46a5', '#eeecff'],
     ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
     ['/files', 'Filer', IconFiles, false, '#366a91', '#e2eef7'],
@@ -48,7 +49,7 @@ export function AppShell() {
     const [activeScopeId, setActiveScopeId] = useState(() => localStorage.getItem('zuratax-active-scope'));
     const [scopeOpen, setScopeOpen] = useState(false);
     const [avatarOpen, setAvatarOpen] = useState(false);
-    const routeScopeId = location.pathname.match(/^\/lore\/([^/]+)\//)?.[1];
+    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog)\/([^/]+)\//)?.[1];
     const activeScope = scopes.find((scope) => scope.id === routeScopeId) ?? scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)
         localStorage.setItem('zuratax-active-scope', activeScope.id); }, [activeScope]);

@@ -3,6 +3,7 @@ import { DepartmentFilter } from '../shared/ui/DepartmentFilter';
 import { departmentApi } from '../entities/department/api';
 import { DepartmentField } from '../shared/ui/DepartmentField';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
+import { TaskDarklogs } from '../shared/ui/TaskDarklogs';
 import {
   Fragment,
   lazy,
@@ -1403,6 +1404,7 @@ export function TaskInspector({ scopeId, taskId, projects, assignable, onClose }
       <TaskChecklistPanel task={task} scopeId={scopeId} refresh={refresh} assignees={assignable.assignees}/>
       <SubtasksPanel task={task} scopeId={scopeId} refresh={refresh} />
       <fieldset className="task-frozen-fields" disabled={frozen}><RelationsPanel task={task} scopeId={scopeId} /></fieldset>
+      <TaskDarklogs task={task} scopeId={scopeId}/>
       {detach.error && (
         <p className="form-error">
           {detach.error.message}
