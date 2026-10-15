@@ -1,10 +1,10 @@
-.darklog-ui { --dark-accent: #70556f; color: #263247; font-size: 13px; }
+.darklog-ui { --dark-accent: #343434; --dark-tint: #dddddd; color: #263247; font-size: 13px; }
 .darklog-page { padding: 14px; min-width: 0; overflow: auto; }
 .darklog-ui button, .darklog-ui input, .darklog-ui select, .darklog-ui textarea { font: inherit; }
 .darklog-ui button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; border: 0; border-radius: 5px; padding: 6px 9px; background: #eef0f4; color: #43516a; cursor: pointer; }
 .darklog-ui button:hover { background: #e4e7ee; }
 .darklog-ui button:disabled { opacity: .45; cursor: default; }
-.darklog-ui button:focus-visible, .darklog-ui a:focus-visible { outline: 2px solid #8a6d89; outline-offset: 2px; }
+.darklog-ui button:focus-visible, .darklog-ui a:focus-visible { outline: 2px solid #777777; outline-offset: 2px; }
 .darklog-ui input, .darklog-ui select, .darklog-ui textarea { min-width: 0; max-width: 100%; border: 1px solid #d9dfe8; border-radius: 5px; background: white; padding: 7px 8px; color: inherit; }
 .darklog-ui label { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .darklog-ui h1, .darklog-ui h2, .darklog-ui h3, .darklog-ui p { margin: 0; }
@@ -13,13 +13,13 @@
 .darklog-ui h3 { font-size: 14px; font-weight: 600; }
 .darklog-ui small { color: #7b8596; }
 .darklog-ui .darklog-primary { background: var(--dark-accent); color: white; }
-.darklog-ui .darklog-primary:hover { background: #60465f; }
+.darklog-ui .darklog-primary:hover { background: #222222; }
 .darklog-ui .danger { color: #b6444e; }
 .darklog-heading { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; color: var(--dark-accent); }
 .darklog-heading > div:first-of-type { margin-right: auto; }
 .darklog-heading small { display: block; margin-top: 2px; }
 .darklog-view-switch { display: flex; gap: 2px; }
-.darklog-ui button[aria-pressed="true"] { color: var(--dark-accent); background: #e9e0eb; }
+.darklog-ui button[aria-pressed="true"] { color: var(--dark-accent); background: var(--dark-tint); }
 .darklog-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .darklog-toolbar > select { max-width: 190px; }
 .darklog-toolbar > input { flex: 1 1 160px; }
@@ -39,22 +39,25 @@
 .darklog-dates > div { border-right: 1px solid #eef0f5; padding: 5px 8px; color: #55627a; }
 .darklog-dates .weekend { background: #f0f1f5; }
 .darklog-dates .other-month { color: #b9c0cd; }
-.darklog-dates .today time { background: #70556f; color: white; border-radius: 50%; padding: 2px 5px; }
+.darklog-dates .today time { background: #343434; color: white; border-radius: 50%; padding: 2px 5px; }
 .darklog-week-bars { position: relative; }
 .darklog-bar-lane { margin: 3px 0; }
-.darklog-bar { position: relative; min-width: 0; min-height: 38px; margin: 0 3px; border-radius: 14px; background: #e6e8ef; color: #475169; overflow: hidden; }
+.darklog-bar { position: relative; min-width: 0; min-height: 38px; margin: 0 3px; border: 1px solid transparent; border-radius: 14px; background: #e6e8ef; color: #343434; overflow: hidden; }
+.darklog-bar::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--entry-color); pointer-events: none; }
+.darklog-bar.darklog-bar--active { border-color: #999999; }
 .darklog-bar[data-severity="low"], .darklog-severity[data-severity="low"] { background: #e9edf2; color: #69778a; }
 .darklog-bar[data-severity="medium"], .darklog-severity[data-severity="medium"] { background: #eee4ed; color: #725370; }
 .darklog-bar[data-severity="high"], .darklog-severity[data-severity="high"] { background: #f9e5da; color: #995d38; }
 .darklog-bar[data-severity="critical"], .darklog-severity[data-severity="critical"] { background: #f8dce3; color: #a53d59; }
-.darklog-bar.darklog-bar--forecast { background: #faf7fb; border: 1px dashed #ab8ba9; color: #8b7088; opacity: .85; }
+.darklog-bar[data-severity] { color: #343434; }
+.darklog-bar.darklog-bar--forecast { background: #f6f6f6; border: 1px dashed #999999; color: #666666; opacity: .85; }
 .darklog-ui .darklog-bar-open { width: 100%; min-height: 38px; padding: 4px 9px 15px; border-radius: inherit; justify-content: flex-start; text-align: left; color: inherit; background: transparent; white-space: nowrap; }
-.darklog-bar-open b { font-size: 11px; font-weight: 600; }
+.darklog-bar-open b { flex-shrink: 0; font-size: 11px; font-weight: 600; color: var(--entry-color); background: var(--entry-tint); padding: 1px 5px; border-radius: 4px; }
 .darklog-bar-open span { text-overflow: ellipsis; overflow: hidden; }
 .darklog-bar-markers { position: absolute; inset: auto 0 3px; height: 10px; pointer-events: none; }
 .darklog-ui .darklog-bar-markers button { pointer-events: auto; position: absolute; bottom: 0; transform: translateX(-50%); width: 10px; height: 10px; padding: 0; border-radius: 50%; background: var(--marker-color); border: 1px solid #ffffffc4; }
 .darklog-ui .darklog-bar-markers .planned { background: white; border: 2px solid var(--marker-color); }
-.darklog-ui .darklog-standalone-marker { margin: 0 3px; padding: 3px 5px; font-size: 10px; background: #f6f3f7; border-left: 3px solid var(--marker-color); overflow: hidden; white-space: nowrap; }
+.darklog-ui .darklog-standalone-marker { margin: 0 3px; padding: 3px 5px; font-size: 10px; background: #f3f3f3; border-left: 3px solid var(--marker-color); overflow: hidden; white-space: nowrap; }
 .darklog-table { width: 100%; border-collapse: collapse; background: white; min-width: 760px; }
 .darklog-table th, .darklog-table td { padding: 9px 8px; border-bottom: 1px solid #e7eaf0; text-align: left; }
 .darklog-table th { background: #f4f5f8; font-weight: 500; color: #7d8596; }
@@ -72,7 +75,7 @@
 .darklog-card-meta > span { display: inline-flex; align-items: center; gap: 5px; }
 .darklog-description { padding: 10px 0; overflow-wrap: anywhere; }
 .darklog-context { padding: 10px 0; border-top: 1px solid #edf0f5; }
-.darklog-context summary { cursor: pointer; color: #7f6481; }
+.darklog-context summary { cursor: pointer; color: #555555; }
 .darklog-context section, .darklog-context h3 { margin: 10px 0; }
 .darklog-context p { margin: 5px 0; }
 .darklog-tabs { display: flex; gap: 5px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1px solid #eceef4; margin-bottom: 12px; }
@@ -85,7 +88,7 @@
 .darklog-timeline-event.is-comment::before { display: none; }
 .darklog-timeline-event.is-comment .comment-author > .comment-avatar { position: absolute; left: -32px; top: 9px; }
 .darklog-timeline-event.is-comment > header { min-height: 28px; }
-.darklog-timeline-event.is-focused { outline: 1px solid #a387a2; background: #f7eef8; }
+.darklog-timeline-event.is-focused { outline: 1px solid #999999; background: #f0f0f0; }
 .darklog-timeline-event > footer { display: flex; gap: 6px; margin-top: 6px; }
 .darklog-ui .markdown-renderer p { margin: 7px 0; }
 .darklog-comment-form { display: grid; gap: 7px; margin-bottom: 12px; }

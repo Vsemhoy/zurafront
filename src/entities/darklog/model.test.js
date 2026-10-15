@@ -1,6 +1,27 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { calendarWeeks, darklogHref, dayKey, isoInput, localInput, markersOnSegment, periodSegment } from './model.js';
+import { calendarWeeks, darklogHref, darklogIdentity, dayKey, isoInput, localInput, markersOnSegment, periodSegment } from './model.js';
+
+test('record identity stays the same across title, status and severity changes', () => {
+  const initial = { id: 'record', number: 42, code: 'DRK-42', title: 'Network', status: 'new', severity: 'high' };
+  assert.deepEqual(darklogIdentity(initial), darklogIdentity({ ...initial, title: 'Renamed', status: 'closed', severity: 'low' }));
+  assert.deepEqual(darklogIdentity(initial), darklogIdentity({ code: 'DRK-42' }));
+});
+
+test('consecutive records receive different identity colors and valid pastel tints', () => {
+  const colors = Array.from({ length: 12 }, (_, index) => darklogIdentity({ number: index + 1 }));
+  assert.equal(new Set(colors.map((color) => color.color)).size, 12);
+  for (const color of colors) {
+    assert.match(color.color, /^#[0-9a-f]{6}$/);
+    assert.match(color.tint, /^#[0-9a-f]{6}$/);
+  }
+});
+
+test('records without a number use a deterministic identity, not random colors', () => {
+  assert.deepEqual(darklogIdentity({ id: 'record-a' }), darklogIdentity({ id: 'record-a', title: 'Renamed' }));
+  assert.notDeepEqual(darklogIdentity({ id: 'record-a' }), darklogIdentity({ id: 'record-b' }));
+  assert.ok(darklogIdentity({}));
+});
 
 test('month includes complete Monday-to-Sunday weeks, including leap day', () => {
   const weeks = calendarWeeks('2024-02');

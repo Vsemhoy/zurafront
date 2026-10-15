@@ -3,10 +3,27 @@ export const kinds = { incident: 'Поломка / инцидент', constraint
 export const origins = { unknown: 'Неизвестно', internal: 'Наши действия', external: 'Внешняя причина', systemic: 'Системная проблема' };
 export const severities = { low: 'Низкая', medium: 'Средняя', high: 'Высокая', critical: 'Критическая' };
 export const relations = { possible_cause: 'Возможная причина', confirmed_cause: 'Подтверждённая причина', affected: 'Затронуто', remediation: 'Устранение / обход', context: 'Контекст', duplicate: 'Повторение / дубликат' };
+export const darklogTheme = { color: '#343434', tint: '#dddddd' };
+const identityPalette = [
+  { color: '#375d86', tint: '#dfeaf6' }, { color: '#826020', tint: '#f5e9cc' },
+  { color: '#316e59', tint: '#dcefe5' }, { color: '#85537b', tint: '#efdfed' },
+  { color: '#93604a', tint: '#f5e3d9' }, { color: '#5f5c98', tint: '#e6e3f8' },
+  { color: '#33717c', tint: '#dceff2' }, { color: '#8d4963', tint: '#f5dfe8' },
+  { color: '#64712e', tint: '#eaf0d8' }, { color: '#765946', tint: '#ece2d8' },
+  { color: '#496b82', tint: '#deedf2' }, { color: '#725c82', tint: '#ebe1f1' },
+];
+
+export function darklogIdentity(entry) {
+  const number = Number(entry.number ?? entry.code?.match(/^DRK-(\d+)$/i)?.[1]);
+  if (Number.isSafeInteger(number) && number > 0) return identityPalette[(number - 1) % identityPalette.length];
+  let hash = 0;
+  for (const char of String(entry.id ?? entry.code ?? '')) hash = (Math.imul(hash, 31) + char.charCodeAt(0)) >>> 0;
+  return identityPalette[hash % identityPalette.length];
+}
 export const modules = {
   task: ['Tasker', '#1d4ed8'], event: ['Eventor', '#2d6cdf'], project: ['Projector', '#be185d'],
   book: ['Booker', '#d85a30'], book_page: ['Страница Booker', '#d85a30'], lore: ['Lore', '#4f46a5'],
-  fact: ['Factor', '#2b6cb0'], plan_item: ['Planner', '#0f766e'], darklog: ['Darklog', '#70556f'],
+  fact: ['Factor', '#2b6cb0'], plan_item: ['Planner', '#0f766e'], darklog: ['Darklog', darklogTheme.color],
   file: ['Filer', '#366a91'], comment: ['Комментарий', '#8992a2'],
 };
 export const actions = { 'darklog.created': 'Дарклог зарегистрирован', 'darklog.updated': 'Карточка изменена', 'darklog.linked': 'Связь добавлена', 'darklog.unlinked': 'Связь удалена', 'darklog.comment_deleted': 'Комментарий удалён', 'darklog.kpi_reviewed': 'Применимость KPI изменена', 'darklog.kpi_removed': 'Связь с KPI удалена' };

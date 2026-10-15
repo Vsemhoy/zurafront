@@ -1,8 +1,8 @@
 .task-darklogs { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e4e7ee; display: grid; gap: 7px; font-size: 12px; }
 .task-darklogs header { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
-.task-darklogs strong { display: inline-flex; gap: 6px; align-items: center; color: #70556f; font-weight: 600; }
-.task-darklogs a { text-decoration: none; color: #715b75; }
+.task-darklogs strong { display: inline-flex; gap: 6px; align-items: center; color: #343434; font-weight: 600; }
+.task-darklogs a { text-decoration: none; color: #343434; }
 .task-darklogs > a { display: flex; align-items: flex-start; gap: 8px; padding: 5px 0; }
-.task-darklogs code { color: #9c869f; white-space: nowrap; font-size: 11px; }
+.task-darklogs code { color: #777777; white-space: nowrap; font-size: 11px; }
 .task-darklogs small { display: block; color: #8a91a0; margin-top: 3px; }
 .task-darklogs p { color: #a55363; }

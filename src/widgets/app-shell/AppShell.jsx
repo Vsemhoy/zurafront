@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
 import { scopeApi } from '../../entities/scope/api';
 import { contractorApi } from '../../entities/contractor/api';
+import { darklogTheme } from '../../entities/darklog/model';
 import { Brand } from '../../shared/ui/Brand';
 import { LanguageMenu } from '../../shared/ui/LanguageMenu';
 import './ModuleRail.css';
@@ -21,7 +22,7 @@ const modules = [
     ['/reports', 'Reporter', IconBriefcase2, false, '#0369a1', '#e0f2fe'],
     ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
     ['/factor', 'Factor', IconBuildingFactory2, false, '#2b6cb0', '#ebf4ff'],
-    ['/darklog', 'Darklog', IconMoon, false, '#70556f', '#eee4ed'],
+    ['/darklog', 'Darklog', IconMoon, false, darklogTheme.color, darklogTheme.tint],
     ['/lore', 'Lore', IconBrain, false, '#4f46a5', '#eeecff'],
     ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
     ['/files', 'Filer', IconFiles, false, '#366a91', '#e2eef7'],
