@@ -5,7 +5,7 @@ export const editorPath = `/vendor/drawio-${release.version}/index.html`;
 export const editorMarker = `/vendor/drawio-${release.version}/zuratax-release.json`;
 export function editorUrl(origin, language = 'ru') {
   const url = new URL(editorPath, origin);
-  url.search = new URLSearchParams({ embed: '1', proto: 'json', spin: '1', offline: '1', lockdown: '1', local: '1', plugins: '0', ui: 'kennedy', dark: '0', lang: ['ru', 'en', 'zh'].includes(language) ? language : 'ru', saveAndExit: '1', noExitBtn: '0' });
+  url.search = new URLSearchParams({ embed: '1', proto: 'json', configure: '1', spin: '1', offline: '1', lockdown: '1', local: '1', plugins: '0', ui: 'kennedy', dark: '0', lang: ['ru', 'en', 'zh'].includes(language) ? language : 'ru', saveAndExit: '0', noExitBtn: '1', keepmodified: '1' });
   return url.href;
 }
 export function editorMessage(event, frameWindow, origin) {

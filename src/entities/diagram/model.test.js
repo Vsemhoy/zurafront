@@ -8,7 +8,11 @@ test('editor is pinned, local and offline, with no cloud fallback', () => {
   assert.equal(url.pathname, '/vendor/drawio-32.4.1/index.html');
   assert.equal(url.searchParams.get('lockdown'), '1');
   assert.equal(url.searchParams.get('proto'), 'json');
+  assert.equal(url.searchParams.get('configure'), '1');
   assert.equal(url.searchParams.get('lang'), 'zh');
+  assert.equal(url.searchParams.get('saveAndExit'), '0');
+  assert.equal(url.searchParams.get('noExitBtn'), '1');
+  assert.equal(url.searchParams.get('keepmodified'), '1');
   assert.equal(new URL(editorUrl('http://localhost:5173', 'invalid')).searchParams.get('lang'), 'ru');
 });
 test('messages must come from the exact iframe and origin', () => {

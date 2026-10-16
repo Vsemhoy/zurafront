@@ -1,0 +1,28 @@
+[Unit]
+Description=Zuratax private Office preview worker
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/var/www/zuratax/current/backend
+Environment=LARAVEL_STORAGE_PATH=/var/www/zuratax/shared/storage
+Environment=REPORTS_ROOT=/var/www/zuratax/shared/reports
+ExecStart=/usr/bin/php8.4 artisan queue:work database --queue=filer-preview --sleep=2 --tries=1 --timeout=65 --memory=256
+Restart=always
+RestartSec=5
+TimeoutStopSec=80
+KillMode=control-group
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/www/zuratax/shared/storage /var/www/zuratax/current/backend/bootstrap/cache /var/www/zuratax/shared/filer
+MemoryMax=1536M
+CPUQuota=100%
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target

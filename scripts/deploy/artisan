@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+# Production entrypoint for maintenance, migrations and diagnostics.
+export LARAVEL_STORAGE_PATH=/var/www/zuratax/shared/storage
+export REPORTS_ROOT=/var/www/zuratax/shared/reports
+cd /var/www/zuratax/current/backend
+exec /usr/bin/php8.4 artisan "$@"
