@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "avatars:generate": "node scripts/generate-avatars.mjs",
-    "predev": "npm run avatars:generate",
-    "prebuild": "npm run avatars:generate",
+    "drawio:install": "node scripts/install-drawio.mjs",
+    "predev": "npm run avatars:generate && npm run drawio:install",
+    "prebuild": "npm run avatars:generate && npm run drawio:install",
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
