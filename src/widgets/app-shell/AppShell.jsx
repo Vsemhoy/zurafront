@@ -1,4 +1,5 @@
 import { AvatarImage } from '../../shared/ui/AvatarImage';
+import { IconBox } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconMoon, IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconLogout, IconPlus, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
@@ -26,6 +27,7 @@ const modules = [
     ['/lore', 'Lore', IconBrain, false, '#4f46a5', '#eeecff'],
     ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
     ['/content', 'Контент', IconFiles, false, '#366a91', '#e2eef7'],
+    ['/equip', 'Equip · Экипа', IconBox, false, '#087f72', '#e1f3ee'],
     ['/contractors', 'Пользователи', IconUsers, false, '#7c3aed', '#ede9fe'],
     ['/departments', 'Отделы', IconBuildingFactory2, false, '#0369a1', '#e0f2fe'],
 ];

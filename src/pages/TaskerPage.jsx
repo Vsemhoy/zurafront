@@ -431,12 +431,13 @@ function ProjectEditorDialog({ scopeId, project, onClose }) {
 
 function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments, showDepartment }) {
   const blocked = task.status === "blocked";
+  const urgent = task.status !== "done" && [4, 5].includes(Number(task.priority));
   return (
     <article
       role="button"
       tabIndex={0}
       draggable={!blocked}
-      className={`task-card ${blocked ? "task-card--blocked" : ""}`}
+      className={`task-card ${blocked ? "task-card--blocked" : ""} ${urgent ? `task-card--urgent task-card--priority-${task.priority}` : ""}`}
       style={{ "--task-project-color": task.project?.color ?? "#2668D8" }}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";
@@ -458,7 +459,7 @@ function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments, sho
         }
       }}
     >
-      <header style={showDepartment && task.department ? { background: departmentColor(task.department), outline: `7px solid ${departmentColor(task.department)}` } : undefined} title={showDepartment && task.department ? `Отдел ${task.department.name}` : undefined}>
+      <header style={showDepartment && task.department ? urgent ? { borderBottom: `2px solid ${departmentColor(task.department)}` } : { background: departmentColor(task.department), outline: `7px solid ${departmentColor(task.department)}` } : undefined} title={showDepartment && task.department ? `Отдел ${task.department.name}` : undefined}>
         <code>{taskReference(task)}</code>
         <div className="task-card-actions">
           {task.assignee && (

@@ -14,7 +14,7 @@ const markdownComponents = {
     table: ({ children }) => <div className="markdown-table-scroll"><table>{children}</table></div>,
 };
 
-export function FilePreview({ scopeId, file, onClose, onDownload }) {
+export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog = false }) {
     const { kind, mime } = filePreviewFormat(file);
     const [content, setContent] = useState({});
     const [attempt, setAttempt] = useState(0);
@@ -27,7 +27,8 @@ export function FilePreview({ scopeId, file, onClose, onDownload }) {
         const previous = document.activeElement;
         const overflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
-        dialog.current?.focus();
+        const element = dialog.current;
+        if (nativeDialog) element.showModal(); else element?.focus();
         const keyboard = (event) => {
             if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close.current(); }
             if (event.key === 'Tab') {
@@ -38,8 +39,8 @@ export function FilePreview({ scopeId, file, onClose, onDownload }) {
             }
         };
         document.addEventListener('keydown', keyboard, true);
-        return () => { document.removeEventListener('keydown', keyboard, true); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
-    }, []);
+        return () => { document.removeEventListener('keydown', keyboard, true); if (nativeDialog) element.close(); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
+    }, [nativeDialog]);
     useEffect(() => {
         if (kind === 'unsupported') return;
         const controller = new AbortController();
@@ -74,7 +75,8 @@ export function FilePreview({ scopeId, file, onClose, onDownload }) {
         (kind === 'office' ? poll(true) : load(`${base}/download`)).catch(fail);
         return () => { active = false; controller.abort(); clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl); };
     }, [scopeId, file.id, kind, mime, attempt]);
-    return createPortal(<section className="file-viewer" ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Просмотр: ${file.name}`} onClick={(event) => event.stopPropagation()}>
+    const Viewer = nativeDialog ? 'dialog' : 'section';
+    return createPortal(<Viewer className={`file-viewer${nativeDialog ? ' file-viewer--native' : ''}`} ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Просмотр: ${file.name}`} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => event.stopPropagation()}>
         <header className="file-viewer-header"><div className="file-viewer-title"><strong>{file.name}</strong><small>Только просмотр{kind === 'office' ? ' · PDF-копия · листы Excel без разбиения по ширине' : ''}</small></div>
             {kind === 'markdown' && <button type="button" aria-pressed={source} onClick={() => setSource(!source)}>{source ? 'Markdown' : 'Исходник'}</button>}
             {kind === 'image' && <><button type="button" aria-label="Уменьшить" onClick={() => setZoom(Math.max(.25, zoom - .25))}>−</button><button type="button" title="Вписать в экран" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</button><button type="button" aria-label="Увеличить" onClick={() => setZoom(Math.min(4, zoom + .25))}>+</button></>}
@@ -88,5 +90,5 @@ export function FilePreview({ scopeId, file, onClose, onDownload }) {
                             : content.text !== undefined ? <div className="file-viewer-text" tabIndex={0}>{content.truncated && <p className="file-viewer-note">Показаны первые 200 КБ. Полный файл доступен для скачивания.</p>}{kind === 'markdown' && !source ? <article className="markdown-renderer"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={markdownComponents}>{content.text}</ReactMarkdown></article> : <pre><code>{content.text}</code></pre>}</div>
                                 : <p className="file-viewer-message" role="status">{kind === 'office' ? 'Готовлю PDF-превью документа…' : 'Загружаю файл…'}</p>}
         </div>
-    </section>, document.body);
+    </Viewer>, document.body);
 }

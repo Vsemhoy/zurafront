@@ -21,7 +21,7 @@ export function FileImage({ scopeId, fileId, alt = '', className = '', style }) 
     return src ? <img className={className} src={src} alt={alt} style={style}/> : <span className={className} title={failed ? 'Фото недоступно' : 'Загрузка фото'}>{failed ? 'Фото недоступно' : '…'}</span>;
 }
 
-export function PhotoPanel({ scopeId, type, id, selectedId, onSelect, featuredId, onChanged, feature = false, readOnly = false }) {
+export function PhotoPanel({ scopeId, type, id, selectedId, onSelect, featuredId, onChanged, feature = false, readOnly = false, nativePreview = false }) {
     const client = useQueryClient();
     const [page, setPage] = useState(1);
     const [busy, setBusy] = useState(false);
@@ -73,6 +73,6 @@ export function PhotoPanel({ scopeId, type, id, selectedId, onSelect, featuredId
         </article>)}</div>
         {!query.isPending && !query.data?.data.length && <p>Фотографий пока нет.</p>}
         {(page > 1 || query.data?.meta.has_more) && <footer><button disabled={page === 1} onClick={() => setPage(page - 1)}>Назад</button><span>{page}</span><button disabled={!query.data?.meta.has_more} onClick={() => setPage(page + 1)}>Далее</button></footer>}
-        {preview && <FilePreview scopeId={scopeId} file={preview} onClose={() => setPreview(null)} onDownload={async () => { const blob = await apiRequest(`/scopes/${scopeId}/files/${preview.id}/download`, { responseType: 'blob' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = preview.name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}/>}
+        {preview && <FilePreview nativeDialog={nativePreview} scopeId={scopeId} file={preview} onClose={() => setPreview(null)} onDownload={async () => { const blob = await apiRequest(`/scopes/${scopeId}/files/${preview.id}/download`, { responseType: 'blob' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = preview.name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }}/>}
     </section>;
 }

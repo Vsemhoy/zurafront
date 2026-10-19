@@ -62,3 +62,16 @@
 .checklist-editor{width:min(640px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;gap:16px;border-radius:10px;padding:22px}.checklist-editor>header{align-items:flex-start}.checklist-editor>header>div{display:grid;gap:3px}.checklist-editor>header strong{font-size:16px}.checklist-editor>header small{color:#7a8697;font-size:11px;font-weight:400}.checklist-editor>header>button{width:30px;height:30px;display:grid;place-items:center;border-radius:5px;color:#647186}.checklist-editor>header>button:hover{background:#edf2f8}.checklist-editor>label,.checklist-editor-fields>label{display:grid;gap:6px;color:#4f5d70;font-size:12px;font-weight:600}.checklist-editor textarea{width:100%;min-height:112px;resize:vertical;border:1px solid #bdc9d8;border-radius:6px;background:#fff;padding:10px 11px;font:14px/1.45 inherit;outline:0}.checklist-editor textarea:focus,.checklist-editor input:focus,.checklist-editor select:focus{border-color:#4d8dd3;box-shadow:0 0 0 3px #2d74c218}.checklist-editor-fields{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(180px,.75fr);gap:12px}.checklist-editor-fields input,.checklist-editor-fields select{min-width:0;height:38px;border-radius:6px}.checklist-editor>footer{flex-wrap:wrap;gap:8px;margin-top:2px;padding-top:14px}.checklist-editor>footer button{min-height:34px;border-radius:5px;padding:7px 12px}@media(max-width:600px){.checklist-editor{width:calc(100vw - 20px);max-height:calc(100vh - 20px);padding:16px}.checklist-editor-fields{grid-template-columns:1fr}.checklist-editor>footer span{display:none}.checklist-editor>footer .checklist-delete{margin-right:auto}}
 
 @media (prefers-reduced-motion: reduce) { .task-card { transition: none; } }
+
+.task-card.task-card--priority-4 { background: #075aaf; }
+.task-card.task-card--priority-5 { background: #b42318; }
+.task-card.task-card--urgent { color: #fff; }
+.task-card--urgent header code,
+.task-card--urgent footer,
+.task-card--urgent .task-priority { color: #e2e8f0; }
+.task-card--urgent .task-card-edit,
+.task-card--urgent .task-card-comments,
+.task-card--urgent .task-card-comments svg { color: #e2e8f0; opacity: 1; }
+.task-card--urgent .task-card-edit:hover,
+.task-card--urgent .task-card-comments:hover { color: #fff; background: #ffffff24; }
+.task-card--urgent .task-card-comments:hover svg { color: #fff; }

@@ -71,13 +71,13 @@ export function BookReference({ payload, editing = false }) {
     </div>;
 }
 
-function ReferenceDialog({ title, onClose, children }) {
+export function ReferenceDialog({ title, onClose, children }) {
     const ref = useRef(null);
     useEffect(() => { const dialog = ref.current; dialog.showModal(); return () => dialog.close(); }, []);
     return createPortal(<dialog ref={ref} className="book-reference-dialog" onCancel={onClose} aria-label={title} onClick={(e) => { e.stopPropagation(); if (e.target === e.currentTarget) onClose(); }} onDoubleClick={(e) => e.stopPropagation()}><header><strong>{title}</strong><button type="button" aria-label="Закрыть просмотр" onClick={onClose}>✕</button></header><div className="book-reference-dialog-body">{children}</div></dialog>, document.body);
 }
 
-function DiagramReadOnly({ item }) {
+export function DiagramReadOnly({ item }) {
     const [zoom, setZoom] = useState(1);
     return <><div className="book-reference-zoom"><button type="button" aria-label="Уменьшить" onClick={() => setZoom(Math.max(.25, zoom - .25))}>−</button><button type="button" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</button><button type="button" aria-label="Увеличить" onClick={() => setZoom(Math.min(4, zoom + .25))}>+</button><button type="button" onClick={() => downloadDiagramXml(item.xml, item.title)}>Скачать draw.io</button></div>{item.preview_svg ? <div className="book-reference-diagram"><img src={svgImageSrc(item.preview_svg)} alt={item.title} style={{ width: `${zoom * 100}%` }}/></div> : <p>У диаграммы нет превью. Исходник можно скачать в формате draw.io.</p>}</>;
 }

@@ -7,11 +7,11 @@ import { useWorkspace } from '../app/workspace';
 import { FilePreview } from '../shared/ui/FilePreview';
 import './FilerPage.css';
 
-const fileCategories = { documentation: 'Документация', general: 'Общие файлы', task: 'Вложения задач', event: 'Вложения событий', book: 'Вложения Букера', project: 'Вложения проектов', user: 'Вложения контакторов', darklog: 'Вложения Дарклога' };
-const subjectTypes = { task: 'Задача', event: 'Событие', book: 'Книга', project: 'Проект', user: 'Контактор', darklog: 'Дарклог' };
+const fileCategories = { documentation: 'Документация', general: 'Общие файлы', task: 'Вложения задач', event: 'Вложения событий', book: 'Вложения Букера', project: 'Вложения проектов', user: 'Вложения контакторов', darklog: 'Вложения Дарклога', thing: 'Оборудование Equip' };
+const subjectTypes = { task: 'Задача', event: 'Событие', book: 'Книга', project: 'Проект', user: 'Контактор', darklog: 'Дарклог', thing: 'Оборудование Equip' };
 const sizeLabel = (value) => value >= 1048576 ? `${(value / 1048576).toFixed(1)} МБ` : `${Math.ceil(value / 1024)} КБ`;
 const endpoint = (scopeId) => `/scopes/${scopeId}/files`;
-const attachmentHref = (attachment, scopeId) => ({ task: `/tasks/${attachment.id}/edit`, book: `/books/${attachment.id}`, project: '/projects', event: '/events', user: '/contractors', darklog: `/darklog/${scopeId}/${attachment.id}` })[attachment.type];
+const attachmentHref = (attachment, scopeId) => ({ task: `/tasks/${attachment.id}/edit`, book: `/books/${attachment.id}`, project: '/projects', event: '/events', user: '/contractors', darklog: `/darklog/${scopeId}/${attachment.id}`, thing: `/equip?item=${attachment.id}` })[attachment.type];
 
 export function FilerPage() {
     const { activeScope } = useWorkspace();
@@ -25,7 +25,7 @@ export function FilerPage() {
     </nav><FilePanel key={`${activeScope.id}:${category}:${type}:${id}`} scopeId={activeScope.id} category={category} subjectType={type} subjectId={id}/></div></main>;
 }
 
-export function FilePanel({ scopeId, category = '', subjectType = '', subjectId = '', readOnly = false }) {
+export function FilePanel({ scopeId, category = '', subjectType = '', subjectId = '', readOnly = false, nativePreview = false }) {
     const queryClient = useQueryClient();
     const [search, setSearch] = useState('');
     const [query, setQuery] = useState('');
@@ -74,7 +74,7 @@ export function FilePanel({ scopeId, category = '', subjectType = '', subjectId 
         <footer className="filer-pagination"><button disabled={page === 1 || isPending} onClick={() => setPage(page - 1)}>Назад</button><span>Страница {page}</span><button disabled={!data?.meta.has_more || isPending} onClick={() => setPage(page + 1)}>Далее</button></footer>
         {uploading && <FileUploadModal scopeId={scopeId} category={category || subjectType || 'general'} subjectType={subjectType} subjectId={subjectId} onClose={() => setUploading(false)} onUploaded={refresh}/>}
         {linking && <FileLinkModal scopeId={scopeId} file={linking} onClose={() => setLinking(null)} onSaved={refresh}/>}
-        {preview && <FilePreview key={preview.id} scopeId={scopeId} file={preview} onClose={() => setPreview(null)} onDownload={() => download(preview)}/>}
+        {preview && <FilePreview nativeDialog={nativePreview} key={preview.id} scopeId={scopeId} file={preview} onClose={() => setPreview(null)} onDownload={() => download(preview)}/>}
     </section>;
 }
 

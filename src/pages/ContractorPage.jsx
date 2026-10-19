@@ -41,12 +41,21 @@ const abilityLabels = {
   'book.delete': 'Удалять книги',
   'report.view': 'Смотреть отчёты',
   'report.write': 'Писать отчёты',
+  'equip.view': 'Смотреть Equip',
+  'equip.create': 'Регистрировать оборудование',
+  'equip.update': 'Редактировать карточки Equip и вложения',
+  'equip.assign': 'Выдавать, передавать и возвращать оборудование с составом',
+  'equip.compose': 'Управлять контейнерами и комплектацией Equip',
+  'equip.state': 'Менять состояние оборудования (с правом редактирования)',
+  'equip.ownership': 'Менять собственника (с правом редактирования)',
+  'equip.types': 'Создавать типы оборудования',
+  'equip.access_all': 'Доступ Equip ко всем отделам, включая оборудование без отдела',
 };
 const rolePresets = {
   owner: Object.keys(abilityLabels),
   admin: Object.keys(abilityLabels),
-  member: ['agent.manage_own', 'task.view', 'task.create', 'task.update', 'task.assign', 'report.view', 'report.write'],
-  observer: ['task.view', 'report.view'],
+  member: ['equip.view', 'agent.manage_own', 'task.view', 'task.create', 'task.update', 'task.assign', 'report.view', 'report.write'],
+  observer: ['equip.view', 'task.view', 'report.view'],
 };
 
 function permissionsForRole(role) {

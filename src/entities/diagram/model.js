@@ -34,4 +34,4 @@ export function downloadDiagramXml(xml, title) {
   link.href = url; link.download = `${filename || 'diagram'}.drawio`; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export const diagramTargetTypes = { task: 'Задача', project: 'Проект', book: 'Книга', book_page: 'Страница книги', event: 'Событие', lore: 'Лор', darklog: 'Дарклог', fact: 'Факт', plan_item: 'План', file: 'Файл', user: 'Контактор' };
+export const diagramTargetTypes = { task: 'Задача', project: 'Проект', book: 'Книга', book_page: 'Страница книги', event: 'Событие', lore: 'Лор', darklog: 'Дарклог', fact: 'Факт', plan_item: 'План', file: 'Файл', user: 'Контактор', thing: 'Оборудование' };
