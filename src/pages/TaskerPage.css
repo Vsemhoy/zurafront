@@ -65,6 +65,8 @@
 
 .task-card.task-card--priority-4 { background: #075aaf; }
 .task-card.task-card--priority-5 { background: #b42318; }
+.task-card--completed-priority-4 { outline: 1px solid #075aaf; outline-offset: -1px; }
+.task-card--completed-priority-5 { outline: 1px solid #b42318; outline-offset: -1px; }
 .task-card.task-card--urgent { color: #fff; }
 .task-card--urgent header code,
 .task-card--urgent footer,

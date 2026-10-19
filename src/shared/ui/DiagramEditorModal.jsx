@@ -7,9 +7,10 @@ import { createDiagramEditorSession } from '../../entities/diagram/editorSession
 import { downloadDiagramXml, editorMarker, editorMessage, editorUrl } from '../../entities/diagram/model';
 import './DiagramEditorModal.css';
 
-export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose }) {
+export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose, nativeDialog = false }) {
   const { i18n } = useTranslation();
   const frame = useRef(null);
+  const modal = useRef(null);
   const session = useRef(null);
   const documentSnapshot = useRef(diagram);
   const diagramId = diagram.id;
@@ -21,6 +22,8 @@ export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose }) {
   const url = editorUrl(window.location.origin, i18n.resolvedLanguage?.split('-')[0]);
 
   useEffect(() => {
+    const dialog = modal.current;
+    if (nativeDialog) dialog.showModal();
     const origin = window.location.origin;
     let disposed = false;
     let timeout;
@@ -69,15 +72,16 @@ export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose }) {
       if (!disposed) setView((value) => ({ ...value, phase: 'error', error: 'Локальный draw.io ещё не установлен. Выполните npm run drawio:install на машине сборки и пересоберите фронт. Внешний сайт не используется.' }));
     });
     return () => {
-      disposed = true; controller.abort(); clearTimeout(timeout); editor.dispose();
+      disposed = true; controller.abort(); clearTimeout(timeout); editor.dispose(); if (nativeDialog) dialog.close();
       window.removeEventListener('message', receive); window.removeEventListener('beforeunload', beforeUnload); window.removeEventListener('keydown', keyDown);
       document.body.style.overflow = previousOverflow;
       if (appRoot) appRoot.inert = previousInert;
       previousFocus?.focus();
     };
-  }, [scopeId, diagramId]);
+  }, [scopeId, diagramId, nativeDialog]);
 
-  return createPortal(<section className="diagram-editor-modal" role="dialog" aria-modal="true" aria-label={`Редактор схемы: ${diagram.title}`} aria-busy={view.busy}>
+  const Wrapper = nativeDialog ? 'dialog' : 'section';
+  return createPortal(<Wrapper ref={modal} className={`diagram-editor-modal${nativeDialog ? ' diagram-editor-modal--native' : ''}`} role="dialog" aria-modal="true" aria-label={`Редактор схемы: ${diagram.title}`} aria-busy={view.busy} onCancel={(event) => { event.preventDefault(); event.stopPropagation(); session.current?.close(); }}>
     <header><strong>{diagram.title}</strong><span className={`diagram-save-status diagram-save-status--${view.phase}`} role="status" aria-live="polite">
       {view.busy ? <IconLoader2 size={15} className="diagram-saving-spin"/> : view.phase === 'saved' ? <IconCheck key={view.savedCount} size={16} className="diagram-saved-check"/> : view.dirty ? <i aria-hidden="true">●</i> : null}{view.status}
     </span>
@@ -88,5 +92,5 @@ export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose }) {
     {view.error && <div className="diagram-error" role="alert">{view.error}</div>}
     {installed && <iframe ref={frame} title="Локальный редактор draw.io" inert={!view.ready} src={url} sandbox="allow-scripts allow-same-origin allow-downloads" referrerPolicy="no-referrer"/>}
     {!installed && !view.error && <p>Проверяю локальный редактор…</p>}
-  </section>, document.body);
+  </Wrapper>, document.body);
 }

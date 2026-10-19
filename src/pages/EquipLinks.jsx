@@ -3,10 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { equipApi } from '../entities/equip/api';
 import { taskReference } from '../entities/task/model';
-import { diagramApi } from '../entities/diagram/api';
-import { diagramHref } from '../entities/diagram/model';
 import { DiagramAttachmentsPanel } from '../shared/ui/DiagramAttachmentsPanel';
-import { DiagramReadOnly, ReferenceDialog } from '../shared/ui/BookReference';
+import { ContentNodeBrowser } from '../shared/ui/ContentNodeBrowser';
 
 const statuses = { scheduled: 'Запланирована', todo: 'К выполнению', in_progress: 'В работе', blocked: 'Заблокирована', review: 'На проверке', done: 'Выполнена', cancelled: 'Отменена' };
 
@@ -55,8 +53,5 @@ function LinkPages({ page, result, onChange }) {
 }
 
 function DiagramPreview({ scopeId, item, onClose }) {
-  const data = useQuery({ queryKey: ['diagram', scopeId, item.id], queryFn: ({ signal }) => diagramApi.get(scopeId, item.id, signal) });
-  return <ReferenceDialog title={item.title} onClose={onClose}>
-    {data.isPending ? <p>Загружаю диаграмму…</p> : data.error ? <p role="alert">{data.error.message}</p> : <><p><Link to={diagramHref(scopeId, item.id)} target="_blank" rel="noopener noreferrer">Открыть диаграмму в новой вкладке</Link> · Версия {data.data.revision}</p><DiagramReadOnly item={data.data}/></>}
-  </ReferenceDialog>;
+  return <ContentNodeBrowser scopeId={scopeId} initialNode={{ type: 'diagram', id: item.id, title: item.title }} onClose={onClose}/>;
 }

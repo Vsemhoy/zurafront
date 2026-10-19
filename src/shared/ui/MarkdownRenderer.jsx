@@ -6,9 +6,9 @@ const components = {
     table: ({ children }) => <div className="markdown-table-scroll"><table>{children}</table></div>,
 };
 
-export default function MarkdownRenderer({ children }) {
+export default function MarkdownRenderer({ children, onLink }) {
     const markdown = typeof children === 'string' ? children : String(children ?? '');
     if (!markdown) return <p className="markdown-renderer-empty">Пустой текстовый блок</p>;
 
-    return <div className="markdown-renderer"><ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>{markdown}</ReactMarkdown></div>;
+    return <div className="markdown-renderer"><ReactMarkdown remarkPlugins={[remarkGfm]} components={{ ...components, ...(onLink ? { a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" onClick={(event) => { if (onLink(href)) event.preventDefault(); }}>{children}</a> } : {}) }}>{markdown}</ReactMarkdown></div>;
 }

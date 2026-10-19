@@ -7,6 +7,7 @@ import { useWorkspace } from '../app/workspace';
 import { diagramApi } from '../entities/diagram/api';
 import { diagramHref, diagramTargetTypes, downloadDiagramXml, svgImageSrc } from '../entities/diagram/model';
 import { DiagramEditorModal } from '../shared/ui/DiagramEditorModal';
+import { ContentNodeBrowser } from '../shared/ui/ContentNodeBrowser';
 
 export function DiagramsPage() {
   const { activeScope } = useWorkspace();
@@ -60,6 +61,7 @@ function DiagramPage({ scopeId, id }) {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState(params.get('edit') === '1');
+  const [viewing, setViewing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -82,13 +84,14 @@ function DiagramPage({ scopeId, id }) {
   const duplicate = (title) => perform(async () => { const copy = await diagramApi.duplicate(scopeId, id, title); await client.invalidateQueries({ queryKey: ['diagrams', scopeId] }); setDuplicating(false); navigate(diagramHref(scopeId, copy.id)); });
   return <main className="diagrams-page"><header className="diagram-heading"><Link to="/content/diagrams" aria-label="Все схемы"><IconArrowLeft size={20}/></Link><div><h1>{item.title}</h1><small>{item.creator?.name} · версия {item.revision}</small></div><div className="diagram-actions">
     <button onClick={copyLink}><IconLink size={15}/>{copied ? 'Скопировано' : 'Ссылка'}</button><button onClick={() => downloadDiagramXml(visible?.xml || item.xml, item.title)}><IconDownload size={15}/>XML</button>
+    <button onClick={() => setViewing(true)} disabled={Boolean(version && selectedVersion.isPending)}>Просмотр на весь экран</button>
     {options.data?.can_create && <button disabled={busy} onClick={() => { setError(''); setDuplicating(true); }}><IconCopy size={15}/>Дублировать</button>}
     {item.can_manage && !version && <button className="diagram-primary" onClick={() => setEditing(true)}><IconEdit size={15}/>Редактировать</button>}
   </div></header>{error && <p className="diagram-error" role="alert">{error}</p>}
     {version && <div className="diagram-version-banner">Просмотр сохранённой версии {visible?.number} · без редактирования <button onClick={() => setVersion(null)}>К актуальной схеме</button></div>}
-    <div className="diagram-layout"><div className="diagram-canvas" onDoubleClick={() => { if (item.can_manage && !version) setEditing(true); }}>
+    <div className="diagram-layout"><div className="diagram-canvas" onDoubleClick={() => setViewing(true)}>
       {selectedVersion.isFetching && version ? <p>Загружаю версию…</p> : visible?.preview_svg ? <img src={svgImageSrc(visible.preview_svg)} alt={item.title} draggable={false}/> : <div className="diagram-empty"><IconSchema size={46}/><p>{version ? 'У этой версии нет превью.' : 'Пока нет превью схемы.'}</p>{item.can_manage && !version && <button onClick={() => setEditing(true)}>Открыть редактор</button>}</div>}
-      {!version && item.can_manage && <small className="diagram-canvas-hint">Двойной клик — открыть редактор</small>}
+      <small className="diagram-canvas-hint">Двойной клик — просмотр, масштаб и навигация</small>
       {selectedVersion.error && version && <p className="diagram-error">{selectedVersion.error.message}</p>}
     </div><aside className="diagram-properties">
       <DiagramSettings key={`${item.id}:${item.revision}`} item={item} projects={options.data?.projects || []} onSave={(data) => perform(async () => saved(await diagramApi.save(scopeId, id, { ...data, revision: item.revision })))} busy={busy} readOnly={!item.can_manage || editing}/>
@@ -97,6 +100,7 @@ function DiagramPage({ scopeId, id }) {
       {item.can_delete && <button className="diagram-delete" disabled={busy} onClick={() => { if (window.confirm('Удалить схему из библиотеки и всех мест прикрепления? История останется в базе.')) void perform(async () => { await diagramApi.remove(scopeId, id); await client.invalidateQueries({ queryKey: ['diagrams', scopeId] }); navigate('/content/diagrams'); }); }}><IconTrash size={14}/>Удалить схему</button>}
     </aside></div>
     {editing && item.can_manage && <DiagramEditorModal scopeId={scopeId} diagram={item} onSaved={saved} onClose={() => { setEditing(false); if (params.has('edit')) setParams({}, { replace: true }); }}/>} 
+    {viewing && <ContentNodeBrowser scopeId={scopeId} initialNode={{ type: 'diagram', id, title: item.title, versionId: version || undefined }} onClose={() => { setViewing(false); void client.invalidateQueries({ queryKey }); }}/>}
     {linking && <DiagramLinkModal scopeId={scopeId} diagramId={id} onClose={() => setLinking(false)} onSaved={saved}/>}
     {duplicating && <DiagramDuplicateModal title={item.title} busy={busy} error={error} onClose={() => setDuplicating(false)} onConfirm={duplicate}/>}
   </main>;

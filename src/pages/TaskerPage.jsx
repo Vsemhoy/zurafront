@@ -431,13 +431,15 @@ function ProjectEditorDialog({ scopeId, project, onClose }) {
 
 function TaskCard({ task, status, index, onOpen, onEdit, onMove, onComments, showDepartment }) {
   const blocked = task.status === "blocked";
-  const urgent = task.status !== "done" && [4, 5].includes(Number(task.priority));
+  const importantPriority = [4, 5].includes(Number(task.priority));
+  const urgent = task.status !== "done" && importantPriority;
+  const completedImportant = task.status === "done" && importantPriority;
   return (
     <article
       role="button"
       tabIndex={0}
       draggable={!blocked}
-      className={`task-card ${blocked ? "task-card--blocked" : ""} ${urgent ? `task-card--urgent task-card--priority-${task.priority}` : ""}`}
+      className={`task-card ${blocked ? "task-card--blocked" : ""} ${urgent ? `task-card--urgent task-card--priority-${task.priority}` : ""} ${completedImportant ? `task-card--completed-priority-${task.priority}` : ""}`}
       style={{ "--task-project-color": task.project?.color ?? "#2668D8" }}
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move";

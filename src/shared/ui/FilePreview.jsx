@@ -14,7 +14,7 @@ const markdownComponents = {
     table: ({ children }) => <div className="markdown-table-scroll"><table>{children}</table></div>,
 };
 
-export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog = false }) {
+export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog = false, embedded = false, onLink }) {
     const { kind, mime } = filePreviewFormat(file);
     const [content, setContent] = useState({});
     const [attempt, setAttempt] = useState(0);
@@ -24,6 +24,7 @@ export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog =
     const close = useRef(onClose);
     useEffect(() => { close.current = onClose; }, [onClose]);
     useEffect(() => {
+        if (embedded) return;
         const previous = document.activeElement;
         const overflow = document.body.style.overflow;
         document.body.style.overflow = 'hidden';
@@ -40,7 +41,7 @@ export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog =
         };
         document.addEventListener('keydown', keyboard, true);
         return () => { document.removeEventListener('keydown', keyboard, true); if (nativeDialog) element.close(); document.body.style.overflow = overflow; if (previous?.isConnected) previous.focus(); };
-    }, [nativeDialog]);
+    }, [nativeDialog, embedded]);
     useEffect(() => {
         if (kind === 'unsupported') return;
         const controller = new AbortController();
@@ -76,19 +77,20 @@ export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog =
         return () => { active = false; controller.abort(); clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl); };
     }, [scopeId, file.id, kind, mime, attempt]);
     const Viewer = nativeDialog ? 'dialog' : 'section';
-    return createPortal(<Viewer className={`file-viewer${nativeDialog ? ' file-viewer--native' : ''}`} ref={dialog} tabIndex={-1} role="dialog" aria-modal="true" aria-label={`Просмотр: ${file.name}`} onCancel={(event) => { event.preventDefault(); onClose(); }} onClick={(event) => event.stopPropagation()}>
+    const viewer = <Viewer className={`file-viewer${nativeDialog ? ' file-viewer--native' : ''}${embedded ? ' file-viewer--embedded' : ''}`} ref={dialog} tabIndex={-1} role={embedded ? 'region' : 'dialog'} aria-modal={embedded ? undefined : 'true'} aria-label={`Просмотр: ${file.name}`} onCancel={(event) => { event.preventDefault(); onClose?.(); }} onClick={(event) => event.stopPropagation()}>
         <header className="file-viewer-header"><div className="file-viewer-title"><strong>{file.name}</strong><small>Только просмотр{kind === 'office' ? ' · PDF-копия · листы Excel без разбиения по ширине' : ''}</small></div>
             {kind === 'markdown' && <button type="button" aria-pressed={source} onClick={() => setSource(!source)}>{source ? 'Markdown' : 'Исходник'}</button>}
             {kind === 'image' && <><button type="button" aria-label="Уменьшить" onClick={() => setZoom(Math.max(.25, zoom - .25))}>−</button><button type="button" title="Вписать в экран" onClick={() => setZoom(1)}>{Math.round(zoom * 100)}%</button><button type="button" aria-label="Увеличить" onClick={() => setZoom(Math.min(4, zoom + .25))}>+</button></>}
-            <button type="button" onClick={onDownload} title="Скачать оригинал"><IconDownload size={17}/><span>Скачать</span></button><button type="button" aria-label="Закрыть просмотр" onClick={onClose}><IconX size={22}/></button>
+            <button type="button" onClick={onDownload} title="Скачать оригинал"><IconDownload size={17}/><span>Скачать</span></button>{!embedded && <button type="button" aria-label="Закрыть просмотр" onClick={onClose}><IconX size={22}/></button>}
         </header>
         <div className="file-viewer-body">
             {content.error ? <div className="file-viewer-message" role="alert"><p>{content.error}</p><button type="button" onClick={() => { setContent({}); setAttempt(attempt + 1); }}>Повторить</button></div>
                 : kind === 'unsupported' ? <p className="file-viewer-message">Просмотр этого формата недоступен. Скачайте оригинал.</p>
                     : kind === 'image' && content.url ? <div className="file-viewer-image"><img style={{ width: `${zoom * 100}%`, maxWidth: 'none', height: `${zoom * 100}%` }} src={content.url} alt={file.name} onError={() => setContent({ error: 'Браузер не смог прочитать изображение. Скачайте оригинал.' })}/></div>
                         : content.url ? <iframe src={`${content.url}#view=FitH`} title={file.name}/>
-                            : content.text !== undefined ? <div className="file-viewer-text" tabIndex={0}>{content.truncated && <p className="file-viewer-note">Показаны первые 200 КБ. Полный файл доступен для скачивания.</p>}{kind === 'markdown' && !source ? <article className="markdown-renderer"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={markdownComponents}>{content.text}</ReactMarkdown></article> : <pre><code>{content.text}</code></pre>}</div>
+                            : content.text !== undefined ? <div className="file-viewer-text" tabIndex={0}>{content.truncated && <p className="file-viewer-note">Показаны первые 200 КБ. Полный файл доступен для скачивания.</p>}{kind === 'markdown' && !source ? <article className="markdown-renderer"><ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{ ...markdownComponents, ...(onLink ? { a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" onClick={(event) => { if (onLink(href)) event.preventDefault(); }}>{children}</a> } : {}) }}>{content.text}</ReactMarkdown></article> : <pre><code>{content.text}</code></pre>}</div>
                                 : <p className="file-viewer-message" role="status">{kind === 'office' ? 'Готовлю PDF-превью документа…' : 'Загружаю файл…'}</p>}
         </div>
-    </Viewer>, document.body);
+    </Viewer>;
+    return embedded ? viewer : createPortal(viewer, document.body);
 }

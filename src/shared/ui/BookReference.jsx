@@ -5,8 +5,7 @@ import { apiRequest } from '../../api';
 import { diagramApi } from '../../entities/diagram/api';
 import { loreApi } from '../../entities/lore/api';
 import { svgImageSrc, downloadDiagramXml } from '../../entities/diagram/model';
-import { FilePreview } from './FilePreview';
-import MarkdownRenderer from './MarkdownRenderer';
+import { ContentNodeBrowser } from './ContentNodeBrowser';
 import { findReferenceFile, referenceKinds } from './bookReferenceData';
 import './BookReference.css';
 
@@ -41,20 +40,12 @@ export function BookReferenceFields({ scopeId, value, onChange }) {
 export function BookReference({ payload, editing = false }) {
     const { scope_id: scopeId, reference_type: kind, reference_id: id } = payload;
     const [open, setOpen] = useState(false);
-    const [downloadError, setDownloadError] = useState('');
     const result = useQuery({ queryKey: ['book-reference', scopeId, kind, id], enabled: Boolean(scopeId && id), retry: false, queryFn: ({ signal }) => {
         if (kind === 'diagram') return diagramApi.get(scopeId, id, signal);
         if (kind === 'lore') return loreApi.get(scopeId, id);
         return findReferenceFile(id, (page) => files(scopeId, { page }, signal));
     } });
     const item = result.data;
-    const download = async () => {
-        setDownloadError('');
-        try {
-            const blob = await apiRequest(`/scopes/${scopeId}/files/${id}/download`, { responseType: 'blob' });
-            const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = item.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-        } catch (error) { setDownloadError(error.message); }
-    };
     if (!id) return <p className="book-block-placeholder">Выберите {referenceKinds[kind]?.toLowerCase()} в редакторе блока.</p>;
     if (result.isPending) return <p role="status">Загружаю {referenceKinds[kind]?.toLowerCase()}…</p>;
     if (result.error) return <div className="book-reference-unavailable" role="alert">Объект удалён или недоступен. <button type="button" onClick={() => result.refetch()}>Повторить</button></div>;
@@ -65,9 +56,7 @@ export function BookReference({ payload, editing = false }) {
     return <div className={`book-reference book-reference--${kind}`} onDoubleClick={editing ? undefined : (event) => { event.stopPropagation(); show(); }}>
         <small>{referenceKinds[kind]}</small>
         {kind === 'lore' ? <button type="button" className="book-reference-spoiler" onClick={show} disabled={editing}><strong>▸ {title}</strong><span>{content.slice(0, 260)}{content.length > 260 ? '…' : ''}</span><small>Открыть полный текст</small></button> : <><strong>{title}</strong>{kind === 'diagram' && item.preview_svg && <img className="book-reference-thumbnail" src={svgImageSrc(item.preview_svg)} alt={title}/>}<button type="button" onClick={show} disabled={editing}>Открыть</button>{!editing && <small>Двойной клик — просмотр</small>}</>}
-        {downloadError && <p role="alert">{downloadError}</p>}
-        {open && kind === 'file' && <FilePreview scopeId={scopeId} file={item} onClose={() => setOpen(false)} onDownload={download}/>}
-        {open && kind !== 'file' && <ReferenceDialog title={title} onClose={() => setOpen(false)}>{kind === 'lore' ? <MarkdownRenderer>{content}</MarkdownRenderer> : <DiagramReadOnly item={item}/>}</ReferenceDialog>}
+        {open && <ContentNodeBrowser scopeId={scopeId} initialNode={{ type: kind, id, title }} onClose={() => setOpen(false)}/>}
     </div>;
 }
 

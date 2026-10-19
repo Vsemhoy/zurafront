@@ -34,4 +34,41 @@ export function downloadDiagramXml(xml, title) {
   link.href = url; link.download = `${filename || 'diagram'}.drawio`; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+function diagramExportFilename(title, extension) {
+  const safe = Array.from((title || 'diagram').replace(/[<>:"/\\|?*]/g, '_'), (char) => char.charCodeAt(0) < 32 ? '_' : char).join('');
+  return `${safe || 'diagram'}.${extension}`;
+}
+function downloadDiagramBlob(blob, title, extension) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = diagramExportFilename(title, extension); link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+export function downloadDiagramSvg(svg, title) {
+  downloadDiagramBlob(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), title, 'svg');
+}
+export async function downloadDiagramPng(svg, title, dimensions) {
+  const sourceUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+  try {
+    const image = new Image();
+    await new Promise((resolve, reject) => {
+      image.onload = resolve;
+      image.onerror = () => reject(new Error('Не удалось подготовить PNG схемы.'));
+      image.src = sourceUrl;
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.ceil(dimensions.width));
+    canvas.height = Math.max(1, Math.ceil(dimensions.height));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Браузер не поддерживает экспорт PNG.');
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('Не удалось сформировать PNG схемы.');
+    downloadDiagramBlob(blob, title, 'png');
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
 export const diagramTargetTypes = { task: 'Задача', project: 'Проект', book: 'Книга', book_page: 'Страница книги', event: 'Событие', lore: 'Лор', darklog: 'Дарклог', fact: 'Факт', plan_item: 'План', file: 'Файл', user: 'Контактор', thing: 'Оборудование' };
