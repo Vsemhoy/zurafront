@@ -1,7 +1,8 @@
 import { NavLink, Navigate, useLocation } from 'react-router-dom';
-import { IconFiles, IconSchema } from '@tabler/icons-react';
+import { IconFileDescription, IconFiles, IconSchema } from '@tabler/icons-react';
 import { FilerPage } from './FilerPage';
 import { DiagramsPage } from './DiagramsPage';
+import { LightbookPage } from './LightbookPage';
 import './ContentPage.css';
 
 export function LegacyFilesRedirect() {
@@ -13,5 +14,6 @@ export function ContentPage({ section = 'diagrams' }) {
   return <div className="content-page"><nav className="content-tabs" aria-label="Библиотека контента"><strong>Контент</strong>
     <NavLink to="/content/files"><IconFiles size={17}/>Файлы</NavLink>
     <NavLink to="/content/diagrams"><IconSchema size={17}/>Схемы</NavLink>
-  </nav>{section === 'files' ? <FilerPage/> : <DiagramsPage/>}</div>;
+    <NavLink to="/content/lightbooks"><IconFileDescription size={17}/>Lightbook</NavLink>
+  </nav>{section === 'files' ? <FilerPage/> : section === 'lightbooks' ? <LightbookPage/> : <DiagramsPage/>}</div>;
 }

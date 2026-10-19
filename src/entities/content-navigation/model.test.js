@@ -39,6 +39,8 @@ test('internal Markdown links become nodes only for the correct origin and scope
   assert.deepEqual(nodeFromHref(`/content/diagrams/${scope}/${id}`, scope, origin), { type: 'diagram', id });
   assert.deepEqual(nodeFromHref(`/lore/${scope}/${id}`, scope, origin), { type: 'lore', id });
   assert.deepEqual(nodeFromHref(`/tasks/${id}/edit`, scope, origin), { type: 'task', id });
+  assert.deepEqual(nodeFromHref(`/content/lightbooks/${id}`, scope, origin), { type: 'lightbook', id });
+  assert.deepEqual(nodeFromHref(`/content/lightbooks/${id}/blocks/${scope}`, scope, origin), { type: 'lightbook', id });
   assert.deepEqual(nodeFromHref(`/content/files?file=${id}`, scope, origin), { type: 'file', id });
   assert.equal(nodeFromHref(`https://external.test/tasks/${id}`, scope, origin), null);
   assert.equal(nodeFromHref(`/lore/${id}/${id}`, scope, origin), null);

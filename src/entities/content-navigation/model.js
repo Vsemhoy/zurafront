@@ -1,4 +1,4 @@
-export const nodeTypes = { diagram: 'Схема', file: 'Файл', lore: 'Лор', task: 'Задача' };
+export const nodeTypes = { diagram: 'Схема', file: 'Файл', lore: 'Лор', task: 'Задача', lightbook: 'Lightbook' };
 export const diagramCanvasOverscan = .05;
 export const nodeKey = (node) => `${node.type}:${node.id}:${node.versionId || ''}`;
 export const createTrail = (node) => ({ visits: [{ ...node, view: {} }], cursor: 0 });
@@ -39,6 +39,8 @@ export function nodeFromHref(href, scopeId, origin) {
     if (lore) return lore[1] === scopeId ? { type: 'lore', id: lore[2] } : null;
     const task = url.pathname.match(new RegExp(`^/tasks/(${ulid})(?:/edit)?/?$`, 'i'));
     if (task) return { type: 'task', id: task[1] };
+    const lightbook = url.pathname.match(new RegExp(`^/content/lightbooks/(${ulid})(?:/(?:versions|blocks)/${ulid})?/?$`, 'i'));
+    if (lightbook) return { type: 'lightbook', id: lightbook[1] };
     if (['/files', '/content/files'].includes(url.pathname) && new RegExp(`^${ulid}$`, 'i').test(url.searchParams.get('file') || '')) return { type: 'file', id: url.searchParams.get('file') };
   } catch { /* Invalid or external links are not internal nodes. */ }
   return null;
