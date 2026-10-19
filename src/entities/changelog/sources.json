@@ -1,5 +1,7 @@
 {
   "2026-10-19": [
+    { "repo": "zurafront", "hash": "7a1d700" },
+    { "repo": "zurafront", "hash": "6f8246a" },
     { "repo": "zuraback", "hash": "a51652e" }
   ],
   "2026-10-17": [

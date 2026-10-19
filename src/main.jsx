@@ -10,6 +10,7 @@ import './i18n';
 import './index.css';
 import App from './App.jsx';
 import './shared/ui/AvatarFrame.css';
+import './shared/ui/WorkspaceControls.css';
 const queryClient = new QueryClient();
 const theme = createTheme({
     primaryColor: 'blue',

@@ -1,0 +1,313 @@
+/* Shared compact controls, based on Calendar and Eventor.
+   Keep selectors explicit: cards, calendar markers and rich-text toolbars are not buttons here. */
+:root {
+  --workspace-filter-height: 31px;
+  --workspace-action-height: 32px;
+  --workspace-field-height: 33px;
+  --workspace-control-font: 12px;
+  --workspace-control-radius: 0px;
+  --workspace-panel-radius: 2px;
+  --workspace-line: #cbd3de;
+  --workspace-canvas: #f4f6fa;
+  --workspace-muted: #e9edf3;
+  --workspace-ink: #435064;
+  --workspace-blue: #075aaf;
+}
+
+/* Filters and search fields share the same baseline, including custom triggers. */
+:is(.equip-toolbar select, .equip-toolbar form button, .equip-sort-label select,
+  .equip-column-picker > summary, .lore-filters > select, .lore-filters > button,
+  .lore-filters > label, .factor-filters > select, .factor-filters > button, .factor-search,
+  .darklog-toolbar > select, .darklog-toolbar > input, .darklog-toolbar > button,
+  .darklog-month input, .darklog-month button, .plans-filters select, .plans-filters input,
+  .plans-filters > button, .tasker-toolbar .department-filter, .tasker-project-trigger,
+  .tasker-toolbar .task-search, .task-filter-picker > button, .column-picker > button,
+  .task-filter-menu select) {
+  box-sizing: border-box;
+  height: var(--workspace-filter-height);
+  min-height: var(--workspace-filter-height);
+  min-width: 0;
+  border: 1px solid var(--workspace-line);
+  border-radius: var(--workspace-control-radius);
+  padding: 0 9px;
+  background: #fff;
+  color: var(--workspace-ink);
+  font-size: var(--workspace-control-font);
+  font-weight: 400;
+  line-height: 1.3;
+}
+.equip-column-picker > summary { display: flex; align-items: center; }
+:is(.tasker-project-trigger, .tasker-toolbar .department-filter) { max-width: 220px; }
+.tasker-project-trigger span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is(.tasker-toolbar .task-search, .factor-search, .lore-filters > label) { min-width: 160px; }
+:is(.task-search, .factor-search, .lore-filters > label) input { font-size: var(--workspace-control-font); }
+.task-search input { width: 180px; min-width: 0; }
+.equip-toolbar form { gap: 6px; }
+.equip-toolbar form > input {
+  height: var(--workspace-filter-height);
+  border: 1px solid var(--workspace-line);
+  border-radius: var(--workspace-control-radius);
+  padding: 0 7px;
+  background: #fff;
+  font-size: var(--workspace-control-font);
+}
+.lore-filters > button.active { background: #fff8df; color: #9a6b00; border-color: #d9bd67; }
+:is(.task-filter-picker > button.active, .column-picker > button.active,
+  .tasker-project-trigger.open, .factor-filters > button.is-active) {
+  background: #eaf3fd;
+  border-color: #438bd0;
+  color: var(--workspace-blue);
+}
+
+/* Action buttons: no fixed height on content rows or destructive status cards. */
+:is(.equip-primary, .equip-secondary, .equip-edit-trigger, .equip-pagination button,
+  .equip-operation-buttons > button, .equip-links-heading > button,
+  .equip-link-list > li > button, .equip-column-option-actions button,
+  .lore-toolbar > button, .lore-new-version, .lore-modal > footer > button,
+  .lore-revise > footer > button, .factor-create, .fact-modal > footer > button,
+  .darklog-heading > button, .darklog-pager > button, .darklog-card-actions > button,
+  .darklog-editor > footer > button, .darklog-periods > header > button,
+  .darklog-link-picker > button, .darklog-comment-form > button,
+  .plans-heading > button, .plans-pager > button, .plans-actions > button,
+  .plans-editor > footer > button, .tasker-toolbar .new-task,
+  .task-modal > footer > button, .task-inspector .primary-button,
+  .task-inspector .secondary-button, .checklist-editor > footer > button,
+  .task-editor-header > button, .task-comments-compose > button,
+  .equip-links .diagram-pagination > button, .equip-links .diagram-attachments-panel > :where(header) > button,
+  .equip-links .diagram-attachments-panel :where(form) > button, .equip-link-kinds > button) {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: var(--workspace-action-height);
+  padding: 5px 11px;
+  border: 1px solid var(--workspace-line);
+  border-radius: var(--workspace-control-radius);
+  background: #fff;
+  color: var(--workspace-ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  cursor: pointer;
+}
+:is(.equip-primary, .lore-toolbar > button, .lore-new-version,
+  .lore-modal > footer > .primary, .lore-revise > footer > .primary,
+  .factor-create, .fact-modal > footer > .fact-primary,
+  .darklog-ui .darklog-primary, .plans-page .plans-primary, .plans-editor .plans-primary,
+  .tasker-toolbar .new-task, .task-modal > footer > .primary-button,
+  .task-inspector .primary-button, .checklist-editor > footer > .primary-button,
+  .task-comments-compose > button) {
+  background: var(--workspace-blue);
+  border-color: var(--workspace-blue);
+  color: #fff;
+}
+:is(.equip-primary, .lore-toolbar > button, .lore-new-version,
+  .lore-modal > footer > .primary, .lore-revise > footer > .primary,
+  .factor-create, .fact-modal > footer > .fact-primary, .darklog-ui .darklog-primary,
+  .plans-page .plans-primary, .plans-editor .plans-primary,
+  .tasker-toolbar .new-task, .task-modal > footer > .primary-button,
+  .task-inspector .primary-button, .checklist-editor > footer > .primary-button,
+  .task-comments-compose > button):hover:not(:disabled) { background: #064b92; border-color: #064b92; }
+.darklog-ui .danger { color: #b42318; }
+.task-editor-header > .editor-delete { color: #b42318; }
+:is(.task-modal > footer > .danger-button, .lore-modal > footer > .lore-delete) { background: #b42318; border-color: #b42318; color: #fff; }
+.equip-link-kinds > button[aria-pressed=true] { border-color: #438bd0; background: #eaf3fd; color: var(--workspace-blue); }
+
+/* Segmented controls and tabs follow the reference pages. */
+:is(.equip-view-switch, .darklog-view-switch, .tasker-toolbar .view-switch, .task-modal .modal-mode) {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 0;
+  border-radius: var(--workspace-control-radius);
+  background: var(--workspace-muted);
+}
+:is(.equip-view-switch, .darklog-view-switch, .tasker-toolbar .view-switch, .task-modal .modal-mode) > button {
+  height: 30px;
+  min-height: 30px;
+  border: 0;
+  border-radius: var(--workspace-control-radius);
+  padding: 0 9px;
+  background: transparent;
+  color: #657083;
+  font-size: var(--workspace-control-font);
+}
+.tasker-toolbar .view-switch > button { padding: 0; }
+:is(.equip-view-switch, .darklog-view-switch, .tasker-toolbar .view-switch, .task-modal .modal-mode)
+  > :is(button.active, button[aria-pressed=true]) {
+  background: #fff;
+  color: var(--workspace-blue);
+  box-shadow: 0 1px 3px #21314a20;
+}
+:is(.equip-tabs, .darklog-tabs, .editor-tabs, .task-inspector .content-switch) {
+  gap: 3px;
+  padding-block: 0;
+  min-height: 35px;
+  height: auto;
+  border-bottom: 1px solid var(--workspace-line);
+}
+:is(.equip-tabs, .darklog-tabs, .editor-tabs, .task-inspector .content-switch) > button {
+  min-height: 34px;
+  height: auto;
+  padding: 6px 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  color: #687487;
+  font-size: var(--workspace-control-font);
+  line-height: 20px;
+}
+:is(.equip-tabs, .darklog-tabs, .editor-tabs, .task-inspector .content-switch)
+  > :is(button.active, button[aria-pressed=true]) {
+  border-bottom-color: var(--workspace-blue);
+  background: transparent;
+  color: var(--workspace-blue);
+}
+
+/* Native form fields only: preserve checkbox sizes and the Markdown editor. */
+:is(.equip-form, .lore-modal, .lore-revise, .fact-modal, .fact-properties,
+  .darklog-form-grid, .darklog-period-row, .darklog-editor > label,
+  .equip-link-picker, :where(.equip-links) .diagram-attachments-panel :where(form), .plans-editor, .task-modal,
+  .task-properties, .task-customer-field, .editor-properties, .checklist-editor-fields)
+  :is(input:not([type=checkbox], [type=radio], [type=range], [type=color], [type=file]), select) {
+  box-sizing: border-box;
+  min-width: 0;
+  height: var(--workspace-field-height);
+  min-height: var(--workspace-field-height);
+  padding: 5px 7px;
+  border: 1px solid var(--workspace-line);
+  border-radius: var(--workspace-control-radius);
+  font-size: var(--workspace-control-font);
+  line-height: 20px;
+}
+:is(.equip-form, .lore-modal, .lore-revise, .fact-modal, .darklog-editor > label, .plans-editor, .task-modal)
+  textarea:not(.md-source-input) {
+  padding: 7px;
+  border-color: var(--workspace-line);
+  border-radius: var(--workspace-control-radius);
+  font-size: var(--workspace-control-font);
+}
+:is(.equip-form, .lore-form-grid, .fact-modal, .darklog-form-grid, .darklog-period-row,
+  .plans-editor, .plans-filters, .task-modal, .editor-properties) label,
+.darklog-editor > label {
+  gap: 4px;
+  font-size: 11px;
+}
+.equip-form label { margin-bottom: 10px; }
+.equip-form fieldset { padding-bottom: 12px; margin-bottom: 12px; }
+.equip-form legend { font-size: 13px; margin-bottom: 8px; }
+.equip-form :disabled { padding: 7px; }
+.equip-form-footer { padding-block: 10px; }
+
+/* Consistent panel chrome and spacing. Module accents and status colours stay local. */
+:is(.equip-page, .lore-page, .darklog-page, .factor-page, .plans-page) {
+  padding: 14px 16px;
+  min-width: 0;
+  min-height: calc(100vh - 82px);
+  background: var(--workspace-canvas);
+}
+:is(.equip-heading, .lore-toolbar, .darklog-heading, .factor-toolbar, .plans-heading) {
+  min-height: 40px;
+  height: auto;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+:is(.equip-heading, .lore-toolbar, .darklog-heading, .factor-toolbar, .plans-heading) h1 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.equip-heading p { font-size: 11px; }
+.equip-mark { width: 36px; height: 36px; border-radius: 2px; }
+.equip-mark > svg { width: 22px; height: 22px; }
+.equip-toolbar { padding: 5px 0; border: 0; border-radius: 0; background: transparent; }
+:is(.equip-toolbar, .lore-filters, .factor-filters, .darklog-toolbar, .plans-filters, .tasker-toolbar) {
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.plans-filters { align-items: flex-end; }
+:is(.lore-filters, .factor-filters) { overflow: visible; }
+:is(.lore-filters > label, .factor-search) { flex: 1 1 220px; max-width: 320px; }
+.equip-count { margin: 10px 0 8px; font-size: 12px; }
+.equip-view-controls { margin-top: 8px; gap: 6px; }
+.equip-sort-label { gap: 6px; }
+.equip-grid { gap: 8px; }
+.equip-card { border-color: var(--workspace-line); border-radius: var(--workspace-panel-radius); padding: 10px 10px 0; }
+.equip-card-top { margin-bottom: 8px; }
+.equip-card > strong { font-size: 13px; }
+.equip-card dl { margin: 9px 0; }
+.equip-card footer { margin-inline: -10px; width: calc(100% + 20px); padding-inline: 10px; }
+:is(.equip-table-scroll, .equip-column-options, .equip-picker-results, .equip-schema-field,
+  .equip-assembly-list, .equip-composition-list, .lore-table, .darklog-calendar,
+  .fact-table, .plans-scroll, .editor-properties, .editor-mechanics-grid > .checklist,
+  .editor-mechanics-grid > .subtasks, .editor-simple, .task-filter-menu, .column-picker-menu) {
+  border-color: var(--workspace-line);
+  border-radius: var(--workspace-panel-radius);
+}
+.plans-scroll { border: 1px solid var(--workspace-line); background: #fff; }
+:is(.equip-dialog-body, .lore-drawer, .fact-editor, .darklog-drawer) { padding: 16px; }
+.equip-dialog-heading { padding: 10px 16px; gap: 10px; background: #fff; border-bottom-color: var(--workspace-line); }
+.equip-dialog-heading h2 { font-size: 18px; }
+.equip-tabs { padding-inline: 8px; }
+:is(.lore-modal, .fact-modal, .darklog-editor, .plans-editor, .task-modal, .checklist-editor) {
+  padding: 16px;
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  border-radius: var(--workspace-panel-radius);
+  gap: 10px;
+}
+:is(.lore-modal, .fact-modal, .darklog-editor, .plans-editor, .task-modal) > header h2 { font-size: 18px; margin: 0; }
+:is(.equip-dialog-heading, .lore-modal > header, .lore-drawer > header,
+  .fact-modal > header, .fact-editor > header, .darklog-drawer > header,
+  .darklog-editor > header, .plans-editor > header, .task-modal > header) > button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #657083;
+}
+.equip-operation-toolbar { margin-bottom: 12px; }
+.equip-operation-buttons { gap: 6px; }
+.tasker-toolbar .column-picker > button { width: auto; overflow: visible; gap: 5px; color: var(--workspace-ink); }
+.equip-operation-confirm { padding: 10px; border-radius: var(--workspace-panel-radius); }
+.equip-assembly-list li, .equip-composition-list li { padding: 8px 10px; }
+:is(.editor-properties, .editor-mechanics-grid > .checklist, .editor-mechanics-grid > .subtasks, .editor-simple) { padding: 12px; }
+
+/* Keyboard focus stays visible on compact controls. */
+:is(.equip-toolbar, .equip-form, .equip-heading-actions, .equip-view-controls,
+  .lore-filters, .lore-modal, .fact-modal, .factor-filters, .darklog-toolbar,
+  .darklog-form-grid, .plans-filters, .plans-editor, .tasker-toolbar, .task-modal,
+  .task-properties, .editor-properties) :is(input, select, button, summary):focus-visible {
+  outline: 2px solid #438bd0;
+  outline-offset: 1px;
+}
+
+@media (max-width: 680px) {
+  :is(.equip-page, .lore-page, .darklog-page, .factor-page, .plans-page) { padding: 10px; }
+  :is(.equip-heading, .lore-toolbar, .darklog-heading, .factor-toolbar, .plans-heading) { flex-wrap: wrap; }
+  :is(.equip-toolbar form, .lore-filters > label, .factor-search) { flex-basis: 100%; width: 100%; max-width: none; }
+  :is(.equip-toolbar select, .lore-filters > select, .factor-filters > select) { flex: 1 1 130px; max-width: 100%; }
+  .equip-heading-actions { width: auto; margin-left: auto; }
+  :is(.lore-modal, .fact-modal, .darklog-editor, .plans-editor, .task-modal, .checklist-editor) { padding: 12px; }
+  .tasker-toolbar .tasker-project-trigger { flex: 1 1 150px; max-width: none; }
+  .tasker-toolbar .department-filter { flex: 1 1 150px; max-width: none; }
+  .tasker-toolbar .task-search { display: flex; flex: 1 1 100%; width: 100%; }
+  .task-search input { width: 100%; }
+  .tasker-toolbar .column-picker-menu, .tasker-toolbar .task-filter-menu { left: auto; right: 0; max-width: calc(100vw - 24px); }
+  .darklog-month { flex-wrap: wrap; }
+}
+@media (max-width: 680px) and (pointer: coarse) {
+  :root { --workspace-filter-height: 44px; --workspace-action-height: 44px; --workspace-field-height: 44px; }
+  :is(.equip-view-switch, .darklog-view-switch, .tasker-toolbar .view-switch, .task-modal .modal-mode) > button { min-width: 44px; height: 44px; }
+  :is(.equip-tabs, .darklog-tabs, .editor-tabs, .task-inspector .content-switch) > button { min-height: 44px; }
+}
