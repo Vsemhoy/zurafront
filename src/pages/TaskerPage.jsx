@@ -31,6 +31,7 @@ import {
   IconMessageCircle,
   IconPlus,
   IconRobot,
+  IconUserCheck,
   IconSearch,
   IconSubtask,
   IconTargetArrow,
@@ -45,6 +46,7 @@ import { contractorApi } from "../entities/contractor/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
 import { priorityLabel, taskReference } from "../entities/task/model";
+import { readTaskFilters, updateTaskFilters } from "../entities/task/urlFilters";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
 import { TaskKpiField } from "../shared/ui/TaskKpiField";
 import { TaskReferenceCopy } from "../shared/ui/TaskReferenceCopy";
@@ -968,6 +970,9 @@ function BlockerHistory({ blockers }) {
 
 function SubtasksPanel({ task, scopeId, refresh }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const taskSearch = searchParams.toString();
+  const taskRoute = (pathname) => ({ pathname, search: taskSearch ? `?${taskSearch}` : "" });
   const [title, setTitle] = useState("");
   const children = task.children ?? [];
   const create = useMutation({
@@ -997,7 +1002,7 @@ function SubtasksPanel({ task, scopeId, refresh }) {
       </header>
       <div>
         {children.map((child) => (
-          <button key={child.id} onClick={() => navigate(`/tasks/${child.id}`)}>
+          <button key={child.id} onClick={() => navigate(taskRoute(`/tasks/${child.id}`))}>
             <code>{child.task_key}</code>
             <strong>{child.title}</strong>
             <span>{statusLabel(child.status)}</span>
@@ -1149,6 +1154,9 @@ function RelationsPanel({ task, scopeId }) {
 export function TaskInspector({ scopeId, taskId, projects, assignable, onClose }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const taskSearch = searchParams.toString();
+  const taskRoute = (pathname) => ({ pathname, search: taskSearch ? `?${taskSearch}` : "" });
   const [pane, setPane] = useState("description");
   const [formattingOpen, setFormattingOpen] = useState(false);
   const [markdownControls, setMarkdownControls] = useState(null);
@@ -1203,7 +1211,7 @@ export function TaskInspector({ scopeId, taskId, projects, assignable, onClose }
             type="button"
             className="open-editor"
             title="Открыть задачу в полноэкранном редакторе"
-            onClick={() => navigate(`/tasks/${task.id}/edit`)}
+            onClick={() => navigate(taskRoute(`/tasks/${task.id}/edit`))}
           >
             <IconArrowsMaximize size={16} />
             Открыть полный редактор
@@ -1431,32 +1439,63 @@ export function TaskerPage() {
   const { taskId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const departmentStorageKey = `zuratax-task-department:${activeScope?.id ?? ''}`;
-  const departmentFilter = searchParams.get('department') ?? (activeScope ? localStorage.getItem(departmentStorageKey) || '' : '');
+  const user = useAuth((state) => state.user);
+  const storedStatuses = useMemo(() => storedListStatusIds(), []);
+  const taskFilters = useMemo(
+    () => readTaskFilters(searchParams, allStatusIds, storedStatuses),
+    [searchParams, storedStatuses],
+  );
+  const { q: search, view, people: peopleFilters, statuses: listStatusIds } = taskFilters;
+  const updateFilters = (patch) =>
+    setSearchParams(
+      (current) => updateTaskFilters(current, patch, allStatusIds),
+      { replace: true },
+    );
+  const setView = (nextView) => updateFilters({ view: nextView });
+  const setSearch = (query) => updateFilters({ q: query });
+  const setPeopleFilters = (nextValue) => {
+    const people = typeof nextValue === "function" ? nextValue(peopleFilters) : nextValue;
+    updateFilters({ people });
+  };
+  const setListStatusIds = (nextValue) => {
+    const statuses = typeof nextValue === "function" ? nextValue(listStatusIds) : nextValue;
+    localStorage.setItem("zuratax:task-list-statuses", JSON.stringify(statuses));
+    updateFilters({ statuses });
+  };
+  const departmentStorageKey = `zuratax-task-department:${activeScope?.id ?? ""}`;
+  const departmentFilter = searchParams.get("department") ?? (activeScope ? localStorage.getItem(departmentStorageKey) || "" : "");
   useEffect(() => {
-    if (activeScope) {
-      if (departmentFilter) localStorage.setItem(departmentStorageKey, departmentFilter);
-      else localStorage.removeItem(departmentStorageKey);
-    }
-  }, [activeScope, departmentFilter, departmentStorageKey]);
-  const departmentOptions = useQuery({ queryKey: ['departments', activeScope?.id], queryFn: () => departmentApi.list(activeScope.id), enabled: Boolean(activeScope) });
-  const [view, setView] = useState("board");
+    if (!activeScope) return;
+    if (departmentFilter) localStorage.setItem(departmentStorageKey, departmentFilter);
+    else localStorage.removeItem(departmentStorageKey);
+    if (searchParams.get("department") === (departmentFilter || null)) return;
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (departmentFilter) next.set("department", departmentFilter);
+      else next.delete("department");
+      return next;
+    }, { replace: true });
+  }, [activeScope, departmentFilter, departmentStorageKey, searchParams, setSearchParams]);
+  useEffect(() => {
+    if (searchParams.has("statuses")) return;
+    const hasStoredFilter = storedStatuses.length !== allStatusIds.length ||
+      storedStatuses.some((status) => !allStatusIds.includes(status));
+    if (!hasStoredFilter) return;
+    setSearchParams(
+      (current) => updateTaskFilters(current, { statuses: storedStatuses }, allStatusIds),
+      { replace: true },
+    );
+  }, [searchParams, setSearchParams, storedStatuses]);
+  const departmentOptions = useQuery({ queryKey: ["departments", activeScope?.id], queryFn: () => departmentApi.list(activeScope.id), enabled: Boolean(activeScope) });
   const [create, setCreate] = useState(null);
   const [editingProjectId, setEditingProjectId] = useState(null);
   const [commentsTask, setCommentsTask] = useState(null);
-  const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filtersRef = useRef(null);
-  const [peopleFilters, setPeopleFilters] = useState({
-    assignee: "all",
-    creator: "all",
-    customer: "all",
-  });
   const [columnsMenuOpen, setColumnsMenuOpen] = useState(false);
   const columnPickerRef = useRef(null);
   const [columnLimits, setColumnLimits] = useState({});
   const [visibleColumnIds, setVisibleColumnIds] = useState(storedColumnIds);
-  const [listStatusIds, setListStatusIds] = useState(storedListStatusIds);
   const [projectRailOpen, setProjectRailOpen] = useState(
     () => localStorage.getItem("zuratax:task-project-rail") !== "closed",
   );
@@ -1515,8 +1554,8 @@ export function TaskerPage() {
     setProjectSelection({ scopeId: activeScope?.id ?? null, ids });
   };
   useEffect(() => {
-    if (!activeScope?.id || !projectsLoaded || projectSelection.scopeId !== activeScope.id) return;
-    const value = serializeProjectSelection(projectSelection.ids, projects);
+    if (!activeScope?.id || !projectsLoaded) return;
+    const value = serializeProjectSelection(selectedProjectIds, projects);
     const scopeValue = activeScope.slug ?? activeScope.id;
     localStorage.setItem(`zuratax:task-projects:${activeScope.id}`, value);
     if (searchParams.get("projects") === value && searchParams.get("scope") === scopeValue) return;
@@ -1524,7 +1563,7 @@ export function TaskerPage() {
     next.set("scope", scopeValue);
     next.set("projects", value);
     setSearchParams(next, { replace: true });
-  }, [activeScope?.id, activeScope?.slug, projectSelection, projects, projectsLoaded, searchParams, selectedProjectIds, setSearchParams]);
+  }, [activeScope?.id, activeScope?.slug, projects, projectsLoaded, searchParams, selectedProjectIds, setSearchParams]);
   useEffect(() => {
     localStorage.setItem(
       "zuratax:task-project-rail",
@@ -1537,12 +1576,6 @@ export function TaskerPage() {
       JSON.stringify(visibleColumnIds),
     );
   }, [visibleColumnIds]);
-  useEffect(() => {
-    localStorage.setItem(
-      "zuratax:task-list-statuses",
-      JSON.stringify(listStatusIds),
-    );
-  }, [listStatusIds]);
   useEffect(() => {
     if (!columnsMenuOpen) return undefined;
     const closeColumnsMenu = (event) => {
@@ -1691,7 +1724,7 @@ export function TaskerPage() {
       selected &&
       `${task.task_key} ${task.title}`
         .toLowerCase()
-        .includes(search.toLowerCase())
+        .includes(search.trim().toLowerCase())
     );
   });
   const listGroups = groupListTasks(
@@ -1736,7 +1769,9 @@ export function TaskerPage() {
         ? ""
         : projects.find((project) => selectedProjectIds.has(project.id))?.id ??
           "";
-  const open = (task) => navigate(`/tasks/${task.id}`);
+  const taskSearch = searchParams.toString();
+  const taskRoute = (pathname) => ({ pathname, search: taskSearch ? `?${taskSearch}` : "" });
+  const open = (task) => navigate(taskRoute(`/tasks/${task.id}`));
   const move = (movedTaskId, status, targetIndex) => {
     if (movedTaskId)
       moveTask.mutate({ taskId: movedTaskId, status, targetIndex });
@@ -1860,7 +1895,20 @@ export function TaskerPage() {
             </div>
           )}
         </div>
-        <DepartmentFilter departments={departmentOptions.data?.departments} value={departmentFilter} onChange={(value) => { if (value) localStorage.setItem(departmentStorageKey, value); else localStorage.removeItem(departmentStorageKey); setSearchParams((current) => { const next = new URLSearchParams(current); if (value) next.set('department', value); else next.delete('department'); return next; }); }}/>
+        <DepartmentFilter
+          departments={departmentOptions.data?.departments}
+          value={departmentFilter}
+          onChange={(value) => {
+            if (value) localStorage.setItem(departmentStorageKey, value);
+            else localStorage.removeItem(departmentStorageKey);
+            setSearchParams((current) => {
+              const next = new URLSearchParams(current);
+              if (value) next.set("department", value);
+              else next.delete("department");
+              return next;
+            }, { replace: true });
+          }}
+        />
         <div className="task-filter-picker" ref={filtersRef}>
           <button
             type="button"
@@ -1925,13 +1973,30 @@ export function TaskerPage() {
             placeholder="Поиск по ключу или названию"
           />
         </label>
-        <button
-          className="new-task"
-          onClick={() => setCreate({ status: "todo" })}
-        >
-          <IconPlus size={17} />
-          Новая задача
-        </button>
+        <div className="task-actions">
+          <button
+            type="button"
+            className={`my-tasks ${peopleFilters.assignee === user?.id ? "active" : ""}`}
+            aria-pressed={peopleFilters.assignee === user?.id}
+            disabled={!user?.id}
+            onClick={() =>
+              setPeopleFilters((current) => ({
+                ...current,
+                assignee: current.assignee === user.id ? "all" : user.id,
+              }))
+            }
+          >
+            <IconUserCheck size={17} />
+            Мои задачи
+          </button>
+          <button
+            className="new-task"
+            onClick={() => setCreate({ status: "todo" })}
+          >
+            <IconPlus size={17} />
+            Новая задача
+          </button>
+        </div>
       </header>
       <div className={`tasker-workspace ${projectRailOpen ? "rail-open" : ""}`}>
         {projectRailOpen && activeScope && (
@@ -2017,7 +2082,7 @@ export function TaskerPage() {
                       }
                       onMove={move}
                       onOpen={() => open(task)}
-                      onEdit={() => navigate(`/tasks/${task.id}/edit`)}
+                      onEdit={() => navigate(taskRoute(`/tasks/${task.id}/edit`))}
                       onComments={() => setCommentsTask(task)}
                     />
                   ))}
@@ -2136,7 +2201,7 @@ export function TaskerPage() {
         <>
           <div
             className="inspector-backdrop"
-            onClick={() => navigate("/tasks")}
+            onClick={() => navigate(taskRoute("/tasks"))}
           />
           <TaskInspector
             key={`${activeScope.id}:${taskId}`}
@@ -2144,7 +2209,7 @@ export function TaskerPage() {
             taskId={taskId}
             projects={projects}
             assignable={assignable}
-            onClose={() => navigate("/tasks")}
+            onClose={() => navigate(taskRoute("/tasks"))}
           />
         </>
       )}

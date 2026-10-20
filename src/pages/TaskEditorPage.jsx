@@ -17,7 +17,7 @@ import {
   IconTargetArrow,
   IconTrash,
 } from "@tabler/icons-react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useWorkspace } from "../app/workspace";
 import { TaskDiscussion } from "../shared/ui/TaskDiscussion";
 import { contractorApi } from "../entities/contractor/api";
@@ -63,6 +63,9 @@ export function TaskEditorPage() {
 
 function TaskEditor({ activeScope, taskId }) {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const taskSearch = searchParams.toString();
+  const taskRoute = (pathname) => ({ pathname, search: taskSearch ? `?${taskSearch}` : "" });
   const queryClient = useQueryClient();
   const [tab, setTab] = useState("content");
   const [document, setDocument] = useState("description");
@@ -108,7 +111,7 @@ function TaskEditor({ activeScope, taskId }) {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey });
       queryClient.invalidateQueries({ queryKey: ["tasks", activeScope.id] });
-      navigate("/tasks");
+      navigate(taskRoute("/tasks"));
     },
   });
   const removeTail = useMutation({
@@ -140,7 +143,7 @@ function TaskEditor({ activeScope, taskId }) {
       <header className="task-editor-header">
         <button
           className="editor-back"
-          onClick={() => navigate(`/tasks/${task.id}`)}
+          onClick={() => navigate(taskRoute(`/tasks/${task.id}`))}
         >
           <IconArrowLeft size={18} />К задаче
         </button>
