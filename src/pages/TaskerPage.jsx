@@ -45,6 +45,7 @@ import { useAuth } from "../auth";
 import { contractorApi } from "../entities/contractor/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
+import { subtaskPayload } from "../entities/task/subtasks";
 import { priorityLabel, taskReference } from "../entities/task/model";
 import { readTaskFilters, updateTaskFilters } from "../entities/task/urlFilters";
 import { TaskAssignmentFields } from "../shared/ui/TaskAssignmentFields";
@@ -977,11 +978,7 @@ function SubtasksPanel({ task, scopeId, refresh }) {
   const children = task.children ?? [];
   const create = useMutation({
     mutationFn: () =>
-      taskApi.create(scopeId, {
-        title,
-        parent_id: task.id,
-        project_id: task.project_id ?? null,
-      }),
+      taskApi.create(scopeId, subtaskPayload(task, title)),
     onSuccess: () => {
       setTitle("");
       refresh();

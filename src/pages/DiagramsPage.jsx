@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import { IconArrowLeft, IconCopy, IconDownload, IconEdit, IconLink, IconPlus, IconSchema, IconTrash, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { diagramApi } from '../entities/diagram/api';
-import { diagramHref, diagramTargetTypes, downloadDiagramXml, svgImageSrc } from '../entities/diagram/model';
+import { canEditDiagram, diagramHref, diagramTargetTypes, downloadDiagramXml, svgImageSrc } from '../entities/diagram/model';
 import { DiagramEditorModal } from '../shared/ui/DiagramEditorModal';
 import { ContentNodeBrowser } from '../shared/ui/ContentNodeBrowser';
 
@@ -41,17 +41,19 @@ function DiagramCreateModal({ scopeId, projects, onCreated, onClose }) {
   const [title, setTitle] = useState('');
   const [project, setProject] = useState('');
   const [visibility, setVisibility] = useState('private');
+  const [allowMemberEditing, setAllowMemberEditing] = useState(false);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const save = async (event) => {
     event.preventDefault(); setBusy(true); setError('');
-    try { onCreated(await diagramApi.save(scopeId, null, { title, project_id: project || null, visibility })); }
+    try { onCreated(await diagramApi.save(scopeId, null, { title, project_id: project || null, visibility, allow_member_editing: allowMemberEditing })); }
     catch (failure) { setError(failure.message); setBusy(false); }
   };
   return createPortal(<div className="diagram-backdrop"><form className="diagram-modal" role="dialog" aria-modal="true" aria-label="Новая схема" onSubmit={save}><header><h2>Новая схема</h2><button type="button" disabled={busy} aria-label="Закрыть" onClick={onClose}><IconX size={18}/></button></header>
     <label>Название<input autoFocus required maxLength={255} value={title} onChange={(event) => setTitle(event.target.value)}/></label>
     <label>Проект<select value={project} onChange={(event) => setProject(event.target.value)}><option value="">Без проекта</option>{projects.map((item) => <option key={item.id} value={item.id}>{item.key} · {item.title}</option>)}</select></label>
-    <label>Доступ<select value={visibility} onChange={(event) => setVisibility(event.target.value)}><option value="private">Личная — только автор</option><option value="scope">В скоупе, с учётом доступа к проекту</option></select></label>
+    <label>Доступ<select value={visibility} onChange={(event) => { setVisibility(event.target.value); if (event.target.value === 'private') setAllowMemberEditing(false); }}><option value="private">Личная — только автор</option><option value="scope">В скоупе, с учётом доступа к проекту</option></select></label>
+    <DiagramMemberEditingField projectId={project} visibility={visibility} value={allowMemberEditing} onChange={setAllowMemberEditing}/>
     {error && <p className="diagram-error">{error}</p>}<footer><button type="button" disabled={busy} onClick={onClose}>Отмена</button><button className="diagram-primary" disabled={busy || !title.trim()}>{busy ? 'Создаю…' : 'Создать и рисовать'}</button></footer>
   </form></div>, document.body);
 }
@@ -86,11 +88,11 @@ function DiagramPage({ scopeId, id }) {
     <button onClick={copyLink}><IconLink size={15}/>{copied ? 'Скопировано' : 'Ссылка'}</button><button onClick={() => downloadDiagramXml(visible?.xml || item.xml, item.title)}><IconDownload size={15}/>XML</button>
     <button onClick={() => setViewing(true)} disabled={Boolean(version && selectedVersion.isPending)}>Просмотр на весь экран</button>
     {options.data?.can_create && <button disabled={busy} onClick={() => { setError(''); setDuplicating(true); }}><IconCopy size={15}/>Дублировать</button>}
-    {item.can_manage && !version && <button className="diagram-primary" onClick={() => setEditing(true)}><IconEdit size={15}/>Редактировать</button>}
+    {canEditDiagram(item) && !version && <button className="diagram-primary" onClick={() => setEditing(true)}><IconEdit size={15}/>Редактировать</button>}
   </div></header>{error && <p className="diagram-error" role="alert">{error}</p>}
     {version && <div className="diagram-version-banner">Просмотр сохранённой версии {visible?.number} · без редактирования <button onClick={() => setVersion(null)}>К актуальной схеме</button></div>}
     <div className="diagram-layout"><div className="diagram-canvas" onDoubleClick={() => setViewing(true)}>
-      {selectedVersion.isFetching && version ? <p>Загружаю версию…</p> : visible?.preview_svg ? <img src={svgImageSrc(visible.preview_svg)} alt={item.title} draggable={false}/> : <div className="diagram-empty"><IconSchema size={46}/><p>{version ? 'У этой версии нет превью.' : 'Пока нет превью схемы.'}</p>{item.can_manage && !version && <button onClick={() => setEditing(true)}>Открыть редактор</button>}</div>}
+      {selectedVersion.isFetching && version ? <p>Загружаю версию…</p> : visible?.preview_svg ? <img src={svgImageSrc(visible.preview_svg)} alt={item.title} draggable={false}/> : <div className="diagram-empty"><IconSchema size={46}/><p>{version ? 'У этой версии нет превью.' : 'Пока нет превью схемы.'}</p>{canEditDiagram(item) && !version && <button onClick={() => setEditing(true)}>Открыть редактор</button>}</div>}
       <small className="diagram-canvas-hint">Двойной клик — просмотр, масштаб и навигация</small>
       {selectedVersion.error && version && <p className="diagram-error">{selectedVersion.error.message}</p>}
     </div><aside className="diagram-properties">
@@ -99,7 +101,7 @@ function DiagramPage({ scopeId, id }) {
       <section><button className="diagram-history-toggle" aria-expanded={history} onClick={() => setHistory(!history)}>История версий {history ? '▴' : '▾'}</button>{history && <div className="diagram-history">{versions.isPending && <small>Загружаю…</small>}{versions.error && <p className="diagram-error">{versions.error.message}</p>}{versions.data?.map((revision) => <button key={revision.id} className={version === revision.id ? 'active' : ''} onClick={() => setVersion(revision.number === item.revision ? null : revision.id)}>v{revision.number} · {new Date(revision.created_at).toLocaleString()}<small>{revision.creator?.name}</small></button>)}</div>}</section>
       {item.can_delete && <button className="diagram-delete" disabled={busy} onClick={() => { if (window.confirm('Удалить схему из библиотеки и всех мест прикрепления? История останется в базе.')) void perform(async () => { await diagramApi.remove(scopeId, id); await client.invalidateQueries({ queryKey: ['diagrams', scopeId] }); navigate('/content/diagrams'); }); }}><IconTrash size={14}/>Удалить схему</button>}
     </aside></div>
-    {editing && item.can_manage && <DiagramEditorModal scopeId={scopeId} diagram={item} onSaved={saved} onClose={() => { setEditing(false); if (params.has('edit')) setParams({}, { replace: true }); }}/>} 
+    {editing && canEditDiagram(item) && <DiagramEditorModal scopeId={scopeId} diagram={item} onSaved={saved} onClose={() => { setEditing(false); if (params.has('edit')) setParams({}, { replace: true }); }}/>}
     {viewing && <ContentNodeBrowser scopeId={scopeId} initialNode={{ type: 'diagram', id, title: item.title, versionId: version || undefined }} onClose={() => { setViewing(false); void client.invalidateQueries({ queryKey }); }}/>}
     {linking && <DiagramLinkModal scopeId={scopeId} diagramId={id} onClose={() => setLinking(false)} onSaved={saved}/>}
     {duplicating && <DiagramDuplicateModal title={item.title} busy={busy} error={error} onClose={() => setDuplicating(false)} onConfirm={duplicate}/>}
@@ -112,13 +114,22 @@ function DiagramDuplicateModal({ title, busy, error, onClose, onConfirm }) {
 }
 
 function DiagramSettings({ item, projects, onSave, busy, readOnly }) {
-  const [draft, setDraft] = useState({ title: item.title, description: item.description || '', project_id: item.project_id || '', visibility: item.visibility });
-  const change = (key) => (event) => setDraft((value) => ({ ...value, [key]: event.target.value }));
+  const [draft, setDraft] = useState({ title: item.title, description: item.description || '', project_id: item.project_id || '', visibility: item.visibility, allow_member_editing: Boolean(item.allow_member_editing) });
+  const change = (key) => (event) => setDraft((value) => ({ ...value, [key]: event.target.value, ...(key === 'visibility' && event.target.value === 'private' ? { allow_member_editing: false } : {}) }));
   return <form onSubmit={(event) => { event.preventDefault(); onSave({ ...draft, project_id: draft.project_id || null }); }}><h2>Настройки</h2><fieldset disabled={busy || readOnly}>
     <label>Название<input required maxLength={255} value={draft.title} onChange={change('title')}/></label><label>Описание<textarea rows={3} maxLength={10000} value={draft.description} onChange={change('description')}/></label>
     <label>Проект<select value={draft.project_id} onChange={change('project_id')}><option value="">Без проекта</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}</option>)}</select></label>
-    <label>Доступ<select value={draft.visibility} onChange={change('visibility')}><option value="private">Личная — только автор</option><option value="scope">В скоупе, с учётом проекта</option></select></label>{!readOnly && <button disabled={busy} className="diagram-primary">Сохранить настройки</button>}
+    <label>Доступ<select value={draft.visibility} onChange={change('visibility')}><option value="private">Личная — только автор</option><option value="scope">В скоупе, с учётом проекта</option></select></label>
+    <DiagramMemberEditingField projectId={draft.project_id} visibility={draft.visibility} value={draft.allow_member_editing} onChange={(allow_member_editing) => setDraft((value) => ({ ...value, allow_member_editing }))}/>
+    {!readOnly && <button disabled={busy} className="diagram-primary">Сохранить настройки</button>}
   </fieldset></form>;
+}
+
+function DiagramMemberEditingField({ projectId, visibility, value, onChange }) {
+  return <label>Совместное редактирование<select disabled={visibility === 'private'} value={value ? 'members' : 'owner'} onChange={(event) => onChange(event.target.value === 'members')}>
+    <option value="owner">Только автор и владелец скоупа</option>
+    <option value="members">{projectId ? 'Разрешить участникам проекта' : 'Разрешить участникам скоупа'}</option>
+  </select><small className="diagram-note">{visibility === 'private' ? 'Сначала откройте схему скоупу. Личные схемы не видны коллегам.' : 'С учётом прав аккаунта. Настройки доступа и удаление остаются у автора и владельца.'}</small></label>;
 }
 
 export function DiagramLinkModal({ scopeId, diagramId, onClose, onSaved }) {

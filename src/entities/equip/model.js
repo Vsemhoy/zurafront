@@ -14,13 +14,16 @@ export const fieldLabels = {
 };
 
 export function newThing(departmentId = '') {
-  return { name: '', thing_type_id: '', department_id: departmentId, manufacturer: '', model: '', serial_number: '', inventory_number: '', registration_basis: '', owner_kind: 'organization', owner_id: '', owner_name: '', purchased_on: '', purchase_cost: '', supplier_id: '', condition: 'working', suitability: 'unassessed', characteristics: {}, description: '', wms_product_id: '', wms_inventory_unit: '' };
+  return { name: '', thing_type_id: '', department_id: departmentId, container_kind: 'none', manufacturer: '', model: '', serial_number: '', inventory_number: '', registration_basis: '', owner_kind: 'organization', owner_id: '', owner_name: '', purchased_on: '', purchase_cost: '', supplier_id: '', condition: 'working', suitability: 'unassessed', characteristics: {}, description: '', wms_product_id: '', wms_inventory_unit: '' };
 }
 
 export function thingPayload(form, existing = false) {
   const payload = Object.fromEntries(Object.keys(newThing()).map((key) => [key, form[key] === '' ? null : form[key]]));
   payload.characteristics = form.characteristics ?? {};
-  if (existing) payload.revision = form.revision;
+  if (existing) {
+    delete payload.container_kind;
+    payload.revision = form.revision;
+  } else payload.container_kind = form.container_kind || 'none';
   return payload;
 }
 

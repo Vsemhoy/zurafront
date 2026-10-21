@@ -2,6 +2,7 @@ import { equipColumns, defaultColumns } from '../entities/equip/registry';
 import { IconBox } from '@tabler/icons-react';
 import { FileImage } from '../shared/ui/PhotoPanel';
 import { conditions, suitability, containerKinds, ownerLabel } from '../entities/equip/model';
+import { departmentShortLabel } from '../entities/department/model';
 
 export function EquipPhoto({ scopeId, thing }) {
   return <span className="equip-card-icon">{thing.cover_photo_id ? <FileImage scopeId={scopeId} fileId={thing.cover_photo_id} alt={`Фото: ${thing.name}`} className="equip-cover"/> : <IconBox size={23}/>}</span>;
@@ -23,7 +24,7 @@ export function EquipTable({ things, scope, types, columns, sort, direction, onS
       case 'photo': return <EquipPhoto scopeId={scope.id} thing={thing}/>;
       case 'name': return <button type="button" className="equip-table-name" onClick={() => onOpen(thing.id)}>{thing.name}</button>;
       case 'type': return thing.type?.name || '—';
-      case 'department': return <span className="equip-table-department" style={{ background: thing.department?.color || '#edf2f4' }}>{thing.department?.name || 'Без отдела'}</span>;
+      case 'department': return <span className="equip-table-department" title={thing.department?.name || 'Без отдела'} style={{ background: thing.department?.color || '#edf2f4' }}>{departmentShortLabel(thing.department)}</span>;
       case 'assignee': return thing.current_assignment?.user_name || 'Не выдано';
       case 'owner': return ownerLabel(thing, scope.name) || '—';
       case 'condition': return <span className={`equip-condition equip-condition--${thing.condition}`}>{conditions[thing.condition]}</span>;

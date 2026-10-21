@@ -1,6 +1,7 @@
 import release from './drawio-release.json' with { type: 'json' };
 
 export const diagramHref = (scopeId, id) => `/content/diagrams/${scopeId}/${id}`;
+export const canEditDiagram = (diagram) => Boolean(diagram?.can_edit ?? diagram?.can_manage);
 export const editorPath = `/vendor/drawio-${release.version}/index.html`;
 export const editorMarker = `/vendor/drawio-${release.version}/zuratax-release.json`;
 export function editorUrl(origin, language = 'ru') {

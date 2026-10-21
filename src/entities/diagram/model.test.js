@@ -1,6 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { editorUrl, editorMessage, svgDataToText, svgImageSrc, diagramHref } from './model.js';
+import { canEditDiagram, editorUrl, editorMessage, svgDataToText, svgImageSrc, diagramHref } from './model.js';
+
+test('collaborators can edit without management permission and explicit read-only wins', () => {
+  assert.equal(canEditDiagram({ can_edit: true, can_manage: false }), true);
+  assert.equal(canEditDiagram({ can_edit: false, can_manage: true }), false);
+  assert.equal(canEditDiagram({ can_manage: true }), true);
+  assert.equal(canEditDiagram({}), false);
+  assert.equal(canEditDiagram(null), false);
+});
 
 test('editor is pinned, local and offline, with no cloud fallback', () => {
   const url = new URL(editorUrl('https://crm.intranet', 'zh'));

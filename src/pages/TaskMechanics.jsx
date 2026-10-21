@@ -15,6 +15,7 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { taskApi } from "../entities/task/api";
+import { subtaskPayload } from "../entities/task/subtasks";
 import "./TaskerPage.css";
 import "./Subtasks.css";
 import "./Relations.css";
@@ -431,11 +432,7 @@ export function SubtasksPanel({ task, scopeId, refresh }) {
   const children = task.children ?? [];
   const create = useMutation({
     mutationFn: () =>
-      taskApi.create(scopeId, {
-        title,
-        parent_id: task.id,
-        project_id: task.project_id ?? null,
-      }),
+      taskApi.create(scopeId, subtaskPayload(task, title)),
     onSuccess: () => {
       setTitle("");
       refresh();

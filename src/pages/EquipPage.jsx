@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { IconBox, IconPlus, IconSearch, IconX, IconSettings, IconPhoto, IconFiles, IconHistory, IconPencil } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { equipApi } from '../entities/equip/api';
+import { departmentLabel, departmentShortLabel } from '../entities/department/model';
 import { conditions, suitability, ownerKinds, fieldLabels, newThing, thingPayload, ownerLabel, containerKinds, responsibilities, eventLabels } from '../entities/equip/model';
 import { EquipLinks } from './EquipLinks';
 import { EquipOperations, SupplierPicker } from './EquipOperations';
@@ -64,7 +65,7 @@ function EquipWorkspace({ scope }) {
     </div></header>
     {error ? <p role="alert" className="equip-error">{error.status === 403 ? 'Нет доступа к Equip. Обратитесь к владельцу организации.' : error.message}<button onClick={() => { options.refetch(); list.refetch(); }}>Повторить</button></p> : <>
       <section className="equip-toolbar" aria-label="Фильтры оборудования"><form onSubmit={(event) => { event.preventDefault(); change('q', search.trim()); setSearchDraft(null); }}><IconSearch size={18}/><input aria-label="Поиск оборудования" placeholder="Название, серийник или код WMS" maxLength={120} value={search} onChange={(event) => setSearchDraft({ source: urlSearch, value: event.target.value })}/><button type="submit">Найти</button></form>
-        <select aria-label="Отдел" value={params.get('department_id') || ''} onChange={(event) => change('department_id', event.target.value)}><option value="">Все доступные отделы</option>{options.data?.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+        <select aria-label="Отдел" value={params.get('department_id') || ''} onChange={(event) => change('department_id', event.target.value)}><option value="">Все доступные отделы</option>{options.data?.departments.map((item) => <option key={item.id} value={item.id}>{departmentLabel(item)}</option>)}</select>
         <select aria-label="Тип оборудования" value={params.get('thing_type_id') || ''} onChange={(event) => change('thing_type_id', event.target.value)}><option value="">Все типы</option>{options.data?.types.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
         <select aria-label="Состояние" value={params.get('condition') || ''} onChange={(event) => change('condition', event.target.value)}><option value="">Любое состояние</option>{Object.entries(conditions).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
         {hasFilters && <button className="equip-secondary" onClick={resetFilters}>Сбросить</button>}
@@ -77,7 +78,7 @@ function EquipWorkspace({ scope }) {
           <div className="equip-card-top"><EquipPhoto scopeId={scope.id} thing={thing}/><span className={`equip-condition equip-condition--${thing.condition}`}>{conditions[thing.condition]}</span></div>
           <small>{thing.type?.name}</small><strong>{thing.name}</strong><span className="equip-model">{[thing.manufacturer, thing.model].filter(Boolean).join(' ') || 'Модель не указана'}</span>
           <dl><div><dt>Инв. №</dt><dd>{thing.inventory_number || '—'}</dd></div><div><dt>Собственник</dt><dd>{ownerLabel(thing, scope.name)}</dd></div><div><dt>Выдано</dt><dd>{thing.current_assignment?.user_name || 'Не выдано'}</dd></div></dl>
-          <footer style={{ background: thing.department?.color || '#edf2f4' }}>{thing.department?.name || 'Без отдела'}</footer>
+          <footer title={thing.department?.name || 'Без отдела'} style={{ background: thing.department?.color || '#edf2f4' }}>{departmentShortLabel(thing.department)}</footer>
         </button>)}</div>}
         {list.data?.meta.last_page > 1 && <nav className="equip-pagination" aria-label="Страницы реестра"><button disabled={list.data.meta.page <= 1} onClick={() => change('page', list.data.meta.page - 1)}>Назад</button><span>{list.data.meta.page} / {list.data.meta.last_page}</span><button disabled={list.data.meta.page >= list.data.meta.last_page} onClick={() => change('page', list.data.meta.page + 1)}>Далее</button></nav>}
       </>}
@@ -109,6 +110,7 @@ function ThingSidebar({ scope, id, options, departmentId, onClose, onSaved }) {
     {!isNew && <nav className="equip-tabs" aria-label="Разделы карточки">{[['details', 'Карточка', IconBox], ['assignments', 'Выдача', IconPencil], ['compositions', 'Состав', IconBox], ['photos', 'Фото', IconPhoto], ['files', 'Документы', IconFiles], ['links', 'Связи', IconFiles], ['history', 'История', IconHistory]].map(([key, label, Icon]) => <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}><Icon size={16}/>{label}</button>)}</nav>}
     {thing.error ? <p role="alert" className="equip-error">{thing.error.message}<button onClick={() => thing.refetch()}>Повторить</button></p> : !isNew && thing.isPending ? <p className="equip-empty">Загружаю карточку…</p> : <>
       <div hidden={tab !== 'details'} className="equip-dialog-body">
+        {!isNew && <div className="equip-container-summary"><span>{containerKinds[thing.data.container_kind] || containerKinds.none}</span><button type="button" className="equip-secondary" disabled={dirty} onClick={() => setTab('compositions')}>Состав и контейнер</button></div>}
         {!isNew && !editing && canEdit && <button className="equip-edit-trigger" onClick={() => setEditing(true)}><IconPencil size={16}/>Редактировать</button>}
         <ThingForm key={isNew ? 'new' : `${id}:${thing.data.revision}:${formVersion}`} initial={isNew ? newThing(departmentId || options.default_department_id || '') : thing.data} options={options} scopeId={scope.id} editing={editing} isNew={isNew} onDirty={() => setDirty(true)} onSaved={saved} onCancel={cancel}/>
       </div>
@@ -131,9 +133,10 @@ function ThingForm({ initial, options, scopeId, editing, isNew, onDirty, onSaved
   const editable = editing && (isNew ? options.permissions.create : options.permissions.update);
   return <form className="equip-form" onSubmit={(event) => { event.preventDefault(); if (!supplierPending) save.mutate(); }}>
     <fieldset disabled={!editable || save.isPending}><legend>Основное</legend>
+      {isNew && <><label>Что создаём<select value={form.container_kind || 'none'} disabled={!options.permissions.compose} onChange={(event) => set('container_kind', event.target.value)}><option value="none">Отдельная вещь</option><option value="physical">Физический контейнер — компьютер, стойка</option><option value="logical">Логический комплект — рабочее место, набор</option></select></label><small>{options.permissions.compose ? 'После создания добавьте компоненты во вкладке «Состав». Вложенные контейнеры поддерживаются.' : 'Для создания контейнера нужно право «Управлять комплектацией». Можно создать отдельную вещь.'}</small></>}
       {input('name', 'Название *', 'text', { required: true, autoFocus: isNew, placeholder: 'Например, монитор дизайнера' })}
       <div className="equip-form-row"><label>Тип *<select required value={form.thing_type_id} onChange={(event) => { if (Object.keys(form.characteristics).length && !window.confirm('При смене типа заполненные характеристики будут очищены. Продолжить?')) return; setForm((value) => ({ ...value, thing_type_id: event.target.value, characteristics: {} })); onDirty(); }}><option value="">Выберите тип</option>{options.types.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <label>Отдел<select required={!options.permissions.access_all} value={form.department_id || ''} onChange={(event) => set('department_id', event.target.value)}><option value="">Без отдела</option>{options.departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></div>
+        <label>Отдел<select required={!options.permissions.access_all} value={form.department_id || ''} onChange={(event) => set('department_id', event.target.value)}><option value="">Без отдела</option>{options.departments.map((item) => <option key={item.id} value={item.id}>{departmentLabel(item)}</option>)}</select></label></div>
       <div className="equip-form-row">{input('manufacturer', 'Производитель')}{input('model', 'Модель')}</div>
       <div className="equip-form-row">{input('inventory_number', 'Инвентарный номер')}{input('serial_number', 'Серийный номер')}</div>
     </fieldset>

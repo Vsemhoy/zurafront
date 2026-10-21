@@ -6,6 +6,7 @@ import { apiRequest } from '../../api';
 import { contentNavigationApi } from '../../entities/content-navigation/api';
 import { createTrail, followNode, moveTrail, nodeFromHref, nodeKey, nodeTypes, rememberVisit } from '../../entities/content-navigation/model';
 import { diagramApi } from '../../entities/diagram/api';
+import { canEditDiagram } from '../../entities/diagram/model';
 import { DiagramViewport } from './DiagramViewport';
 import { DiagramEditorModal } from './DiagramEditorModal';
 import { FilePreview } from './FilePreview';
@@ -31,7 +32,7 @@ export function ContentNodeBrowser({ scopeId, initialNode, onClose }) {
     const node = await contentNavigationApi.get(scopeId, visit, signal);
     if (visit.type === 'diagram' && visit.versionId) {
       const version = await diagramApi.revision(scopeId, visit.id, visit.versionId);
-      return { ...node, title: version.title, can_manage: false, links: [], document: { ...node.document, ...version, id: visit.id, revision: version.number } };
+      return { ...node, title: version.title, can_manage: false, can_edit: false, links: [], document: { ...node.document, ...version, id: visit.id, revision: version.number } };
     }
     return node;
   }, refetchOnWindowFocus: !editing });
@@ -90,7 +91,7 @@ export function ContentNodeBrowser({ scopeId, initialNode, onClose }) {
       <div className="document-browser-title"><small>{nodeTypes[visit.type]}{visit.versionId ? ' · сохранённая версия' : ''}</small><strong>{node?.title || visit.title || 'Загрузка…'}</strong></div>
       <button aria-pressed={showLinks} title="Показать или скрыть навигацию по документам" onClick={() => setShowLinks(!showLinks)}><IconRoute size={17}/><span>Навигация</span></button>
       {node?.can_manage && !visit.versionId && <button aria-label="Настроить связи" title="Настроить связи" aria-pressed={managing} onClick={() => { setManaging(!managing); setShowLinks(true); setDrawing(false); }}><IconLink size={17}/><span>Настроить связи</span></button>}
-      {visit.type === 'diagram' && node?.can_manage && !visit.versionId && <button aria-label="Редактировать схему" title="Редактировать схему" onClick={() => setEditing(node.document)}><IconEdit size={17}/><span>Редактировать схему</span></button>}
+      {visit.type === 'diagram' && canEditDiagram(node) && !visit.versionId && <button aria-label="Редактировать схему" title="Редактировать схему" onClick={() => setEditing(node.document)}><IconEdit size={17}/><span>Редактировать схему</span></button>}
       <button aria-label="Закрыть браузер документов" onClick={onClose}><IconX size={22}/></button>
     </header>
     <nav className="document-breadcrumbs" aria-label="Путь просмотра">{trail.visits.slice(0, trail.cursor + 1).map((item, index, path) => <span key={index}>{index > 0 && <IconChevronRight size={13}/>}<button aria-current={index === trail.cursor ? 'page' : undefined} title={item.title || nodeTypes[item.type]} onClick={() => jump(index)}>{path.slice(0, index).some((previous) => nodeKey(previous) === nodeKey(item)) && <IconRoute size={12}/>}<small>{nodeTypes[item.type]}</small>{item.code || item.title || (index === trail.cursor ? node?.title : '') || item.id}</button></span>)}<em>Путь переходов, не иерархия</em></nav>

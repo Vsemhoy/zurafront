@@ -1,4 +1,6 @@
 import { departmentColor } from '../../entities/department/colors';
+import { departmentLabel } from '../../entities/department/model';
+import { DepartmentIcon } from './DepartmentIcon';
 import './DepartmentField.css';
 
 export function DepartmentFilter({ departments = [], value, onChange }) {
@@ -7,10 +9,12 @@ export function DepartmentFilter({ departments = [], value, onChange }) {
     style={department ? { backgroundColor: departmentColor(department) } : undefined}
     value={value} onChange={(event) => onChange(event.target.value)}>
     <option value="">Все отделы</option>
-    {departments.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+    {departments.map((item) => <option key={item.id} value={item.id}>{departmentLabel(item)}</option>)}
   </select>;
 }
 
 export function DepartmentStrip({ department }) {
-  return department ? <span className="department-strip" style={{ backgroundColor: departmentColor(department) }} title={`Отдел ${department.name}`}>{department.name}</span> : null;
+  return department ? <span className="department-strip" style={{ backgroundColor: departmentColor(department) }} title={`Отдел ${departmentLabel(department)}`}>
+    {department.icon_svg && <DepartmentIcon department={department}/>}{department.code && <code>{department.code}</code>}<span>{department.name}</span>
+  </span> : null;
 }
