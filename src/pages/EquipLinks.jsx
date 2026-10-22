@@ -1,3 +1,5 @@
+import { useWorkspace } from '../app/workspace';
+import { moduleEnabled } from '../entities/scope/modules';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -9,11 +11,15 @@ import { ContentNodeBrowser } from '../shared/ui/ContentNodeBrowser';
 const statuses = { scheduled: 'Запланирована', todo: 'К выполнению', in_progress: 'В работе', blocked: 'Заблокирована', review: 'На проверке', done: 'Выполнена', cancelled: 'Отменена' };
 
 export function EquipLinks({ scopeId, id, permissions }) {
-  const [kind, setKind] = useState('tasks');
+  const { activeScope } = useWorkspace();
+  const tasksEnabled = moduleEnabled(activeScope, 'tasker');
+  const diagramsEnabled = moduleEnabled(activeScope, 'content');
+  const [kind, setKind] = useState(tasksEnabled ? 'tasks' : 'diagrams');
   const [preview, setPreview] = useState(null);
+  if (!tasksEnabled && !diagramsEnabled) return <p className="equip-dialog-body">Tasker и Контент отключены в этом скоупе. Связи сохранены.</p>;
   if (!permissions.task_view) return <p className="equip-dialog-body">Для просмотра связанных задач и диаграмм нужно право просмотра задач.</p>;
   return <div className="equip-dialog-body equip-links">
-    <nav className="equip-link-kinds" aria-label="Тип связей"><button aria-pressed={kind === 'tasks'} onClick={() => setKind('tasks')}>Задачи</button><button aria-pressed={kind === 'diagrams'} onClick={() => setKind('diagrams')}>Диаграммы</button></nav>
+    <nav className="equip-link-kinds" aria-label="Тип связей">{tasksEnabled && <button aria-pressed={kind === 'tasks'} onClick={() => setKind('tasks')}>Задачи</button>}{diagramsEnabled && <button aria-pressed={kind === 'diagrams'} onClick={() => setKind('diagrams')}>Диаграммы</button>}</nav>
     {kind === 'tasks' ? <TaskLinks scopeId={scopeId} id={id} readOnly={!permissions.update}/> : <DiagramAttachmentsPanel scopeId={scopeId} type="thing" id={id} readOnly={!permissions.update || !permissions.task_update} onOpen={setPreview}/>}
     {preview && <DiagramPreview key={preview.id} scopeId={scopeId} item={preview} onClose={() => setPreview(null)}/>}
   </div>;

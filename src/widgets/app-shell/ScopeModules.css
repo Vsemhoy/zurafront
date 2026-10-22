@@ -1,0 +1,27 @@
+.scope-modules-modal { width:min(620px,calc(100vw - 24px)); max-height:calc(100dvh - 24px); overflow:auto; overscroll-behavior:contain; padding:0 16px; border:1px solid #cbd3de; border-radius:2px; color:#435064; background:#fff; box-shadow:0 20px 70px #14213b44; }
+.scope-modules-modal::backdrop { background:#14213b55; backdrop-filter:blur(6px); }
+.scope-modules-modal>header { position:sticky; top:0; z-index:3; background:#fff; display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:1px solid #cbd3de; }
+.scope-modules-modal h2 { display:flex; gap:8px; align-items:center; font-size:17px; margin:0; }
+.scope-modules-modal button { display:inline-flex; align-items:center; justify-content:center; border:1px solid #cbd3de; border-radius:0; background:#fff; color:inherit; min-height:32px; cursor:pointer; }
+.scope-modules-modal>p { font-size:12px; line-height:1.5; }
+.scope-modules-modal .scope-modules-hint { color:#687487; font-size:11px; }
+.scope-modules-modal ul { padding:0; margin:12px 0; display:grid; gap:5px; list-style:none; }
+.scope-module-row { position:relative; display:flex; gap:8px; align-items:center; padding:7px; border:1px solid #cbd3de; background:#fff; min-width:0; }
+.scope-module-row.is-disabled { background:#f4f6fa; }
+.scope-module-row label { display:flex; align-items:center; gap:8px; flex:1; min-width:0; cursor:pointer; }
+.scope-module-row input { accent-color:#075aaf; flex-shrink:0; }
+.scope-module-row label>span { display:grid; gap:3px; }
+.scope-module-row strong { font-size:13px; font-weight:500; }
+.scope-module-row small { color:#687487; font-size:11px; }
+.scope-module-row .scope-module-grip { touch-action:none; border:0; background:transparent; cursor:grab; padding:4px; }
+.scope-module-arrows { display:flex; gap:3px; }
+.scope-module-arrows button { width:28px; padding:0; }
+.scope-modules-modal button:disabled { opacity:.4; cursor:default; }
+.scope-modules-modal>footer { position:sticky; bottom:0; z-index:3; padding:10px 0; background:#fff; border-top:1px solid #cbd3de; }
+.scope-modules-modal .editor-save-bar { justify-content:space-between; width:100%; }
+.scope-modules-modal .editor-save-button { background:#075aaf; color:#fff; border-color:#075aaf; }
+.scope-modules-error { color:#b42318; }
+.scope-module-unavailable { padding:32px 24px; color:#435064; }
+.scope-module-unavailable h1 { font-size:21px; }
+.scope-module-unavailable button { padding:7px 12px; margin-right:8px; border:1px solid #cbd3de; background:#fff; color:#075aaf; cursor:pointer; }
+@media(max-width:680px) { .scope-modules-modal { padding-inline:10px; } .scope-module-row { gap:4px; padding:6px 3px; } .scope-module-arrows { flex-direction:column; } .scope-module-arrows button { min-height:28px; } }

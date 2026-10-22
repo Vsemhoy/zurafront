@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useWorkspace } from '../../app/workspace';
+import { moduleEnabled } from '../../entities/scope/modules';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { IconLink, IconSchema } from '@tabler/icons-react';
@@ -6,7 +8,12 @@ import { diagramApi } from '../../entities/diagram/api';
 import { ContentNodeBrowser } from './ContentNodeBrowser';
 import '../../pages/ContentPage.css';
 
-export function DiagramAttachmentsPanel({ scopeId, type, id, readOnly = false, onOpen }) {
+export function DiagramAttachmentsPanel(props) {
+  const { activeScope } = useWorkspace();
+  return moduleEnabled(activeScope, 'content') ? <EnabledDiagramAttachmentsPanel {...props}/> : null;
+}
+
+function EnabledDiagramAttachmentsPanel({ scopeId, type, id, readOnly = false, onOpen }) {
   const client = useQueryClient();
   const [search, setSearch] = useState('');
   const [query, setQuery] = useState('');

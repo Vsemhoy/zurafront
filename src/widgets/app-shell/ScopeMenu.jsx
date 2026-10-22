@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { IconBriefcase2, IconPalette, IconPlus, IconSearch } from '@tabler/icons-react';
+import { IconBriefcase2, IconLayoutGrid, IconPalette, IconPlus, IconSearch } from '@tabler/icons-react';
 import { scopeApi } from '../../entities/scope/api';
 import { canManageScopeAppearance, headerThemeBackground, scopeHeaderTheme } from '../../entities/scope/appearance';
 import './ScopeAppearance.css';
 
-export function ScopeMenu({ scopes, active, userId, onSelect, onAppearance, onClose }) {
+export function ScopeMenu({ scopes, active, userId, onSelect, onAppearance, onClose, canManageModules, onModules }) {
   const queryClient = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [search, setSearch] = useState('');
@@ -31,6 +31,7 @@ export function ScopeMenu({ scopes, active, userId, onSelect, onAppearance, onCl
               <span className="scope-icon scope-icon--work"><IconBriefcase2 size={20}/></span>
               <span className="scope-row-label"><strong>{scope.name}</strong><small>{isActive ? 'Активный' : scope.is_private ? 'Приватный' : 'Общий'}</small></span>
             </button>
+            {isActive && canManageModules && <button type="button" className="scope-appearance-trigger" aria-label={`Модули скоупа «${scope.name}»`} title="Модули и меню" onClick={onModules}><IconLayoutGrid size={18}/></button>}
             {isActive && (canManageScopeAppearance(scope, userId)
               ? <button type="button" className="scope-appearance-trigger" aria-label={`Оформление скоупа «${scope.name}»`} title="Оформление скоупа" onClick={onAppearance}><IconPalette size={18}/></button>
               : <i aria-label="Активный скоуп"/>)}

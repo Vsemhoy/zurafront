@@ -1,3 +1,4 @@
+import { moduleEnabled } from '../entities/scope/modules';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -51,10 +52,12 @@ export function SearchPage() {
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
   const requestedMode = params.get('type');
-  const mode = requestedMode === 'all' || entityTypes.some(([type]) => type === requestedMode) ? requestedMode : 'task';
+  const typeModules = { task: 'tasker', lore: 'lore', event: 'eventor', project: 'projector', book: 'booker', book_page: 'booker', book_block: 'booker' };
+  const availableTypes = entityTypes.filter(([type]) => moduleEnabled(activeScope, typeModules[type]));
+  const mode = requestedMode === 'all' || availableTypes.some(([type]) => type === requestedMode) ? requestedMode : (moduleEnabled(activeScope, 'tasker') ? 'task' : 'all');
   const projectId = params.get('project_id') || '';
   const userId = params.get('user_id') || '';
-  const taskMode = ['task', 'all'].includes(mode);
+  const taskMode = moduleEnabled(activeScope, 'tasker') && ['task', 'all'].includes(mode);
   const completedBy = taskMode ? params.get('completed_by') || '' : '';
   const createdBy = taskMode ? params.get('created_by') || '' : '';
   const status = params.get('status') || '';
@@ -116,7 +119,7 @@ export function SearchPage() {
         <button className={mode === 'all' ? 'active' : ''} onClick={() => selectMode('all')}>
           Всё {mode === 'all' && search.data && <small>{search.data.total}</small>}
         </button>
-        {entityTypes.map(([type, label, Icon]) => (
+        {availableTypes.map(([type, label, Icon]) => (
           <button key={type} className={mode === type ? 'active' : ''} onClick={() => selectMode(type)}>
             <Icon size={14} />{label}{search.data && (mode === type || mode === 'all') && <small>{counts[type] ?? 0}</small>}
           </button>
@@ -128,7 +131,7 @@ export function SearchPage() {
           <header><IconAdjustments size={16} /><strong>Уточнить</strong>{hasFilters && <button onClick={reset}>Сбросить</button>}</header>
           <label>Проект<select value={projectId} onChange={(event) => updateParam('project_id', event.target.value)}><option value="">Все проекты</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}</option>)}</select></label>
           <label>Участник<select value={userId} onChange={(event) => updateParam('user_id', event.target.value)}><option value="">Все участники</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}{user.position ? ` · ${user.position}` : ''}</option>)}</select></label>
-          {['task', 'all'].includes(mode) && <>
+          {taskMode && <>
             <label>Выполнил<select value={completedBy} onChange={(event) => updateParam('completed_by', event.target.value)}><option value="">Любой исполнитель</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
             <label>Поставил задачу<select value={createdBy} onChange={(event) => updateParam('created_by', event.target.value)}><option value="">Любой автор</option>{users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
             {completedBy && <p>Только завершённые задачи выбранного исполнителя.</p>}

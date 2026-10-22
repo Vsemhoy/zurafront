@@ -1,3 +1,4 @@
+import { moduleEnabled } from '../entities/scope/modules';
 import { CommentAuthor } from '../shared/ui/CommentAuthor';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { departmentApi } from '../entities/department/api';
@@ -28,32 +29,33 @@ export function DashboardPage() {
   if (isLoading) return <main className="crm-dashboard-state">Собираю рабочую картину…</main>;
   if (error) return <main className="crm-dashboard-state error">{error.message}</main>;
   const myKpi = data.kpi?.me;
+  const enabled = (id) => moduleEnabled(activeScope, id);
 
   return <main className="crm-dashboard">
-    <header className="crm-hero"><div><small>{activeScope.name} · {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h1>Привет, {user?.name?.split(' ')[0] || 'бро'}</h1><p>{data.summary.my_open_tasks ? `В фокусе ${data.summary.my_open_tasks} задач${data.summary.my_overdue_tasks ? `, просрочено ${data.summary.my_overdue_tasks}` : ''}.` : 'Личный хвост разобран. Можно посмотреть, что происходит у команды.'}</p></div><nav><Link className="primary" to="/tasks"><IconPlus size={16}/>Новая задача</Link><Link to="/plans"><IconRoute size={16}/>Planner</Link><Link to="/kpi"><IconTargetArrow size={16}/>KPI</Link></nav></header>
+    <header className="crm-hero"><div><small>{activeScope.name} · {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}</small><h1>Привет, {user?.name?.split(' ')[0] || 'бро'}</h1><p>{data.summary.my_open_tasks ? `В фокусе ${data.summary.my_open_tasks} задач${data.summary.my_overdue_tasks ? `, просрочено ${data.summary.my_overdue_tasks}` : ''}.` : 'Личный хвост разобран. Можно посмотреть, что происходит у команды.'}</p></div><nav>{enabled('tasker') && <Link className="primary" to="/tasks"><IconPlus size={16}/>Новая задача</Link>}{enabled('planner') && <Link to="/plans"><IconRoute size={16}/>Planner</Link>}{enabled('kpi') && <Link to="/kpi"><IconTargetArrow size={16}/>KPI</Link>}</nav></header>
 
     <section className="crm-metrics">
-      <Metric icon={IconClipboardList} value={data.summary.my_open_tasks} label="Мои активные" tone="blue" href="/tasks"/>
-      <Metric icon={IconAlertTriangle} value={data.summary.my_overdue_tasks} label="Просрочено" tone="red" href="/planner"/>
+      {enabled('tasker') && <Metric icon={IconClipboardList} value={data.summary.my_open_tasks} label="Мои активные" tone="blue" href="/tasks"/>}
+      {enabled('tasker') && <Metric icon={IconAlertTriangle} value={data.summary.my_overdue_tasks} label="Просрочено" tone="red" href={enabled('calendar') ? '/planner' : '/tasks'}/> }
       <Metric icon={IconBriefcase2} value={data.summary.projects} label="Доступно проектов" tone="violet" href="/projects"/>
-      <Metric icon={IconBook2} value={data.summary.books} label="Доступно книг" tone="orange" href="/books"/>
+      {enabled('booker') && <Metric icon={IconBook2} value={data.summary.books} label="Доступно книг" tone="orange" href="/books"/>}
     </section>
 
     <div className="crm-dashboard-grid">
       <div className="crm-dashboard-main">
-        <DashboardSection title="Мои задачи" icon={IconClipboardList} count={data.my_tasks.length} href="/tasks">
+        {enabled('tasker') && <><DashboardSection title="Мои задачи" icon={IconClipboardList} count={data.my_tasks.length} href="/tasks">
           <div className="crm-task-list">{data.my_tasks.map((task) => <TaskRow key={task.id} task={task}/>)}{!data.my_tasks.length && <Empty icon={IconCheck}>Активных задач нет.</Empty>}</div>
         </DashboardSection>
         <TaskUpdates updates={data.task_updates ?? []}/>
         {[['Мне поставили', data.assigned_to_me], ['Я поставил', data.created_by_me], ['Недавно выполнено', data.recently_completed]].map(([title, tasks]) => <DashboardSection key={title} title={title} icon={IconClipboardList} count={tasks?.length ?? 0}><div className="crm-task-list">{tasks?.map((task) => <TaskRow key={task.id} task={task}/>)}{!tasks?.length && <Empty icon={IconCheck}>Задач пока нет.</Empty>}</div></DashboardSection>)}
-        <DepartmentQueue scopeId={activeScope.id} tasks={data.department_queue ?? []} canClaim={data.can_claim}/>
+        <DepartmentQueue scopeId={activeScope.id} tasks={data.department_queue ?? []} canClaim={data.can_claim}/></>}
         <RecentWorkspace recent={data.recent}/>
       </div>
 
       <aside className="crm-dashboard-side">
-        <MyKpiCard kpi={myKpi} month={data.kpi?.month}/>
-        <TeamKpi people={data.kpi?.team ?? []}/>
-        <BookComments comments={data.book_comments}/>
+        {enabled('kpi') && <MyKpiCard kpi={myKpi} month={data.kpi?.month}/>}
+        {enabled('kpi') && <TeamKpi people={data.kpi?.team ?? []}/>}
+        {enabled('booker') && <BookComments comments={data.book_comments}/>}
       </aside>
     </div>
   </main>;
@@ -85,7 +87,8 @@ function BookComments({ comments }) {
 }
 
 function RecentWorkspace({ recent }) {
-  return <section className="crm-recent"><header><span>Новое в скоупе</span><small>последние добавления</small></header><div><RecentColumn title="Задачи" icon={IconClipboardList} href="/tasks">{recent.tasks.map((task) => <Link key={task.id} to={`/tasks/${task.id}/edit`}><code>{task.task_key}</code><span><strong>{task.title}</strong><small>{task.assignee?.name || 'Не назначена'} · {relativeDate(task.created_at)}</small></span></Link>)}</RecentColumn><RecentColumn title="Проекты" icon={IconBriefcase2} href="/projects">{recent.projects.map((project) => <Link key={project.id} to="/projects"><i style={{ background: project.color }}/><span><strong>{project.key} · {project.title}</strong><small>{project.tasks_count} задач · {project.books_count} книг</small></span></Link>)}</RecentColumn><RecentColumn title="Книги" icon={IconBook2} href="/books">{recent.books.map((book) => <Link key={book.id} to={`/books/${book.id}`}><IconBook2 size={15}/><span><strong>{book.title}</strong><small>{book.pages_count} страниц · {relativeDate(book.created_at)}</small></span></Link>)}</RecentColumn></div></section>;
+  const { activeScope } = useWorkspace();
+  return <section className="crm-recent"><header><span>Новое в скоупе</span><small>последние добавления</small></header><div>{moduleEnabled(activeScope, 'tasker') && <RecentColumn title="Задачи" icon={IconClipboardList} href="/tasks">{recent.tasks.map((task) => <Link key={task.id} to={`/tasks/${task.id}/edit`}><code>{task.task_key}</code><span><strong>{task.title}</strong><small>{task.assignee?.name || 'Не назначена'} · {relativeDate(task.created_at)}</small></span></Link>)}</RecentColumn>}<RecentColumn title="Проекты" icon={IconBriefcase2} href="/projects">{recent.projects.map((project) => <Link key={project.id} to="/projects"><i style={{ background: project.color }}/><span><strong>{project.key} · {project.title}</strong><small>{project.tasks_count} задач · {project.books_count} книг</small></span></Link>)}</RecentColumn>{moduleEnabled(activeScope, 'booker') && <RecentColumn title="Книги" icon={IconBook2} href="/books">{recent.books.map((book) => <Link key={book.id} to={`/books/${book.id}`}><IconBook2 size={15}/><span><strong>{book.title}</strong><small>{book.pages_count} страниц · {relativeDate(book.created_at)}</small></span></Link>)}</RecentColumn>}</div></section>;
 }
 
 function RecentColumn({ title, icon: Icon, href, children }) {

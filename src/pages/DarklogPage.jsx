@@ -1,3 +1,4 @@
+import { moduleEnabled } from '../entities/scope/modules';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -113,6 +114,8 @@ function DarklogTable({ entries, onOpen }) {
 }
 
 function DarklogDrawer({ scopeId, id, options, refresh, onEdit, onClose }) {
+  const { activeScope } = useWorkspace();
+  const kpiEnabled = moduleEnabled(activeScope, 'kpi');
   const navigate = useNavigate();
   const location = useLocation();
   const [tab, setTab] = useState('timeline');
@@ -139,11 +142,11 @@ function DarklogDrawer({ scopeId, id, options, refresh, onEdit, onClose }) {
       <div className="darklog-card-actions">{item.can_update && <button onClick={() => onEdit(item)}><IconEdit size={15}/>Редактировать</button>}<AttachmentsButton scopeId={scopeId} type="darklog" id={id} readOnly={!item.can_update}/>{item.can_delete && <button className="danger" disabled={remove.isPending} onClick={() => window.confirm('Удалить дарклог из реестра? История останется в базе.') && remove.mutate()}><IconTrash size={15}/>Удалить</button>}</div>
       {item.description && <div className="darklog-description"><MarkdownRenderer>{item.description}</MarkdownRenderer></div>}
       <details className="darklog-context"><summary>Влияние, обходное решение и результат</summary>{[['Что пострадало', item.impact], ['Обходное решение', item.workaround], ['Устранение и проверка', item.resolution], ['Обоснование решения', item.decision_reason]].map(([title, value]) => value && <section key={title}><h3>{title}</h3><MarkdownRenderer>{value}</MarkdownRenderer></section>)}<h3>Периоды влияния</h3>{item.periods.map((period) => <p key={period.id}>{dateTime(period.starts_at)} → {dateTime(period.ends_at)}{period.note && ` · ${period.note}`}</p>)}</details>
-      <nav className="darklog-tabs"><button aria-pressed={activeTab === 'timeline'} onClick={() => switchTab('timeline')}>Хронология</button><button aria-pressed={activeTab === 'links'} onClick={() => switchTab('links')}>Связи · {item.links.length}</button><button aria-pressed={activeTab === 'kpi'} onClick={() => switchTab('kpi')}>KPI · {item.kpi_links.length}</button></nav>
+      <nav className="darklog-tabs"><button aria-pressed={activeTab === 'timeline'} onClick={() => switchTab('timeline')}>Хронология</button><button aria-pressed={activeTab === 'links'} onClick={() => switchTab('links')}>Связи · {item.links.length}</button>{kpiEnabled && <button aria-pressed={activeTab === 'kpi'} onClick={() => switchTab('kpi')}>KPI · {item.kpi_links.length}</button>}</nav>
       {activeTab === 'timeline' && <><section className="darklog-timeline">{!location.hash && item.timeline.length > visible && <button onClick={() => setVisible(visible + 40)}>Показать предыдущие события</button>}{timeline.map((event) => <article id={`darklog-timeline-${event.id}`} key={event.id} className={`darklog-timeline-event ${event.kind === 'comment' ? 'is-comment' : ''} ${location.hash === `#${event.id}` ? 'is-focused' : ''}`} style={{ '--marker-color': modules[event.module]?.[1] || '#343434' }}><header>{event.author && <CommentAuthor author={event.author}/>}<strong>{actions[event.title] || event.title}</strong><time>{dateTime(event.at)}{new Date(event.at) > new Date() ? ' · запланировано' : ''}</time></header>{event.parent_id && <small className="darklog-reply-label">Ответ на комментарий</small>}{event.content && <MarkdownRenderer>{event.content}</MarkdownRenderer>}{event.link && <p><a href={event.link.target.href}>{event.link.target.code} · {event.link.target.title}</a><small>{relations[event.link.relation]}{event.link.note ? ` · ${event.link.note}` : ''}</small></p>}{event.status && <small>Статус: {statuses[event.status]}</small>}{event.kind === 'comment' && item.can_update && <footer><button onClick={() => { setReply(event); document.getElementById('darklog-comment-input')?.focus(); }}>Ответить</button>{event.can_delete && <button disabled={removeComment.isPending} onClick={() => window.confirm('Удалить комментарий?') && removeComment.mutate(event.comment_id)}>Удалить</button>}</footer>}</article>)}</section>
         {item.can_update && <form className="darklog-comment-form" onSubmit={(event) => { event.preventDefault(); if (content.trim()) comment.mutate(); }}>{reply && <p>Ответ: {reply.author?.name}<button type="button" title="Отменить ответ" onClick={() => setReply(null)}><IconX size={13}/></button></p>}<textarea id="darklog-comment-input" required maxLength={20000} rows={3} placeholder="Что происходит? Комментарий поддерживает Markdown." value={content} onChange={(event) => setContent(event.target.value)}/><button className="darklog-primary" disabled={comment.isPending || !content.trim()}>Добавить комментарий</button>{(comment.error || removeComment.error) && <p className="darklog-error">{comment.error?.message || removeComment.error?.message}</p>}</form>}</>}
       {activeTab === 'links' && <DarklogLinks scopeId={scopeId} item={item} refresh={refresh}/>}
-      {activeTab === 'kpi' && <DarklogKpi scopeId={scopeId} item={item} options={options} refresh={refresh}/>}
+      {kpiEnabled && activeTab === 'kpi' && <DarklogKpi scopeId={scopeId} item={item} options={options} refresh={refresh}/>}
     </>}
     <button className="darklog-back-link" onClick={() => navigate('/darklog')}>К календарю Darklog</button>
   </aside></>, document.body);
