@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { IconCheck, IconDeviceFloppy, IconDownload, IconLoader2, IconX } from '@tabler/icons-react';
+import { IconDownload, IconX } from '@tabler/icons-react';
 import { useTranslation } from 'react-i18next';
 import { diagramApi } from '../../entities/diagram/api';
 import { createDiagramEditorSession } from '../../entities/diagram/editorSession';
 import { downloadDiagramXml, editorMarker, editorMessage, editorUrl } from '../../entities/diagram/model';
 import './DiagramEditorModal.css';
+import { EditorSaveBar } from './EditorSaveBar';
+import { useEditorLeaveGuard } from './editorGuard';
 
 export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose, nativeDialog = false }) {
   const { i18n } = useTranslation();
@@ -19,6 +21,9 @@ export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose, nativeD
   useEffect(() => { callbacks.current = { onSaved, onClose }; }, [onSaved, onClose]);
   const [installed, setInstalled] = useState(false);
   const [view, setView] = useState({ phase: 'loading', busy: false, ready: false, dirty: false, error: '', status: 'Запускаю локальный редактор…', savedCount: 0 });
+  const leave = useEditorLeaveGuard({ label: 'Рисунок схемы', dirty: view.dirty, busy: view.busy, isDirty: () => session.current?.dirty ?? false, isBusy: () => session.current?.busy ?? false, save: () => session.current?.saveAndWait() ?? false, discard: () => session.current?.discard() });
+  const leaveRef = useRef(leave);
+  useEffect(() => { leaveRef.current = leave; }, [leave]);
   const url = editorUrl(window.location.origin, i18n.resolvedLanguage?.split('-')[0]);
 
   useEffect(() => {
@@ -34,6 +39,7 @@ export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose, nativeD
       onChange: setView,
       onSaved: (result) => callbacks.current.onSaved(result),
       onClose: () => callbacks.current.onClose(),
+      onRequestClose: () => leaveRef.current(() => callbacks.current.onClose()),
     });
     session.current = editor;
     const receive = (event) => {
@@ -46,9 +52,10 @@ export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose, nativeD
       if (editor.unsaved) { event.preventDefault(); event.returnValue = ''; }
     };
     const keyDown = (event) => {
+      if (event.defaultPrevented || document.querySelector('.editor-leave-dialog[open]')) return;
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault(); event.stopPropagation(); editor.save();
-      } else if (event.key === 'Escape') { event.stopPropagation(); editor.close(); }
+      } else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); editor.requestClose(); }
     };
     window.addEventListener('message', receive);
     window.addEventListener('beforeunload', beforeUnload);
@@ -81,13 +88,10 @@ export function DiagramEditorModal({ scopeId, diagram, onSaved, onClose, nativeD
   }, [scopeId, diagramId, nativeDialog]);
 
   const Wrapper = nativeDialog ? 'dialog' : 'section';
-  return createPortal(<Wrapper ref={modal} className={`diagram-editor-modal${nativeDialog ? ' diagram-editor-modal--native' : ''}`} role="dialog" aria-modal="true" aria-label={`Редактор схемы: ${diagram.title}`} aria-busy={view.busy} onCancel={(event) => { event.preventDefault(); event.stopPropagation(); session.current?.close(); }}>
-    <header><strong>{diagram.title}</strong><span className={`diagram-save-status diagram-save-status--${view.phase}`} role="status" aria-live="polite">
-      {view.busy ? <IconLoader2 size={15} className="diagram-saving-spin"/> : view.phase === 'saved' ? <IconCheck key={view.savedCount} size={16} className="diagram-saved-check"/> : view.dirty ? <i aria-hidden="true">●</i> : null}{view.status}
-    </span>
+  return createPortal(<Wrapper ref={modal} className={`diagram-editor-modal${nativeDialog ? ' diagram-editor-modal--native' : ''}`} role="dialog" aria-modal="true" aria-label={`Редактор схемы: ${diagram.title}`} aria-busy={view.busy} onCancel={(event) => { event.preventDefault(); event.stopPropagation(); session.current?.requestClose(); }}>
+    <header><strong>{diagram.title}</strong><EditorSaveBar {...view} disabled={!view.ready} onSave={() => session.current?.save()}>
       <button type="button" onClick={() => downloadDiagramXml(session.current?.xml || diagram.xml, diagram.title)} title="Скачать исходник, включая несохранённые изменения"><IconDownload size={16}/>XML</button>
-      <button type="button" disabled={!view.ready || view.busy} title="Сохранить версию · Ctrl+S / ⌘S" onClick={() => session.current?.save()}><IconDeviceFloppy size={16}/>Сохранить</button>
-      <button type="button" autoFocus disabled={view.busy} onClick={() => session.current?.close()}><IconX size={18}/>{view.dirty ? 'Сохранить и закрыть' : 'Закрыть редактор'}</button>
+      <button type="button" autoFocus disabled={view.busy} onClick={() => session.current?.requestClose()}><IconX size={18}/>Закрыть редактор</button></EditorSaveBar>
     </header>
     {view.error && <div className="diagram-error" role="alert">{view.error}</div>}
     {installed && <iframe ref={frame} title="Локальный редактор draw.io" inert={!view.ready} src={url} sandbox="allow-scripts allow-same-origin allow-downloads" referrerPolicy="no-referrer"/>}

@@ -5,9 +5,9 @@ import { svgImageSrc } from './model.js';
 
 const source = (text) => `<mxfile><diagram id="page-1">${text}</diagram></mxfile>`;
 const svg = svgImageSrc('<svg xmlns="http://www.w3.org/2000/svg"><text>Схема</text></svg>');
-function setup(persist, normalizedXml = source('original')) {
+function setup(persist, normalizedXml = source('original'), confirmClose = false) {
   const messages = [], writes = [], views = [], saved = [], timers = new Map();
-  let closed = 0, timerId = 0;
+  let closed = 0, requestedClose = 0, timerId = 0;
   const editor = createDiagramEditorSession({
     diagram: { id: 'diagram-1', title: 'Test', xml: source('original'), revision: 1 },
     post: (message) => messages.push(message),
@@ -18,6 +18,7 @@ function setup(persist, normalizedXml = source('original')) {
     onChange: (view) => views.push(view),
     onSaved: (result) => saved.push(result),
     onClose: () => closed++,
+    onRequestClose: confirmClose ? () => requestedClose++ : undefined,
     schedule: (callback) => { timers.set(++timerId, callback); return timerId; },
     cancel: (id) => timers.delete(id),
   });
@@ -31,6 +32,7 @@ function setup(persist, normalizedXml = source('original')) {
   messages.length = 0;
   return { editor, messages, writes, views, saved, timers,
     get closed() { return closed; },
+    get requestedClose() { return requestedClose; },
     get view() { return views.at(-1); },
     get request() { return messages.filter((message) => message.action === 'export').at(-1); },
     draft: (xml) => editor.receive({ event: 'autosave', xml }),
@@ -243,4 +245,31 @@ test('source comparison ignores only volatile envelope metadata, never diagram c
   assert.equal(diagramSourceKey('<mxfile modified="now" etag="random" host="local" agent="browser" version="1"><diagram>data</diagram></mxfile>'), source('data').replace(' id="page-1"', ''));
   assert.notEqual(diagramSourceKey(source('<cell modified="one"/>')), diagramSourceKey(source('<cell modified="two"/>')));
   assert.notEqual(diagramSourceKey(source('a')), diagramSourceKey(source('b')));
+});
+
+test('requesting close inspects the final drawing without persisting before confirmation', async () => {
+  const app = setup(undefined, source('original'), true);
+  app.editor.requestClose();
+  await app.export(source('change before autosave notification'));
+  assert.equal(app.requestedClose, 1);
+  assert.equal(app.editor.dirty, true);
+  assert.equal(app.closed, 0);
+  assert.equal(app.writes.length, 0);
+  app.editor.discard();
+  assert.equal(app.editor.xml, source('original'));
+  assert.equal(app.editor.unsaved, false);
+});
+
+test('confirmation can await saving; errors keep the editor dirty and retryable', async () => {
+  let fail = true;
+  const app = setup((data) => { if (fail) throw new Error('Offline'); return { ...data, revision: 2 }; }, source('original'), true);
+  await app.draft(source('changed'));
+  const first = app.editor.saveAndWait(); await app.export(source('changed'));
+  assert.equal(await first, false);
+  assert.equal(app.editor.dirty, true);
+  fail = false;
+  const second = app.editor.saveAndWait(); await app.export(source('changed'));
+  assert.equal(await second, true);
+  assert.equal(app.editor.dirty, false);
+  assert.equal(app.closed, 0);
 });
