@@ -20,6 +20,10 @@ export function normalizeHeaderTheme(value) {
     angle: integer(theme.angle, defaultHeaderTheme.angle, 360),
   };
 }
+export function scopeHeaderTheme(scope, preview) {
+  const theme = scope?.id && preview?.scopeId === scope.id ? preview.theme : scope?.settings?.header_theme;
+  return normalizeHeaderTheme(theme);
+}
 const rgba = (color, opacity) => `rgba(${parseInt(color.slice(1, 3), 16)}, ${parseInt(color.slice(3, 5), 16)}, ${parseInt(color.slice(5, 7), 16)}, ${opacity / 100})`;
 export function headerThemeBackground(value) {
   const theme = normalizeHeaderTheme(value);

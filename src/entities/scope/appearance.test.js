@@ -1,6 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultHeaderTheme, headerThemeBackground, headerThemePresets, normalizeHeaderTheme } from './appearance.js';
+import { defaultHeaderTheme, headerThemeBackground, headerThemePresets, normalizeHeaderTheme, scopeHeaderTheme } from './appearance.js';
+
+test('header renders before scopes load and when the user has no scopes', () => {
+  for (const scope of [null, undefined, {}]) {
+    for (const preview of [null, undefined, {}, { scopeId: 'old', theme: headerThemePresets[1].theme }]) {
+      assert.deepEqual(scopeHeaderTheme(scope, preview), defaultHeaderTheme);
+      assert.doesNotThrow(() => headerThemeBackground(scopeHeaderTheme(scope, preview)));
+    }
+  }
+});
+test('header uses saved settings unless a preview belongs to the active scope', () => {
+  const scope = { id: 'work', settings: { header_theme: headerThemePresets[2].theme } };
+  assert.deepEqual(scopeHeaderTheme(scope, null), headerThemePresets[2].theme);
+  assert.deepEqual(scopeHeaderTheme(scope, { scopeId: 'personal', theme: headerThemePresets[1].theme }), headerThemePresets[2].theme);
+  assert.deepEqual(scopeHeaderTheme(scope, { scopeId: 'work', theme: headerThemePresets[1].theme }), headerThemePresets[1].theme);
+  assert.deepEqual(scopeHeaderTheme({ id: 'work', settings: null }, null), defaultHeaderTheme);
+  assert.deepEqual(scopeHeaderTheme(scope, { scopeId: 'work', theme: null }), defaultHeaderTheme);
+});
 
 test('legacy scopes keep a neutral translucent header without sharing mutable defaults', () => {
   assert.deepEqual(normalizeHeaderTheme(), defaultHeaderTheme);

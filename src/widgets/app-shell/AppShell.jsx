@@ -7,7 +7,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
 import { scopeApi } from '../../entities/scope/api';
-import { headerThemeBackground } from '../../entities/scope/appearance';
+import { headerThemeBackground, scopeHeaderTheme } from '../../entities/scope/appearance';
 import { ScopeAppearanceModal } from './ScopeAppearanceModal';
 import { contractorApi } from '../../entities/contractor/api';
 import { darklogTheme } from '../../entities/darklog/model';
@@ -87,7 +87,7 @@ export function AppShell() {
         if (scope.id !== activeScope?.id && location.pathname.startsWith('/content/diagrams/')) navigate('/content/diagrams');
       });
     };
-    const headerTheme = appearancePreview?.scopeId === activeScope?.id ? appearancePreview.theme : activeScope?.settings?.header_theme;
+    const headerTheme = scopeHeaderTheme(activeScope, appearancePreview);
     const canManageAppearance = activeScope && (activeScope.can_manage_appearance || activeScope.owner_id === user?.id);
     return <div className="app-shell">
       <aside className="module-rail"><Brand compact/>{modules.map(([to, label, Icon, end, color, tint]) => <NavLink key={to} to={to} end={end} title={label} aria-label={label} style={{ '--module-color': color, '--module-tint': tint }} className={({ isActive }) => `${isActive ? 'active' : ''} ${to === '/contractors' ? 'module-people' : ''}`}><Icon size={21}/></NavLink>)}</aside>
