@@ -1,0 +1,11 @@
+/* Content menus use layers up to 20; full-screen backdrops start at 30.
+   Keep shell chrome between them so every drawer covers and blurs the header.
+   Do not filter the shell itself: that would also affect its fixed drawers. */
+.app-shell > .status-bar { z-index: 22; }
+.app-shell > .app-header { z-index: 24; }
+.app-shell > .module-rail { z-index: 25; }
+
+.darklog-drawer-backdrop {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}

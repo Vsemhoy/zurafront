@@ -1,3 +1,6 @@
+.app-shell { --app-header-height: 50px; }
+.app-shell > .app-header { height: var(--app-header-height); }
+
 .app-shell > .module-rail {
     overflow-x: hidden;
     overflow-y: auto;
@@ -65,9 +68,10 @@
 
     .app-shell > .module-rail {
         width: 44px;
-        padding: 9px 0;
+        padding: 0 0 9px;
         gap: 6px;
         scrollbar-width: none;
+        border-right: 0;
     }
 
     .app-shell:has(> .module-rail) {
@@ -79,11 +83,27 @@
         left: 44px;
     }
 
-    .module-rail .brand--compact .brand__mark {
-        width: 40px;
-        height: 30px;
-        font-size: 15px;
-        background: linear-gradient(117deg, #003c87 0%, #005aaa 20%, #007ad7 40%, #009afb 60%, #00b9ff 80%, #00d8ef 100%);
+    .app-shell > .module-rail > .module-rail-brand {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 100%;
+        height: var(--app-header-height, 50px);
+        margin: 0;
+    }
+
+    .module-rail-brand .brand.brand--compact { margin: 0; }
+
+    .module-rail .module-rail-brand .brand__mark {
+        width: auto;
+        height: auto;
+        font-size: 16px;
+        background: transparent;
+        border-radius: 0;
+        color: #fff;
+        text-shadow: 0 1px 3px #14213b70;
     }
 
     .module-rail > a.active::before {
@@ -92,6 +112,7 @@
 }
 
 @media (max-width: 680px) {
+    .module-rail > .module-rail-brand { display: none; }
     .app-shell > .module-rail {
         justify-content: flex-start;
         overflow-x: auto;

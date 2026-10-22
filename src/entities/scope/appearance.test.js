@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { defaultHeaderTheme, headerThemeBackground, headerThemePresets, normalizeHeaderTheme, scopeHeaderTheme } from './appearance.js';
+import { applyHeaderThemePreset, canManageScopeAppearance, defaultHeaderTheme, headerThemeBackground, headerThemePresets, headerThemeStartBackground, headerThemeStyle, normalizeHeaderTheme, scopeHeaderTheme } from './appearance.js';
 
 test('header renders before scopes load and when the user has no scopes', () => {
   for (const scope of [null, undefined, {}]) {
@@ -43,5 +43,45 @@ test('stored data never becomes arbitrary CSS or external resource requests', ()
   assert.deepEqual(normalizeHeaderTheme({ start_opacity: -10, end_opacity: 999, angle: 361 }), { ...defaultHeaderTheme, start_opacity: 0, end_opacity: 100, angle: 360 });
 });
 test('presets use the same validated format as custom settings', () => {
+  assert.equal(headerThemePresets.length, 9);
+  assert.equal(new Set(headerThemePresets.map((preset) => headerThemeBackground(preset.theme))).size, 9);
   for (const preset of headerThemePresets) assert.deepEqual(normalizeHeaderTheme(preset.theme), preset.theme);
+});
+
+test('header blur defaults to 16 for legacy themes and safely supports 0–40 pixels', () => {
+  const legacy = { mode: 'gradient', start_color: '#aabbcc' };
+  assert.equal(headerThemeStyle(legacy)['--scope-header-blur'], '16px');
+  assert.equal(headerThemeStyle({ ...legacy, blur_px: 0 })['--scope-header-blur'], '0px');
+  assert.equal(headerThemeStyle({ blur_px: 40 })['--scope-header-blur'], '40px');
+  assert.equal(normalizeHeaderTheme({ blur_px: 22.6 }).blur_px, 23);
+  assert.equal(normalizeHeaderTheme({ blur_px: -1 }).blur_px, 0);
+  assert.equal(normalizeHeaderTheme({ blur_px: 1000 }).blur_px, 40);
+  for (const blur of [null, '', '20px;url(evil)', NaN, Infinity]) {
+    assert.equal(headerThemeStyle({ blur_px: blur })['--scope-header-blur'], '16px');
+  }
+  assert.equal(headerThemeStyle(legacy).backgroundImage, headerThemeBackground(legacy));
+});
+
+test('palette presets preserve the separately configured blur', () => {
+  const current = { ...defaultHeaderTheme, blur_px: 0 };
+  const preset = headerThemePresets[5].theme;
+  assert.deepEqual(applyHeaderThemePreset(current, preset), { ...preset, blur_px: 0 });
+  assert.equal(preset.blur_px, 16);
+  assert.equal(current.start_color, '#ffffff');
+});
+
+test('rail brand uses the first header stop including its opacity and safe defaults', () => {
+  assert.equal(headerThemeStartBackground({ start_color: '#AABBCC', start_opacity: 65, end_color: '#112233' }), 'rgba(170, 187, 204, 0.65)');
+  assert.equal(headerThemeStartBackground({ start_color: '#123456', start_opacity: 0 }), 'rgba(18, 52, 86, 0)');
+  assert.equal(headerThemeStartBackground(null), 'rgba(255, 255, 255, 0.88)');
+  assert.equal(headerThemeStartBackground({ start_color: 'url(evil)', start_opacity: 'evil' }), 'rgba(255, 255, 255, 0.88)');
+});
+
+test('scope appearance controls are available only to owners and appearance admins', () => {
+  assert.equal(canManageScopeAppearance(null, 'owner'), false);
+  assert.equal(canManageScopeAppearance({}, undefined), false);
+  assert.equal(canManageScopeAppearance({ owner_id: 'owner' }, 'owner'), true);
+  assert.equal(canManageScopeAppearance({ owner_id: 'owner' }, 'member'), false);
+  assert.equal(canManageScopeAppearance({ owner_id: 'owner', can_manage_appearance: true }, 'admin'), true);
+  assert.equal(canManageScopeAppearance({ can_manage_appearance: false }, 'member'), false);
 });
