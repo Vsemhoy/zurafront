@@ -48,28 +48,36 @@ function downloadDiagramBlob(blob, title, extension) {
 export function downloadDiagramSvg(svg, title) {
   downloadDiagramBlob(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), title, 'svg');
 }
-export async function downloadDiagramPng(svg, title, dimensions) {
-  const sourceUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+export async function diagramPngBlob(svg, dimensions) {
+  if (!Number.isFinite(dimensions?.width) || !Number.isFinite(dimensions?.height) || dimensions.width <= 0 || dimensions.height <= 0) {
+    throw new Error('У схемы некорректные размеры для PNG.');
+  }
+  const image = new Image();
+  await new Promise((resolve, reject) => {
+    image.onload = resolve;
+    image.onerror = () => reject(new Error('Не удалось подготовить PNG схемы.'));
+    // Blob SVGs with draw.io HTML labels (foreignObject) taint canvas in some browsers.
+    // Keep the document isolated as an image, using the same data URL as the viewer.
+    image.src = svgImageSrc(svg);
+  });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.ceil(dimensions.width));
+  canvas.height = Math.max(1, Math.ceil(dimensions.height));
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Браузер не поддерживает экспорт PNG.');
+  context.fillStyle = '#fff';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
   try {
-    const image = new Image();
-    await new Promise((resolve, reject) => {
-      image.onload = resolve;
-      image.onerror = () => reject(new Error('Не удалось подготовить PNG схемы.'));
-      image.src = sourceUrl;
-    });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.max(1, Math.ceil(dimensions.width));
-    canvas.height = Math.max(1, Math.ceil(dimensions.height));
-    const context = canvas.getContext('2d');
-    if (!context) throw new Error('Браузер не поддерживает экспорт PNG.');
-    context.fillStyle = '#fff';
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('Не удалось сформировать PNG схемы.');
-    downloadDiagramBlob(blob, title, 'png');
-  } finally {
-    URL.revokeObjectURL(sourceUrl);
+    return blob;
+  } catch (error) {
+    if (error.name === 'SecurityError') throw new Error('Браузер запретил экспорт изображения схемы. Попробуйте скачать SVG.');
+    throw error;
   }
+}
+export async function downloadDiagramPng(svg, title, dimensions) {
+  downloadDiagramBlob(await diagramPngBlob(svg, dimensions), title, 'png');
 }
 export const diagramTargetTypes = { task: 'Задача', project: 'Проект', book: 'Книга', book_page: 'Страница книги', event: 'Событие', lore: 'Лор', darklog: 'Дарклог', fact: 'Факт', plan_item: 'План', file: 'Файл', user: 'Контактор', thing: 'Оборудование' };
