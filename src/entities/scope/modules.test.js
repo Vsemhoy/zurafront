@@ -41,3 +41,8 @@ test('only a real owner, without impersonation, can manage modules', () => {
   assert.equal(canManageScopeModules({owner_id:'owner'}, {id:'owner', acting_as:{id:'member'}}), false);
   assert.equal(canManageScopeModules({owner_id:'owner'}, {id:'owner', type:'agent'}), false);
 });
+test('Exploiter depends on Equip without introducing a second equipment module', () => {
+  const scope = { modules: { enabled: { equip: false, exploiter: true } } };
+  assert.equal(moduleEnabled(scope, 'exploiter'), false);
+  assert.equal(moduleForPath('/exploiter'), 'exploiter');
+});

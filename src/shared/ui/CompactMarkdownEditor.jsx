@@ -29,7 +29,7 @@ import '../../pages/MarkdownEditor.css';
 import { createMarkdownDraft } from './markdownDraft';
 import MarkdownRenderer from './MarkdownRenderer';
 
-export default function CompactMarkdownEditor({ value, placeholder, onChange, onSave, readOnly = false, hideToolbarTrigger = false, toolbarInitiallyOpen = false, toolbarOpen: controlledToolbarOpen, onToolbarOpenChange, variant = 'compact', controlsContainer }) {
+export default function CompactMarkdownEditor({ value, placeholder, onChange, onSave, readOnly = false, hideToolbarTrigger = false, toolbarInitiallyOpen = false, toolbarOpen: controlledToolbarOpen, onToolbarOpenChange, variant = 'compact', controlsContainer, overlayContainer }) {
     const [internalToolbarOpen, setInternalToolbarOpen] = useState(toolbarInitiallyOpen);
     const toolbarOpen = controlledToolbarOpen ?? internalToolbarOpen;
     const [sourceOpen, setSourceOpen] = useState(false);
@@ -62,7 +62,7 @@ export default function CompactMarkdownEditor({ value, placeholder, onChange, on
             setSource(event.target.value);
             draft.change(event.target.value);
             onChange?.(event.target.value);
-        }} onBlur={save}/> : <MDXEditor key={editorRevision} markdown={visualMarkdown} placeholder={placeholder} onChange={(nextMarkdown, initialNormalization) => {
+        }} onBlur={save}/> : <MDXEditor overlayContainer={overlayContainer} key={editorRevision} markdown={visualMarkdown} placeholder={placeholder} onChange={(nextMarkdown, initialNormalization) => {
             if (draft.change(nextMarkdown, initialNormalization)) onChange?.(nextMarkdown);
         }} onBlur={save} plugins={[headingsPlugin(), listsPlugin(), quotePlugin(), linkPlugin(), tablePlugin(), thematicBreakPlugin(), codeBlockPlugin({ defaultCodeBlockLanguage: 'text' }), codeMirrorPlugin({ codeBlockLanguages: { text: 'Текст', sql: 'SQL', javascript: 'JavaScript', typescript: 'TypeScript', php: 'PHP', html: 'HTML', css: 'CSS', json: 'JSON', bash: 'Bash', shell: 'Shell', markdown: 'Markdown', yaml: 'YAML', python: 'Python' } }), markdownShortcutPlugin(), toolbarPlugin({ toolbarContents: () => <><UndoRedo/><Separator/><BlockTypeSelect/><BoldItalicUnderlineToggles/><CodeToggle/><InsertCodeBlock/><Separator/><ListsToggle/><CreateLink/><Separator/><InsertThematicBreak/><InsertTable/></> })]}/>}
     </section>;

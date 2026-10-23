@@ -8,6 +8,10 @@ import { departmentLabel, departmentShortLabel } from '../entities/department/mo
 import { conditions, suitability, ownerKinds, fieldLabels, newThing, thingPayload, ownerLabel, containerKinds, responsibilities, eventLabels } from '../entities/equip/model';
 import { EquipLinks } from './EquipLinks';
 import { EquipOperations, SupplierPicker } from './EquipOperations';
+import { ExploitationPanel } from './ExploiterPage';
+import { moduleEnabled } from '../entities/scope/modules';
+import { EquipActionBoard, EquipActionItem } from './EquipExploitationDrag';
+import { entryKinds, entryStatuses, entryPriorities } from '../entities/exploiter/model';
 import { EquipPhoto, EquipTable, EquipViewControls } from './EquipRegistry';
 import { useEquipColumns } from '../entities/equip/registry';
 import { PhotoPanel } from '../shared/ui/PhotoPanel';
@@ -42,6 +46,7 @@ function EquipWorkspace({ scope }) {
   const change = (key, value) => setParams((previous) => {
     const next = new URLSearchParams(previous);
     if (value) next.set(key, value); else next.delete(key);
+    if (key === 'item') next.delete('exploitation_kind');
     if (!['page', 'item', 'view'].includes(key)) next.delete('page');
     return next;
   });
@@ -74,17 +79,17 @@ function EquipWorkspace({ scope }) {
       <EquipViewControls view={view} onView={(value) => change('view', value)} columns={columns} onColumns={setColumns} sort={sort} direction={direction} onSort={changeSort}/>
       {(options.isPending || list.isLoading) ? <p className="equip-empty">Загружаю Экипу…</p> : <>
         <div className="equip-count">Оборудование <strong>{list.data?.meta.total ?? 0}</strong></div>
-        {!list.data?.data.length ? <section className="equip-empty"><IconBox size={46}/><h2>{hasFilters ? 'Ничего не найдено' : 'Здесь начинается ваша Экипа'}</h2><p>{hasFilters ? 'Попробуйте изменить фильтры или поисковый запрос.' : 'Компьютеры, мониторы, инструменты — всё, чем работает команда.'}</p>{permissions.create && <button className="equip-primary" onClick={() => change('item', 'new')}>Добавить оборудование</button>}</section> : view === 'table' ? <EquipTable things={list.data.data} scope={scope} types={options.data?.types || []} columns={columns} sort={sort} direction={direction} onSort={changeSort} onOpen={(id) => change('item', id)}/> : <div className="equip-grid">{list.data.data.map((thing) => <button className="equip-card" key={thing.id} onClick={() => change('item', thing.id)}>
+        {!list.data?.data.length ? <section className="equip-empty"><IconBox size={46}/><h2>{hasFilters ? 'Ничего не найдено' : 'Здесь начинается ваша Экипа'}</h2><p>{hasFilters ? 'Попробуйте изменить фильтры или поисковый запрос.' : 'Компьютеры, мониторы, инструменты — всё, чем работает команда.'}</p>{permissions.create && <button className="equip-primary" onClick={() => change('item', 'new')}>Добавить оборудование</button>}</section> : view === 'table' ? <EquipTable things={list.data.data} scope={scope} types={options.data?.types || []} columns={columns} sort={sort} direction={direction} onSort={changeSort} onOpen={(id) => change('item', id)}/> : <EquipActionBoard enabled={permissions.update && moduleEnabled(scope, 'exploiter')} onAction={(thing, kind) => setParams((previous) => { const next = new URLSearchParams(previous); next.set('item', thing.id); next.set('exploitation_kind', kind); return next; })}><div className="equip-grid">{list.data.data.map((thing) => <EquipActionItem key={thing.id} thing={thing} enabled={permissions.update && moduleEnabled(scope, 'exploiter')}><button className="equip-card" key={thing.id} onClick={() => change('item', thing.id)}>
           <div className="equip-card-top"><EquipPhoto scopeId={scope.id} thing={thing}/><span className={`equip-condition equip-condition--${thing.condition}`}>{conditions[thing.condition]}</span></div>
           <small>{thing.type?.name}</small><strong>{thing.name}</strong><span className="equip-model">{[thing.manufacturer, thing.model].filter(Boolean).join(' ') || 'Модель не указана'}</span>
           <dl><div><dt>Инв. №</dt><dd>{thing.inventory_number || '—'}</dd></div><div><dt>Собственник</dt><dd>{ownerLabel(thing, scope.name)}</dd></div><div><dt>Выдано</dt><dd>{thing.current_assignment?.user_name || 'Не выдано'}</dd></div></dl>
           <footer title={thing.department?.name || 'Без отдела'} style={{ background: thing.department?.color || '#edf2f4' }}>{departmentShortLabel(thing.department)}</footer>
-        </button>)}</div>}
+        </button></EquipActionItem>)}</div></EquipActionBoard>}
         {list.data?.meta.last_page > 1 && <nav className="equip-pagination" aria-label="Страницы реестра"><button disabled={list.data.meta.page <= 1} onClick={() => change('page', list.data.meta.page - 1)}>Назад</button><span>{list.data.meta.page} / {list.data.meta.last_page}</span><button disabled={list.data.meta.page >= list.data.meta.last_page} onClick={() => change('page', list.data.meta.page + 1)}>Далее</button></nav>}
       </>}
     </>}
-    {selected && options.data && <ThingSidebar key={`${scope.id}:${selected}`} scope={scope} id={selected} options={options.data} departmentId={params.get('department_id')} onClose={() => change('item', null)} onSaved={(thing) => { refresh(); change('item', thing.id); }}/>} 
-    {typeEditor && <TypeEditor scopeId={scope.id} types={options.data?.types ?? []} onClose={() => setTypeEditor(false)} onSaved={() => { client.invalidateQueries({ queryKey: ['equip-options', scope.id] }); setTypeEditor(false); }}/>} 
+    {selected && options.data && <ThingSidebar key={`${scope.id}:${selected}`} scope={scope} id={selected} options={options.data} departmentId={params.get('department_id')} initialExploitation={params.get('exploitation_kind')} onClose={() => change('item', null)} onSaved={(thing) => { refresh(); change('item', thing.id); }}/>}
+    {typeEditor && <TypeEditor scopeId={scope.id} types={options.data?.types ?? []} onClose={() => setTypeEditor(false)} onSaved={() => { client.invalidateQueries({ queryKey: ['equip-options', scope.id] }); setTypeEditor(false); }}/>}
   </main>;
 }
 
@@ -94,9 +99,9 @@ function EquipDialog({ title, onClose, children, className = '' }) {
   return <dialog ref={ref} className={`equip-dialog ${className}`} aria-label={title} onCancel={(event) => { event.preventDefault(); onClose(); }}><header className="equip-dialog-heading"><div><small>Equip</small><h2>{title}</h2></div><button type="button" aria-label="Закрыть" onClick={onClose}><IconX size={22}/></button></header>{children}</dialog>;
 }
 
-function ThingSidebar({ scope, id, options, departmentId, onClose, onSaved }) {
+function ThingSidebar({ scope, id, options, departmentId, initialExploitation, onClose, onSaved }) {
   const isNew = id === 'new';
-  const [tab, setTab] = useState('details');
+  const [tab, setTab] = useState(initialExploitation && moduleEnabled(scope, 'exploiter') ? 'exploitation' : 'details');
   const [editing, setEditing] = useState(isNew);
   const [dirty, setDirty] = useState(false);
   const [formVersion, setFormVersion] = useState(0);
@@ -107,7 +112,7 @@ function ThingSidebar({ scope, id, options, departmentId, onClose, onSaved }) {
   const cancel = () => { setDirty(false); setEditing(false); setFormVersion((version) => version + 1); if (isNew) onClose(); };
   const saved = (result) => { setDirty(false); setEditing(false); client.setQueryData(['equip-thing', scope.id, result.id], result); client.invalidateQueries({ queryKey: ['equip-history', scope.id, result.id] }); onSaved(result); };
   return <EquipDialog title={isNew ? 'Новое оборудование' : thing.data?.name || 'Карточка оборудования'} onClose={close}>
-    {!isNew && <nav className="equip-tabs" aria-label="Разделы карточки">{[['details', 'Карточка', IconBox], ['assignments', 'Выдача', IconPencil], ['compositions', 'Состав', IconBox], ['photos', 'Фото', IconPhoto], ['files', 'Документы', IconFiles], ['links', 'Связи', IconFiles], ['history', 'История', IconHistory]].map(([key, label, Icon]) => <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}><Icon size={16}/>{label}</button>)}</nav>}
+    {!isNew && <nav className="equip-tabs" aria-label="Разделы карточки">{[['details', 'Карточка', IconBox], ['assignments', 'Выдача', IconPencil], ['compositions', 'Состав', IconBox], ['photos', 'Фото', IconPhoto], ['files', 'Документы', IconFiles], ['links', 'Связи', IconFiles], ...(moduleEnabled(scope, 'exploiter') ? [['exploitation', 'Эксплуатация', IconHistory]] : []), ['history', 'История', IconHistory]].map(([key, label, Icon]) => <button key={key} className={tab === key ? 'active' : ''} onClick={() => setTab(key)}><Icon size={16}/>{label}</button>)}</nav>}
     {thing.error ? <p role="alert" className="equip-error">{thing.error.message}<button onClick={() => thing.refetch()}>Повторить</button></p> : !isNew && thing.isPending ? <p className="equip-empty">Загружаю карточку…</p> : <>
       <div hidden={tab !== 'details'} className="equip-dialog-body">
         {!isNew && <div className="equip-container-summary"><span>{containerKinds[thing.data.container_kind] || containerKinds.none}</span><button type="button" className="equip-secondary" disabled={dirty} onClick={() => setTab('compositions')}>Состав и контейнер</button></div>}
@@ -116,7 +121,8 @@ function ThingSidebar({ scope, id, options, departmentId, onClose, onSaved }) {
       </div>
       {thing.data && tab === 'photos' && <div className="equip-dialog-body"><PhotoPanel nativePreview scopeId={scope.id} type="thing" id={id} readOnly={!canEdit} onChanged={() => client.invalidateQueries({ queryKey: ['equip', scope.id] })}/></div>}
       {thing.data && tab === 'files' && <div className="equip-dialog-body"><FilePanel nativePreview scopeId={scope.id} category="thing" subjectType="thing" subjectId={id} readOnly={!canEdit}/></div>}
-      {thing.data && tab === 'links' && <EquipLinks scopeId={scope.id} id={id} permissions={options.permissions}/>} 
+      {thing.data && tab === 'links' && <EquipLinks scopeId={scope.id} id={id} permissions={options.permissions}/>}
+      {thing.data && tab === 'exploitation' && (dirty ? <p className="equip-dialog-body">Сначала сохраните изменения карточки оборудования.</p> : <ExploitationPanel key={id} scope={scope} thing={thing.data} options={options} initialKind={initialExploitation}/>)}
       {thing.data && tab === 'history' && <ThingHistory scopeId={scope.id} id={id} options={options}/>}
       {thing.data && ['assignments', 'compositions'].includes(tab) && (dirty ? <p className="equip-dialog-body">Сначала сохраните изменения во вкладке «Карточка», затем продолжите операцию.</p> : <EquipOperations key={tab} scopeId={scope.id} thing={thing.data} options={options} mode={tab} onSaved={saved} onOpenThing={(nextId) => onSaved({ id: nextId })}/>)}
     </>}
@@ -172,6 +178,11 @@ function ThingHistory({ scopeId, id, options }) {
   const format = (key, value) => {
     if (value === null || value === undefined || value === '') return '—';
     if (key === 'condition') return conditions[value];
+    if (key === 'kind') return entryKinds[value] || value;
+    if (key === 'status') return entryStatuses[value] || value;
+    if (key === 'priority') return entryPriorities[value] || value;
+    if (key === 'is_pinned') return value ? 'Да' : 'Нет';
+    if (key === 'performer_id') return options.people.find((item) => item.id === value)?.name || 'Бывший участник';
     if (key === 'suitability') return suitability[value];
     if (key === 'owner_kind') return ownerKinds[value];
     if (key === 'container_kind' || key === 'relation_kind') return containerKinds[value];

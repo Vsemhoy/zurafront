@@ -3,8 +3,12 @@ export const suitability = { unassessed: 'Не оценено', suitable: 'Со�
 export const ownerKinds = { organization: 'Организация', employee: 'Сотрудник', external: 'Внешний собственник' };
 export const containerKinds = { none: 'Обычная вещь', physical: 'Физический контейнер', logical: 'Логический комплект' };
 export const responsibilities = { use: 'В работе', custody: 'На хранении', temporary: 'Временно выдано' };
-export const eventLabels = { 'equip.task_linked': 'Привязана задача', 'equip.task_unlinked': 'Отвязана задача', 'equip.diagram_linked': 'Привязана диаграмма', 'equip.diagram_unlinked': 'Отвязана диаграмма', 'equip.created': 'Оборудование зарегистрировано', 'equip.updated': 'Карточка изменена', 'equip.assigned': 'Выдано сотруднику', 'equip.transferred': 'Передано / изменена ответственность', 'equip.returned': 'Возвращено', 'equip.container_changed': 'Изменён вид контейнера', 'equip.attached': 'Добавлено в состав', 'equip.detached': 'Извлечено из состава' };
+export const eventLabels = { 'equip.exploitation_created': 'Добавлена запись эксплуатации', 'equip.exploitation_updated': 'Изменена запись эксплуатации', 'equip.exploitation_deleted': 'Удалена запись эксплуатации', 'equip.task_linked': 'Привязана задача', 'equip.task_unlinked': 'Отвязана задача', 'equip.diagram_linked': 'Привязана диаграмма', 'equip.diagram_unlinked': 'Отвязана диаграмма', 'equip.created': 'Оборудование зарегистрировано', 'equip.updated': 'Карточка изменена', 'equip.assigned': 'Выдано сотруднику', 'equip.transferred': 'Передано / изменена ответственность', 'equip.returned': 'Возвращено', 'equip.container_changed': 'Изменён вид контейнера', 'equip.attached': 'Добавлено в состав', 'equip.detached': 'Извлечено из состава' };
 export const fieldLabels = {
+  title: 'Запись эксплуатации', kind: 'Тип записи', occurred_on: 'Дата / плановая дата', status: 'Статус записи', priority: 'Приоритет',
+  content_md: 'Описание записи', result_md: 'Результат записи', performer_id: 'Исполнитель', performer_name: 'Внешний исполнитель',
+  part_cost: 'Материалы / ресурсы', labor_cost: 'Работы / услуги', currency: 'Валюта', own_minutes: 'Своё время, мин', service_minutes: 'Время сервиса, мин',
+  resource_name: 'Ресурс', quantity: 'Количество', unit: 'Единица измерения', metric_name: 'Показатель', reading_value: 'Показание', is_pinned: 'Закреплено', deleted_at: 'Удалено',
   name: 'Название', thing_type_id: 'Тип', department_id: 'Отдел', manufacturer: 'Производитель', model: 'Модель',
   serial_number: 'Серийный номер', inventory_number: 'Инвентарный номер', registration_basis: 'Основание внесения',
   owner_kind: 'Вид собственности', owner_id: 'Собственник', owner_name: 'Внешний собственник', purchased_on: 'Дата приобретения',
