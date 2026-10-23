@@ -48,21 +48,45 @@ function downloadDiagramBlob(blob, title, extension) {
 export function downloadDiagramSvg(svg, title) {
   downloadDiagramBlob(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }), title, 'svg');
 }
-export async function diagramPngBlob(svg, dimensions) {
+export const diagramPngScales = Object.freeze([1, 2, 3, 4]);
+export const defaultDiagramPngScale = 3;
+export function diagramPngSize(dimensions, scale = defaultDiagramPngScale) {
   if (!Number.isFinite(dimensions?.width) || !Number.isFinite(dimensions?.height) || dimensions.width <= 0 || dimensions.height <= 0) {
     throw new Error('У схемы некорректные размеры для PNG.');
   }
+  if (!diagramPngScales.includes(scale)) throw new Error('Выберите масштаб PNG от ×1 до ×4.');
+  const width = Math.ceil(dimensions.width * scale), height = Math.ceil(dimensions.height * scale);
+  if (width > 8192 || height > 8192 || width * height > 16000000) {
+    throw new Error('PNG такого размера слишком большой. Выберите меньший масштаб PNG или скачайте SVG без потери качества.');
+  }
+  return { width, height };
+}
+function diagramPngSource(svg, dimensions, size) {
+  if (typeof svg !== 'string' || /<!DOCTYPE|<!ENTITY/i.test(svg)) throw new Error('Некорректный SVG схемы.');
+  const document = new DOMParser().parseFromString(svg, 'image/svg+xml');
+  const root = document.documentElement;
+  if (root.localName !== 'svg' || document.querySelector('parsererror')) throw new Error('Некорректный SVG схемы.');
+  if (!root.getAttribute('viewBox')) root.setAttribute('viewBox', `0 0 ${dimensions.width} ${dimensions.height}`);
+  // Set the SVG's intrinsic size before decoding, including its HTML labels.
+  // Upsizing only the canvas can stretch a low-resolution foreignObject bitmap.
+  root.setAttribute('width', String(size.width));
+  root.setAttribute('height', String(size.height));
+  return svgImageSrc(new XMLSerializer().serializeToString(document));
+}
+export async function diagramPngBlob(svg, dimensions, scale = defaultDiagramPngScale) {
+  const size = diagramPngSize(dimensions, scale);
+  const source = diagramPngSource(svg, dimensions, size);
   const image = new Image();
   await new Promise((resolve, reject) => {
     image.onload = resolve;
     image.onerror = () => reject(new Error('Не удалось подготовить PNG схемы.'));
     // Blob SVGs with draw.io HTML labels (foreignObject) taint canvas in some browsers.
     // Keep the document isolated as an image, using the same data URL as the viewer.
-    image.src = svgImageSrc(svg);
+    image.src = source;
   });
   const canvas = document.createElement('canvas');
-  canvas.width = Math.max(1, Math.ceil(dimensions.width));
-  canvas.height = Math.max(1, Math.ceil(dimensions.height));
+  canvas.width = size.width;
+  canvas.height = size.height;
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Браузер не поддерживает экспорт PNG.');
   context.fillStyle = '#fff';
@@ -77,7 +101,7 @@ export async function diagramPngBlob(svg, dimensions) {
     throw error;
   }
 }
-export async function downloadDiagramPng(svg, title, dimensions) {
-  downloadDiagramBlob(await diagramPngBlob(svg, dimensions), title, 'png');
+export async function downloadDiagramPng(svg, title, dimensions, scale = defaultDiagramPngScale) {
+  downloadDiagramBlob(await diagramPngBlob(svg, dimensions, scale), title, 'png');
 }
 export const diagramTargetTypes = { task: 'Задача', project: 'Проект', book: 'Книга', book_page: 'Страница книги', event: 'Событие', lore: 'Лор', darklog: 'Дарклог', fact: 'Факт', plan_item: 'План', file: 'Файл', user: 'Контактор', thing: 'Оборудование' };
