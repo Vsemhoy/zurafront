@@ -1,7 +1,7 @@
 import { canManageScopeModules, moduleCatalog, moduleEnabled, moduleForPath, visibleModuleOrder } from '../../entities/scope/modules';
 import { ScopeModulesModal } from './ScopeModulesModal';
 import { AvatarImage } from '../../shared/ui/AvatarImage';
-import { IconBox, IconTool } from '@tabler/icons-react';
+import { IconBox, IconCoin, IconTool } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { IconMoon, IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconLogout, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
@@ -35,6 +35,7 @@ const modules = [
     ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
     ['/content', 'Контент', IconFiles, false, '#366a91', '#e2eef7'],
     ['/equip', 'Equip · Экипа', IconBox, false, '#087f72', '#e1f3ee'],
+    ['/ledger', 'Ledger', IconCoin, false, '#7c6a46', '#f3eedf'],
     ['/exploiter', 'Exploiter', IconTool, false, '#a45b16', '#fff0db'],
     ['/contractors', 'Пользователи', IconUsers, false, '#7c3aed', '#ede9fe'],
     ['/departments', 'Отделы', IconBuildingFactory2, false, '#0369a1', '#e0f2fe'],
@@ -57,7 +58,7 @@ export function AppShell() {
     const [appearanceOpen, setAppearanceOpen] = useState(false);
     const [appearancePreview, setAppearancePreview] = useState(null);
     const [avatarOpen, setAvatarOpen] = useState(false);
-    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog)\/([^/]+)\//)?.[1]
+    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog|ledger|exploiter)\/([^/]+)\//)?.[1]
         ?? location.pathname.match(/^\/content\/diagrams\/([^/]+)\//)?.[1];
     const activeScope = scopes.find((scope) => scope.id === routeScopeId) ?? scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)

@@ -50,6 +50,9 @@ const abilityLabels = {
   'equip.ownership': 'Менять собственника (с правом редактирования)',
   'equip.types': 'Создавать типы оборудования',
   'equip.access_all': 'Доступ Equip ко всем отделам, включая оборудование без отдела',
+  'ledger.view': 'Смотреть Ledger в доступных проектах',
+  'ledger.write': 'Создавать и изменять денежные операции Ledger',
+  'ledger.manage': 'Управлять счетами, категориями и корзиной Ledger',
 };
 const rolePresets = {
   owner: Object.keys(abilityLabels),

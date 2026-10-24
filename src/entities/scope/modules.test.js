@@ -46,3 +46,10 @@ test('Exploiter depends on Equip without introducing a second equipment module',
   assert.equal(moduleEnabled(scope, 'exploiter'), false);
   assert.equal(moduleForPath('/exploiter'), 'exploiter');
 });
+
+test('Ledger remains standalone when equipment modules are disabled', () => {
+  const scope = { modules: { enabled: { equip: false, exploiter: false, ledger: true } } };
+  assert.equal(moduleEnabled(scope, 'ledger'), true);
+  assert.equal(moduleForPath('/ledger/scope/transaction'), 'ledger');
+  assert.equal(moduleEnabled({ modules: { enabled: { ledger: false } } }, 'ledger'), false);
+});
