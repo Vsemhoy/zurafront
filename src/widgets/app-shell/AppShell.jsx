@@ -1,7 +1,7 @@
 import { canManageScopeModules, moduleCatalog, moduleEnabled, moduleForPath, visibleModuleOrder } from '../../entities/scope/modules';
 import { ScopeModulesModal } from './ScopeModulesModal';
 import { AvatarImage } from '../../shared/ui/AvatarImage';
-import { IconBox, IconCoin, IconTool } from '@tabler/icons-react';
+import { IconAddressBook, IconBox, IconCoin, IconTool } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { IconMoon, IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconLogout, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
@@ -29,6 +29,7 @@ const modules = [
     ['/kpi', 'KPI', IconChartBar, false, '#9333ea', '#f3e8ff'],
     ['/reports', 'Reporter', IconBriefcase2, false, '#0369a1', '#e0f2fe'],
     ['/events', 'Eventor', IconCalendarEvent, false, '#2d6cdf', '#e7f0fd'],
+    ['/contacts', 'Contactor · Контакты', IconAddressBook, false, '#b83280', '#fce7f3'],
     ['/factor', 'Factor', IconBuildingFactory2, false, '#2b6cb0', '#ebf4ff'],
     ['/darklog', 'Darklog', IconMoon, false, darklogTheme.color, darklogTheme.tint],
     ['/lore', 'Lore', IconBrain, false, '#4f46a5', '#eeecff'],
@@ -58,7 +59,7 @@ export function AppShell() {
     const [appearanceOpen, setAppearanceOpen] = useState(false);
     const [appearancePreview, setAppearancePreview] = useState(null);
     const [avatarOpen, setAvatarOpen] = useState(false);
-    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog|ledger|exploiter)\/([^/]+)\//)?.[1]
+    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog|ledger|exploiter|factor|contacts)\/([^/]+)\//)?.[1]
         ?? location.pathname.match(/^\/content\/diagrams\/([^/]+)\//)?.[1];
     const activeScope = scopes.find((scope) => scope.id === routeScopeId) ?? scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)

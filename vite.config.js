@@ -3,6 +3,8 @@ import { defineConfig } from 'vite'
 
 export default defineConfig({
   plugins: [react()],
+  // Vendored editors, release copies and design mockups are not SPA entries.
+  optimizeDeps: { entries: ['index.html'] },
   server: {
     proxy: {
       '/api': {

@@ -2,6 +2,7 @@ export const ledgerKinds = { income: 'Доход', expense: 'Расход', tran
 export const ledgerStatuses = { planned: 'Запланировано', posted: 'Проведено', void: 'Отменено' };
 export const accountTypes = { bank: 'Банковский счёт', cash: 'Касса', wallet: 'Кошелёк' };
 export const categoryKinds = { both: 'Доходы и расходы', income: 'Доходы', expense: 'Расходы' };
+export const costTypes = { labor: 'Работа', parts: 'Запчасти', consumables: 'Расходники', delivery: 'Доставка', service: 'Услуги', other: 'Прочее', combined: 'Общие затраты' };
 export function moneyToMinor(value) {
   const match = /^(-?)(\d{1,10})(?:[.,](\d{1,2}))?$/.exec(String(value));
   if (!match) throw new Error('Сумма: до 9 999 999 999.99, не более двух знаков после точки.');
@@ -51,7 +52,17 @@ export function ledgerPayload(type, form, original = null) {
   else if (type === 'account') { result.project_id = form.project_id; result.currency = form.currency; }
   else if (type === 'category') result.project_id = form.project_id;
   else { result.kind = form.kind; result.account_id = form.account_id; result.target_account_id = form.kind === 'transfer' ? form.target_account_id : null; result.idempotency_key = form.idempotency_key; if (form.kind === 'transfer') result.category_id = null; }
+  if (type === 'transaction' && existing && original.has_exploitation && form.cost_type !== original.cost_type) result.cost_type = form.cost_type;
   return result;
+}
+
+export function newExploitationExpense(entry) {
+  return { account_id: '', amount: '', cost_type: 'labor', title: '', note_md: '', occurred_on: entry.occurred_on, status: 'planned', idempotency_key: crypto.randomUUID() };
+}
+
+export function exploitationExpensePayload(form, entryRevision) {
+  const { title, ...data } = form;
+  return { ...data, amount: minorToDecimal(moneyToMinor(form.amount)), ...(title.trim() ? { title: title.trim() } : {}), note_md: form.note_md || null, entry_revision: entryRevision };
 }
 export function transactionSign(transaction, accountId = '') {
   if (transaction.kind === 'income') return '+';

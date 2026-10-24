@@ -26,6 +26,11 @@ const statusLabels = {
   dormant: 'Спит',
 };
 const abilityLabels = {
+  'fact.view': 'Смотреть доступные факты',
+  'fact.write': 'Создавать и редактировать факты',
+  'fact.reveal': 'Раскрывать чувствительные значения фактов',
+  'contact.view': 'Смотреть доступные контакты',
+  'contact.write': 'Создавать и редактировать контакты',
   'contractor.manage': 'Управлять Contractor',
   'contractor.delete': 'Удалять контракторов',
   'agent.manage_own': 'Управлять своими агентами',
@@ -57,8 +62,8 @@ const abilityLabels = {
 const rolePresets = {
   owner: Object.keys(abilityLabels),
   admin: Object.keys(abilityLabels),
-  member: ['equip.view', 'agent.manage_own', 'task.view', 'task.create', 'task.update', 'task.assign', 'report.view', 'report.write'],
-  observer: ['equip.view', 'task.view', 'report.view'],
+  member: ['fact.view', 'fact.write', 'fact.reveal', 'contact.view', 'contact.write', 'equip.view', 'agent.manage_own', 'task.view', 'task.create', 'task.update', 'task.assign', 'report.view', 'report.write'],
+  observer: ['fact.view', 'contact.view', 'equip.view', 'task.view', 'report.view'],
 };
 
 function permissionsForRole(role) {

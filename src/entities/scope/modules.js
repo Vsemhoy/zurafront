@@ -7,6 +7,7 @@ export const moduleCatalog = {
   kpi: { label: 'KPI', path: '/kpi', requires: ['tasker'] },
   reporter: { label: 'Reporter', path: '/reports', requires: ['tasker'] },
   eventor: { label: 'Eventor', path: '/events' },
+  contactor: { label: 'Contactor · Контакты', path: '/contacts' },
   factor: { label: 'Factor', path: '/factor' },
   darklog: { label: 'Darklog', path: '/darklog' },
   lore: { label: 'Lore', path: '/lore' },

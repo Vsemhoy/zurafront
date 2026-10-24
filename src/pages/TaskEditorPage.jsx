@@ -6,7 +6,6 @@ import {
   IconArrowUpRight,
   IconBriefcase,
   IconBook2,
-  IconBolt,
   IconCalendarEvent,
   IconFileDescription,
   IconHistory,
@@ -23,8 +22,7 @@ import { TaskDiscussion } from "../shared/ui/TaskDiscussion";
 import { contractorApi } from "../entities/contractor/api";
 import { bookApi } from "../entities/book/api";
 import { entityLinkApi } from "../entities/link/api";
-import { eventApi } from "../entities/event/api";
-import { factApi } from "../entities/fact/api";
+import { PrivateRecordLinks } from "../shared/ui/PrivateRecordLinks";
 import { plannerApi } from "../entities/planner/api";
 import { projectApi } from "../entities/project/api";
 import { taskApi } from "../entities/task/api";
@@ -483,26 +481,7 @@ function BookerLinksPanel({ task, scopeId }) {
 }
 
 function TaskEntityLinksPanel({ task, scopeId }) {
-  const queryClient = useQueryClient();
-  const [type, setType] = useState("fact");
-  const [targetId, setTargetId] = useState("");
-  const key = ["entity-links", scopeId, "task", task.id];
-  const { data: links = [] } = useQuery({ queryKey: key, queryFn: () => entityLinkApi.list(scopeId, "task", task.id) });
-  const { data: facts = [] } = useQuery({ queryKey: ["facts", scopeId], queryFn: () => factApi.list(scopeId) });
-  const { data: eventPage } = useQuery({ queryKey: ["events-linker", scopeId], queryFn: () => eventApi.list(scopeId, { per_page: 200 }) });
-  const events = eventPage?.data ?? [];
-  const candidates = type === "fact" ? facts : events;
-  const create = useMutation({
-    mutationFn: () => entityLinkApi.create(scopeId, { source_type: "task", source_id: task.id, target_type: type, target_id: targetId, relation: "related" }),
-    onSuccess: () => {
-      setTargetId("");
-      queryClient.invalidateQueries({ queryKey: key });
-    },
-  });
-  const remove = useMutation({ mutationFn: (id) => entityLinkApi.remove(scopeId, id), onSuccess: () => queryClient.invalidateQueries({ queryKey: key }) });
-  const contextualLinks = links.filter((link) => ["fact", "event"].includes(link.target_type) || ["fact", "event"].includes(link.source_type));
-
-  return <section className="booker-linker context-linker"><header><div><IconLink size={18}/><h2>Контекст задачи</h2></div><small>Factor · Eventor</small></header><div className="booker-link-list">{contextualLinks.map((link) => { const target = link.target_type === "task" ? link.source : link.target; const targetType = link.target_type === "task" ? link.source_type : link.target_type; return <div key={link.id} className={`context-link context-link--${targetType}`}><Link to={targetType === "fact" ? "/factor" : "/events"}>{targetType === "fact" ? <IconBolt size={15}/> : <IconCalendarEvent size={15}/>}<span><strong>{targetType === "fact" ? target.label : target.title}</strong><small>{targetType === "fact" ? "Факт" : "Событие"}</small></span></Link><button title="Удалить связь" onClick={() => remove.mutate(link.id)}>×</button></div>; })}{!contextualLinks.length && <p>Факты и события пока не привязаны.</p>}</div><div className="context-link-form"><select value={type} onChange={(event) => { setType(event.target.value); setTargetId(""); }}><option value="fact">Factor</option><option value="event">Eventor</option></select><select value={targetId} onChange={(event) => setTargetId(event.target.value)}><option value="">Выберите сущность</option>{candidates.map((item) => <option key={item.id} value={item.id}>{type === "fact" ? item.label : item.title}</option>)}</select><button disabled={!targetId || create.isPending} onClick={() => create.mutate()}>Привязать</button></div>{create.error && <p className="form-error">{create.error.message}</p>}</section>;
+  return <PrivateRecordLinks type="task" allowedTypes={["fact", "contact", "event"]} scopeId={scopeId} record={{ ...task, can_write: !["done", "cancelled"].includes(task.status) }}/>;
 }
 
 function activityLabel(action) {

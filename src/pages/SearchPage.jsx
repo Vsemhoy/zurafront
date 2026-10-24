@@ -14,12 +14,15 @@ import {
 } from '@tabler/icons-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useWorkspace } from '../app/workspace';
+import { useAuth } from '../auth';
 import { contractorApi } from '../entities/contractor/api';
 import { projectApi } from '../entities/project/api';
 import { searchApi } from '../entities/search/api';
 import './SearchPage.css';
 
 const entityTypes = [
+  ['fact', 'Факты', IconFileText],
+  ['contact', 'Контакты', IconFileText],
   ['task', 'Задачи', IconChecklist],
   ['lore', 'ЛОР', IconFileText],
   ['event', 'Ивентор', IconCalendarEvent],
@@ -48,11 +51,13 @@ const statusOptions = [
 
 export function SearchPage() {
   const { activeScope } = useWorkspace();
+  const { user } = useAuth();
+  const actorKey = `${user?.id}:${user?.acting_as?.id || ''}`;
   const scopeId = activeScope?.id;
   const [params, setParams] = useSearchParams();
   const query = params.get('q') ?? '';
   const requestedMode = params.get('type');
-  const typeModules = { task: 'tasker', lore: 'lore', event: 'eventor', project: 'projector', book: 'booker', book_page: 'booker', book_block: 'booker' };
+  const typeModules = { fact: 'factor', contact: 'contactor', task: 'tasker', lore: 'lore', event: 'eventor', project: 'projector', book: 'booker', book_page: 'booker', book_block: 'booker' };
   const availableTypes = entityTypes.filter(([type]) => moduleEnabled(activeScope, typeModules[type]));
   const mode = requestedMode === 'all' || availableTypes.some(([type]) => type === requestedMode) ? requestedMode : (moduleEnabled(activeScope, 'tasker') ? 'task' : 'all');
   const projectId = params.get('project_id') || '';
@@ -87,17 +92,18 @@ export function SearchPage() {
   }), [query, mode, projectId, userId, completedBy, createdBy, status, dateFrom, dateTo]);
 
   const search = useQuery({
-    queryKey: ['global-search', scopeId, filters],
+    queryKey: ['global-search', scopeId, actorKey, filters],
     queryFn: () => searchApi.find(scopeId, filters),
+    gcTime: 0,
     enabled: Boolean(scopeId && query.trim().length >= 2),
   });
   const { data: projects = [] } = useQuery({
-    queryKey: ['projects', scopeId],
+    queryKey: ['projects', scopeId, actorKey],
     queryFn: () => projectApi.list(scopeId),
     enabled: Boolean(scopeId),
   });
   const { data: userOptions } = useQuery({
-    queryKey: ['contractors-assignable', scopeId],
+    queryKey: ['contractors-assignable', scopeId, actorKey],
     queryFn: () => contractorApi.assignable(scopeId),
     enabled: Boolean(scopeId),
   });
