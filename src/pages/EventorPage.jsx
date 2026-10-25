@@ -18,6 +18,10 @@ import './EventorPage.css';
 import './BookerExcalidraw.css';
 
 import { PhotoPanel, FileImage } from '../shared/ui/PhotoPanel';
+import { PrivateRecordLinks } from '../shared/ui/PrivateRecordLinks';
+import { EventDayStream } from './EventDayStream';
+import { loadEventView } from '../entities/event/days';
+import { EventImportedLinks } from './EventImportedLinks';
 import { FilePanel } from './FilerPage';
 const MarkdownEditor = lazy(() => import('../shared/ui/CompactMarkdownEditor'));
 const importanceOptions = [['undefined', 'Не определено'], ['unimportant', 'Не важно'], ['read', 'Ознакомиться'], ['important', 'Важно'], ['critical', 'Критично'], ['incident', 'Инцидент']];
@@ -40,7 +44,8 @@ export function EventorPage() {
   const userId = useAuth((state) => state.user?.id);
   const filterKey = structureFiltersKey(userId, scopeId, 'eventor');
   const queryClient = useQueryClient();
-  const [view, setView] = useState(() => localStorage.getItem('zuratax:eventor-view') || 'flow');
+  const [view, setView] = useState(() => loadEventView(filterKey));
+  const [descending, setDescending] = useState(false);
   const [filters, setFilters] = useState(() => ({ type_id: '', created_by: '', requester_id: '', importance: '', ...loadStructureFilters(filterKey) }));
   const [structureOpen, setStructureOpen] = useState(false);
   useEffect(() => saveStructureFilters(filterKey, filters), [filterKey, filters]);
@@ -68,9 +73,9 @@ export function EventorPage() {
     queryFn: ({ pageParam }) => eventApi.list(scopeId, { ...params, page: pageParam, per_page: 20 }),
     getNextPageParam: (page) => page.meta?.current_page < page.meta?.last_page ? page.meta.current_page + 1 : undefined,
   });
-  const calendarRange = useMemo(() => { const days = calendarDays(month); return { from: dateKey(days[0]), until: dateKey(days.at(-1)), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' }; }, [month]);
+  const calendarRange = useMemo(() => { const days = view === 'days' ? [new Date(month.getFullYear(), month.getMonth(), 1), new Date(month.getFullYear(), month.getMonth() + 1, 0)] : calendarDays(month); return { from: dateKey(days[0]), until: dateKey(days.at(-1)), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' }; }, [month, view]);
   const calendar = useQuery({
-    queryKey: ['events-calendar', scopeId, params, calendarRange], enabled: Boolean(scopeId) && view === 'calendar',
+    queryKey: ['events-calendar', scopeId, params, calendarRange], enabled: Boolean(scopeId) && view !== 'flow',
     queryFn: ({ signal }) => eventApi.calendar(scopeId, { ...params, ...calendarRange }, signal),
   });
   const events = (view === 'flow' ? (flow.data?.pages.flatMap((page) => page.data) ?? []) : (calendar.data ?? [])).map((event) => ({ ...event,
@@ -80,7 +85,7 @@ export function EventorPage() {
     queryClient.invalidateQueries({ queryKey: ['events-calendar', scopeId] });
   };
   const move = useMutation({ mutationFn: ({ event, day }) => eventApi.update(scopeId, event.id, movedDates(event, day)), onSuccess: refresh });
-  const changeView = (next) => { setView(next); localStorage.setItem('zuratax:eventor-view', next); };
+  const changeView = (next) => { setView(next); try { localStorage.setItem(`${filterKey}:view`, next); } catch { /* Storage can be disabled. */ } };
   const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }));
   const openCreate = (date = null) => { setCreateDate(date); setCreateOpen(true); };
   const loading = view === 'flow' ? flow.isLoading : calendar.isLoading;
@@ -89,18 +94,20 @@ export function EventorPage() {
   return <main className="eventor-page">
     <header className="eventor-head">
       <div><small>Что и когда случилось</small><h1>Eventor</h1></div>
-      <div className="eventor-view-switch"><button className={view === 'flow' ? 'active' : ''} onClick={() => changeView('flow')}><IconList size={16}/>Лента</button><button className={view === 'calendar' ? 'active' : ''} onClick={() => changeView('calendar')}><IconCalendar size={16}/>Календарь</button></div>
+      <div className="eventor-view-switch"><button aria-label="Лента" className={view === 'flow' ? 'active' : ''} onClick={() => changeView('flow')}><IconList size={16}/>Лента</button><button aria-label="Поток по дням" className={view === 'days' ? 'active' : ''} onClick={() => changeView('days')}><IconCalendarEvent size={16}/>По дням</button><button aria-label="Календарь" className={view === 'calendar' ? 'active' : ''} onClick={() => changeView('calendar')}><IconCalendar size={16}/>Календарь</button></div>
       <button className="new-event" onClick={() => openCreate()}><IconPlus size={17}/>Новое событие</button>
     </header>
     <div className="eventor-layout">
       <aside className="event-projects event-sections"><ContentStructureNav catalog={catalog} value={filters.section_id} onChange={(section_id) => setFilters((current) => ({ ...current, section_id }))} onManage={() => setStructureOpen(true)}/>{structure.error && <p className="eventor-error">{structure.error.message}</p>}</aside>
       <section className="eventor-workspace">
         <EventFilters filters={filters} setFilter={setFilter} projects={eventProjects} catalog={catalog} types={types} people={peopleData.people ?? []} onReset={() => setFilters({ ...defaultStructureFilters(), type_id: '', created_by: '', requester_id: '', importance: '' })}/>
-        {view === 'calendar' && <MonthNavigation month={month} setMonth={setMonth}/>}
+        {view !== 'flow' && <MonthNavigation month={month} setMonth={setMonth}/>}
+        {view === 'days' && <button className="event-day-direction" onClick={() => setDescending(!descending)}>{descending ? 'Сначала новые ↓' : 'По порядку дат ↑'}</button>}
         {loading && <div className="eventor-state">Загружаю события…</div>}
         {error && <div className="eventor-state eventor-error">{error.message}</div>}
         {!loading && view === 'flow' && <EventFlow events={events} onOpen={setSelectedId} onComments={setCommentsId} hasMore={flow.hasNextPage} loadingMore={flow.isFetchingNextPage} loadMore={() => flow.fetchNextPage()}/>}
         {!loading && view === 'calendar' && <EventCalendar month={month} events={events} onOpen={setSelectedId} onComments={setCommentsId} onCreate={openCreate} onMove={(event, day) => move.mutate({ event, day })}/>}
+        {!loading && view === 'days' && <EventDayStream month={month} events={events} descending={descending} onOpen={setSelectedId} onComments={setCommentsId} onCreate={openCreate}/>}
       </section>
     </div>
     {createOpen && <EventCreate scopeId={scopeId} types={types} catalog={catalog} defaults={structureDefaults(filters)} projects={eventProjects} people={peopleData.people ?? []} initialDate={createDate} onClose={() => setCreateOpen(false)} onCreated={(event) => { refresh(); setCreateOpen(false); setSelectedId(event.id); }}/>}
@@ -141,7 +148,7 @@ function EventCard({ event, onOpen, onComments, compact = false }) {
 }
 
 function MonthNavigation({ month, setMonth }) {
-  return <div className="event-month-nav"><button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><IconChevronLeft size={17}/></button><strong>{month.toLocaleDateString([], { month: 'long', year: 'numeric' })}</strong><button onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><IconChevronRight size={17}/></button><button onClick={() => setMonth(startMonth(new Date()))}>Сегодня</button></div>;
+  return <div className="event-month-nav"><button aria-label="Предыдущий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><IconChevronLeft size={17}/></button><strong>{month.toLocaleDateString([], { month: 'long', year: 'numeric' })}</strong><input className="event-month-picker" type="month" aria-label="Выбрать месяц событий" value={`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`} onChange={(event) => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value)) { const [year, nextMonth] = event.target.value.split('-').map(Number); if (year >= 1900 && year <= 9999) setMonth(new Date(year, nextMonth - 1, 1)); } }}/><button aria-label="Следующий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><IconChevronRight size={17}/></button><button onClick={() => setMonth(startMonth(new Date()))}>Сегодня</button></div>;
 }
 
 function EventCalendar({ month, events, onOpen, onComments, onCreate, onMove }) {
@@ -180,12 +187,13 @@ function EventEditor({ scopeId, eventId, types, projects, people, catalog, onClo
   if (error) return <aside className="event-editor eventor-error">{error.message}</aside>;
   const local = (patch) => queryClient.setQueryData(key, { ...event, ...patch });
   const change = (keyName, value) => { local({ [keyName]: value }); save.mutate({ [keyName]: value }); };
-  const tabs = [['editor', 'Редактор'], ['settings', 'Настройки'], ['recurrence', 'Повторение'], ['diagram', 'Схема'], ['attachments', 'Вложения'], ['photos', 'Фотографии']];
+  const tabs = [['editor', 'Редактор'], ['settings', 'Настройки'], ['links', 'Связи'], ['recurrence', 'Повторение'], ['diagram', 'Схема'], ['attachments', 'Вложения'], ['photos', 'Фотографии']];
   return <aside className="event-editor"><header><AttachmentsButton scopeId={scopeId} type="event" id={eventId}/><span><IconCalendarEvent size={18}/>Событие</span><div>{event.comments_allowed && <button onClick={onComments}><IconMessageCircle size={17}/>{event.comments_count || ''}</button>}<button onClick={onClose}><IconX size={19}/></button></div></header><input className="event-title" value={event.title} disabled={event.is_locked} onChange={(input) => local({ title: input.target.value })} onBlur={(input) => save.mutate({ title: input.target.value })}/><nav className="event-editor-tabs">{tabs.map(([value, label]) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>{label}</button>)}</nav>{event.is_locked && <p className="event-locked"><IconLock size={15}/>Событие заблокировано от правок.</p>}
     {tab === 'editor' && <Suspense fallback={<div className="eventor-state">Загружаю Markdown…</div>}><MarkdownEditor variant="full" value={event.content || ''} placeholder="Описание, наблюдения и материалы…" onSave={(content) => save.mutate({ content })}/></Suspense>}
     {tab === 'settings' && <StructureFields value={event} catalog={catalog} disabled={save.isPending || event.is_locked} onChange={(patch) => save.mutate(patch)}/>}
     {tab === 'settings' && <div className="event-editor-settings"><Select label="Проект" value={event.project_id || ''} onChange={(input) => change('project_id', input.target.value || null)} empty="Без проекта" rows={projects}/><Select label="Тип" value={event.type_id || ''} onChange={(input) => change('type_id', input.target.value || null)} empty="Без типа" rows={types}/><Select label="Заявитель" value={event.requester_id || ''} onChange={(input) => change('requester_id', input.target.value || null)} empty="Не указан" rows={people}/><label>Важность<select value={event.importance} onChange={(input) => change('importance', input.target.value)}>{importanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Начало<input type="datetime-local" defaultValue={localDateTime(event.starts_at)} onBlur={(input) => save.mutate({ starts_at: input.target.value ? new Date(input.target.value).toISOString() : null })}/></label><label>Окончание<input type="datetime-local" defaultValue={localDateTime(event.ends_at)} onBlur={(input) => save.mutate({ ends_at: input.target.value ? new Date(input.target.value).toISOString() : null })}/></label><label>Место<input defaultValue={event.location || ''} onBlur={(input) => save.mutate({ location: input.target.value || null })}/></label><label>Видимость<select value={event.visibility} onChange={(input) => change('visibility', input.target.value)}><option value="private">Только автор</option><option value="scope">Коллеги</option><option value="public">Все</option></select></label><div className="event-flags"><Check label="Закрепить" checked={event.is_pinned} onChange={(value) => change('is_pinned', value)}/><Check label="Размыть содержимое" checked={event.is_blurred} onChange={(value) => change('is_blurred', value)}/><Check label="Заблокировать правки" checked={event.is_locked} onChange={(value) => change('is_locked', value)}/><Check label="Комментарии" checked={event.comments_enabled ?? event.project?.event_comments_enabled ?? true} onChange={(value) => change('comments_enabled', value)}/></div></div>}
     {tab === 'recurrence' && <EventRecurrenceEditor key={event.id} event={event} people={people} pending={save.isPending} error={save.error} onSave={(payload) => save.mutateAsync(payload)}/>}
+    {tab === 'links' && <><EventImportedLinks scopeId={scopeId} event={event}/><PrivateRecordLinks type="event" scopeId={scopeId} record={{ ...event, can_write: false }}/></>}
     {tab === 'diagram' && <div className="event-diagram-pane">{event.diagram?.svg ? <img src={svgDataUrl(event.diagram.svg)} alt="Схема события"/> : <div><IconAlertTriangle size={24}/><p>Схема ещё не нарисована.</p></div>}<button onClick={() => setDiagramOpen(true)}>Открыть Excalidraw</button></div>}
     {tab === 'attachments' && <><FilePanel scopeId={scopeId} subjectType="event" subjectId={eventId}/>{Boolean(event.attachments?.length) && <EventResourceLinks icon={IconPaperclip} rows={event.attachments} onChange={(rows) => change('attachments', rows)} label="вложение"/>}</>}
     {tab === 'photos' && <><PhotoPanel scopeId={scopeId} type="event" id={eventId} feature featuredId={event.meta?.cover_file_id} onChanged={async () => { await queryClient.invalidateQueries({ queryKey: key }); onChanged(); }}/>{Boolean(event.photos?.length) && <EventResourceLinks icon={IconPhoto} rows={event.photos} onChange={(rows) => change('photos', rows)} label="фотографию" photos/>}</>}

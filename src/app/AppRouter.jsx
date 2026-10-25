@@ -1,32 +1,42 @@
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 import { useAuth } from '../auth';
-import { ContentPage, LegacyFilesRedirect } from '../pages/ContentPage';
-import { MonitoringPage } from '../pages/MonitoringPage';
-import { DashboardPage } from '../pages/DashboardPage';
-import { LoginPage } from '../pages/LoginPage';
-import { ChangelogPage } from '../pages/ChangelogPage';
-import { TaskerPage } from '../pages/TaskerPage';
-import { TaskEditorPage } from '../pages/TaskEditorPage';
-import { ContactPage } from '../pages/ContactPage';
-import { FactorPage } from '../pages/FactorPage';
-import { EventorPage } from '../pages/EventorPage';
-import { BookerPage } from '../pages/BookerPage';
-import { ContractorPage } from '../pages/ContractorPage';
-import { PlannerPage } from '../pages/PlannerPage';
-import { ProjectorPage } from '../pages/ProjectorPage';
-import { DepartmentsPage } from '../pages/DepartmentsPage';
-import { EquipPage } from '../pages/EquipPage';
-import { ExploiterPage } from '../pages/ExploiterPage';
-import { LedgerPage } from '../pages/LedgerPage';
-import { KpiPage } from '../pages/KpiPage';
-import { PlansPage } from '../pages/PlansPage';
-import { DarklogPage } from '../pages/DarklogPage';
-import { ReportsPage } from '../pages/ReportsPage';
-import { SearchPage } from '../pages/SearchPage';
-import { LorePage, LoreReaderPage } from '../pages/LorePage';
 import { Brand } from '../shared/ui/Brand';
 import { AppShell } from '../widgets/app-shell/AppShell';
+
+function lazyPage(load, name) {
+  const Component = lazy(() => load().then((module) => ({ default: module[name] })));
+  return function DeferredPage() {
+    return <Suspense fallback={<main className="auth-loading" role="status"><Brand/><span>Загружаем раздел…</span></main>}><Component/></Suspense>;
+  };
+}
+
+const ContentPage = lazyPage(() => import('../pages/ContentPage'), 'ContentPage');
+const LegacyFilesRedirect = lazyPage(() => import('../pages/ContentPage'), 'LegacyFilesRedirect');
+const MonitoringPage = lazyPage(() => import('../pages/MonitoringPage'), 'MonitoringPage');
+const DashboardPage = lazyPage(() => import('../pages/DashboardPage'), 'DashboardPage');
+const LoginPage = lazyPage(() => import('../pages/LoginPage'), 'LoginPage');
+const ChangelogPage = lazyPage(() => import('../pages/ChangelogPage'), 'ChangelogPage');
+const TaskerPage = lazyPage(() => import('../pages/TaskerPage'), 'TaskerPage');
+const TaskEditorPage = lazyPage(() => import('../pages/TaskEditorPage'), 'TaskEditorPage');
+const ContactPage = lazyPage(() => import('../pages/ContactPage'), 'ContactPage');
+const FactorPage = lazyPage(() => import('../pages/FactorPage'), 'FactorPage');
+const EventorPage = lazyPage(() => import('../pages/EventorPage'), 'EventorPage');
+const BookerPage = lazyPage(() => import('../pages/BookerPage'), 'BookerPage');
+const ContractorPage = lazyPage(() => import('../pages/ContractorPage'), 'ContractorPage');
+const PlannerPage = lazyPage(() => import('../pages/PlannerPage'), 'PlannerPage');
+const ProjectorPage = lazyPage(() => import('../pages/ProjectorPage'), 'ProjectorPage');
+const DepartmentsPage = lazyPage(() => import('../pages/DepartmentsPage'), 'DepartmentsPage');
+const EquipPage = lazyPage(() => import('../pages/EquipPage'), 'EquipPage');
+const ExploiterPage = lazyPage(() => import('../pages/ExploiterPage'), 'ExploiterPage');
+const LedgerPage = lazyPage(() => import('../pages/LedgerPage'), 'LedgerPage');
+const KpiPage = lazyPage(() => import('../pages/KpiPage'), 'KpiPage');
+const PlansPage = lazyPage(() => import('../pages/PlansPage'), 'PlansPage');
+const DarklogPage = lazyPage(() => import('../pages/DarklogPage'), 'DarklogPage');
+const ReportsPage = lazyPage(() => import('../pages/ReportsPage'), 'ReportsPage');
+const SearchPage = lazyPage(() => import('../pages/SearchPage'), 'SearchPage');
+const LorePage = lazyPage(() => import('../pages/LorePage'), 'LorePage');
+const LoreReaderPage = lazyPage(() => import('../pages/LorePage'), 'LoreReaderPage');
 
 function AuthenticatedApp() { const { user } = useAuth(); return user ? <AppShell /> : <Navigate to="/login" replace/>; }
 
