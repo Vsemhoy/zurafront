@@ -31,7 +31,7 @@ export function moneyTotals(accounts) {
   return [...result].map(([currency, minor]) => ({ currency, minor: String(minor) }));
 }
 export function newAccount(projectId = '') {
-  return { project_id: projectId, title: '', type: 'bank', currency: 'RUB', opening_balance: '0.00', balance_is_known: true, description: '', color: '#7c6a46', sort_order: 0, is_archived: false, interest_rate: '', interest_start_on: '', interest_end_on: '' };
+  return { project_id: projectId, title: '', type: 'bank', currency: 'RUB', opening_balance: '0.00', balance_is_known: true, description: '', color: '#7c6a46', sort_order: 0, is_archived: false, exclude_from_reports: false, interest_rate: '', interest_start_on: '', interest_end_on: '' };
 }
 export function rateToBasisPoints(value) {
   if (value === '' || value == null) return null;
@@ -58,7 +58,7 @@ export function ledgerForm(type, data) {
 }
 export function ledgerPayload(type, form, original = null) {
   const existing = Boolean(original?.id);
-  const fields = type === 'account' ? ['title', 'type', 'opening_balance', 'balance_is_known', 'description', 'color', 'sort_order', 'is_archived', 'interest_rate', 'interest_start_on', 'interest_end_on'] : type === 'category' ? ['title', 'kind', 'color', 'sort_order', 'is_archived'] : ['title', 'amount', 'occurred_on', 'status', 'category_id', 'note_md', 'is_pinned'];
+  const fields = type === 'account' ? ['title', 'type', 'opening_balance', 'balance_is_known', 'description', 'color', 'sort_order', 'is_archived', 'exclude_from_reports', 'interest_rate', 'interest_start_on', 'interest_end_on'] : type === 'category' ? ['title', 'kind', 'color', 'sort_order', 'is_archived'] : ['title', 'amount', 'occurred_on', 'status', 'category_id', 'note_md', 'is_pinned'];
   const normalize = (field, value) => field === 'occurred_on' ? ledgerDate(value) : field === 'interest_rate' ? rateToBasisPoints(value) : ['amount', 'opening_balance'].includes(field) ? minorToDecimal(moneyToMinor(value || '0')) : ['category_id', 'note_md', 'description', 'interest_start_on', 'interest_end_on'].includes(field) ? value || null : field === 'sort_order' ? Number(value) : field === 'title' ? String(value).trim() : value;
   const result = {};
   for (const field of fields) {

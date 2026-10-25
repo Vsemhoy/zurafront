@@ -36,7 +36,7 @@ Zuratax — это закрытая многопользовательская C
 
 ### 1.3. Стек технологий
 
-**Frontend:** React, Vite, Mantine UI, Zustand, React Router, React Query, MDXEditor, Excalidraw, Recharts
+**Frontend:** React, Vite, Mantine UI, Zustand, React Router, React Query, MDXEditor, Recharts
 
 **Backend:** Laravel (PHP), MariaDB/MySQL, S3-совместимое хранилище
 
@@ -561,7 +561,7 @@ scope_contacts
 
 ### 5.7. Booker — Книги и справочники
 
-Модуль для создания структурированных документов с собственной спецификацией формата (teftele.booker.v1). Поддерживает блоки: markdown, excalidraw, svg, table, code, callout, checklist, divider, embed.
+Модуль для создания структурированных документов с собственной спецификацией формата (teftele.booker.v1). Поддерживает блоки: markdown, svg, table, code, callout, checklist, divider, embed.
 
 ```
 books
@@ -585,7 +585,7 @@ book_blocks
 ├── id (ulid)
 ├── page_id → book_pages.id
 ├── block_group_id (для версионирования)
-├── type: markdown | excalidraw | svg | table | code | callout | checklist | divider | embed
+├── type: markdown | svg | table | code | callout | checklist | divider | embed
 ├── role: content | note | source | todo | ai_response
 ├── visibility · title
 ├── content (text, для markdown)

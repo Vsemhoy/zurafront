@@ -1,3 +1,4 @@
+import { isSupportedBookBlock, visibleBookGroups } from '../../entities/book/blocks';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -129,10 +130,11 @@ function DocumentText({ node, onLink }) {
 
 function LightbookDocument({ item, onLink }) {
   const page = item.page;
-  return <article className="document-reader document-lightbook"><small>Lightbook · {item.visibility}</small><h1>{item.title}</h1>{item.description && <p className="document-lightbook-description">{item.description}</p>}{!page ? <p>Страница документа недоступна.</p> : <div className="document-lightbook-blocks">{page.groups?.map((group) => <LightbookBlock key={group.id} group={group} onLink={onLink}/>)}</div>}{page && !page.groups?.length && <p>В документе пока нет блоков.</p>}</article>;
+  return <article className="document-reader document-lightbook"><small>Lightbook · {item.visibility}</small><h1>{item.title}</h1>{item.description && <p className="document-lightbook-description">{item.description}</p>}{!page ? <p>Страница документа недоступна.</p> : <div className="document-lightbook-blocks">{visibleBookGroups(page.groups).map((group) => <LightbookBlock key={group.id} group={group} onLink={onLink}/>)}</div>}{page && !visibleBookGroups(page.groups).length && <p>В документе пока нет блоков.</p>}</article>;
 }
 
 function LightbookBlock({ group, onLink }) {
+  if (!isSupportedBookBlock(group.type)) return null;
   const block = group.master_block ?? {};
   const payload = block.payload ?? {};
   if (group.type === 'divider') return <hr/>;
@@ -141,7 +143,7 @@ function LightbookBlock({ group, onLink }) {
   if (group.type === 'callout') return <aside><strong>{payload.title || 'Заметка'}</strong><p>{payload.text || block.content}</p></aside>;
   if (group.type === 'checklist') return <section className="document-lightbook-checklist">{(payload.items ?? []).map((entry, index) => <label key={index}><input type="checkbox" checked={Boolean(entry.checked)} disabled/>{entry.text}</label>)}</section>;
   if (group.type === 'table') return <div className="document-lightbook-table"><table><thead><tr>{(payload.columns ?? []).map((column, index) => <th key={index}>{column}</th>)}</tr></thead><tbody>{(payload.rows ?? []).map((row, rowIndex) => <tr key={rowIndex}>{row.map((cell, cellIndex) => <td key={cellIndex}>{cell}</td>)}</tr>)}</tbody></table></div>;
-  if (group.type === 'svg' || group.type === 'excalidraw') { const source = payload.url || (payload.svg_text ? svgData(payload.svg_text) : payload.svg ? svgData(payload.svg) : ''); return <figure>{source ? <img src={source} alt={payload.caption || 'Схема'}/> : <p>Изображение не задано.</p>}{payload.caption && <figcaption>{payload.caption}</figcaption>}</figure>; }
+  if (group.type === 'svg') { const source = payload.url || (payload.svg_text ? svgData(payload.svg_text) : payload.svg ? svgData(payload.svg) : ''); return <figure>{source ? <img src={source} alt={payload.caption || 'Схема'}/> : <p>Изображение не задано.</p>}{payload.caption && <figcaption>{payload.caption}</figcaption>}</figure>; }
   if (group.type === 'photo') return <figure><p>Фотография из файлов Lightbook</p>{payload.caption && <figcaption>{payload.caption}</figcaption>}</figure>;
   if (group.type === 'embed') return <section><strong>{payload.title || (payload.reference_type ? `Встроенный объект: ${payload.reference_type}` : 'Ссылка')}</strong>{payload.description && <p>{payload.description}</p>}{payload.url && <a href={payload.url} onClick={(event) => { if (onLink(payload.url)) event.preventDefault(); }}>{payload.url}</a>}</section>;
   return <section><p>{block.content || payload.label || 'Пустой блок'}</p></section>;

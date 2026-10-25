@@ -1,9 +1,9 @@
 import { CommentAuthor } from '../shared/ui/CommentAuthor';
 import { useSearchParams } from 'react-router-dom';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconAlertTriangle, IconCalendar, IconCalendarEvent, IconChevronLeft, IconChevronRight, IconEye, IconEyeOff, IconList, IconLock, IconMessageCircle, IconPaperclip, IconPhoto, IconPin, IconPlus, IconSearch, IconSend, IconTrash, IconUser, IconX } from '@tabler/icons-react';
+import { IconCalendar, IconCalendarEvent, IconChevronLeft, IconChevronRight, IconEye, IconEyeOff, IconList, IconLock, IconMessageCircle, IconPaperclip, IconPhoto, IconPin, IconPlus, IconSearch, IconSend, IconTrash, IconUser, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { structureApi } from '../entities/content-navigation/structureApi';
@@ -15,7 +15,6 @@ import { projectApi } from '../entities/project/api';
 import { eventTypeOptions, recurrenceForm, recurrenceLabel, recurrencePayload } from '../entities/event/recurrence';
 import { EventRecurrenceFields, EventRecurrenceEditor } from './EventRecurrenceFields';
 import './EventorPage.css';
-import './BookerExcalidraw.css';
 
 import { PhotoPanel, FileImage } from '../shared/ui/PhotoPanel';
 import { PrivateRecordLinks } from '../shared/ui/PrivateRecordLinks';
@@ -26,18 +25,6 @@ import { FilePanel } from './FilerPage';
 const MarkdownEditor = lazy(() => import('../shared/ui/CompactMarkdownEditor'));
 const importanceOptions = [['undefined', 'Не определено'], ['unimportant', 'Не важно'], ['read', 'Ознакомиться'], ['important', 'Важно'], ['critical', 'Критично'], ['incident', 'Инцидент']];
 const importanceMap = Object.fromEntries(importanceOptions);
-let ExcalidrawComponent = null;
-let exportExcalidrawToSvg = null;
-
-async function loadExcalidraw() {
-  if (ExcalidrawComponent && exportExcalidrawToSvg) return { Excalidraw: ExcalidrawComponent, exportToSvg: exportExcalidrawToSvg };
-  const module = await import('@excalidraw/excalidraw');
-  await import('@excalidraw/excalidraw/index.css');
-  ExcalidrawComponent = module.Excalidraw;
-  exportExcalidrawToSvg = module.exportToSvg;
-  return { Excalidraw: ExcalidrawComponent, exportToSvg: exportExcalidrawToSvg };
-}
-
 export function EventorPage() {
   const { activeScope } = useWorkspace();
   const scopeId = activeScope?.id;
@@ -179,7 +166,6 @@ function EventEditor({ scopeId, eventId, types, projects, people, catalog, onClo
   const queryClient = useQueryClient();
   const key = ['event', scopeId, eventId];
   const [tab, setTab] = useState('editor');
-  const [diagramOpen, setDiagramOpen] = useState(false);
   const { data: event, isLoading, error } = useQuery({ queryKey: key, queryFn: () => eventApi.get(scopeId, eventId) });
   const save = useMutation({ mutationFn: (payload) => eventApi.update(scopeId, eventId, payload), onSuccess: (updated) => { queryClient.setQueryData(key, updated); onChanged(); } });
   const remove = useMutation({ mutationFn: () => eventApi.remove(scopeId, eventId), onSuccess: () => { onChanged(); onClose(); } });
@@ -187,19 +173,17 @@ function EventEditor({ scopeId, eventId, types, projects, people, catalog, onClo
   if (error) return <aside className="event-editor eventor-error">{error.message}</aside>;
   const local = (patch) => queryClient.setQueryData(key, { ...event, ...patch });
   const change = (keyName, value) => { local({ [keyName]: value }); save.mutate({ [keyName]: value }); };
-  const tabs = [['editor', 'Редактор'], ['settings', 'Настройки'], ['links', 'Связи'], ['recurrence', 'Повторение'], ['diagram', 'Схема'], ['attachments', 'Вложения'], ['photos', 'Фотографии']];
+  const tabs = [['editor', 'Редактор'], ['settings', 'Настройки'], ['links', 'Связи'], ['recurrence', 'Повторение'], ['attachments', 'Вложения'], ['photos', 'Фотографии']];
   return <aside className="event-editor"><header><AttachmentsButton scopeId={scopeId} type="event" id={eventId}/><span><IconCalendarEvent size={18}/>Событие</span><div>{event.comments_allowed && <button onClick={onComments}><IconMessageCircle size={17}/>{event.comments_count || ''}</button>}<button onClick={onClose}><IconX size={19}/></button></div></header><input className="event-title" value={event.title} disabled={event.is_locked} onChange={(input) => local({ title: input.target.value })} onBlur={(input) => save.mutate({ title: input.target.value })}/><nav className="event-editor-tabs">{tabs.map(([value, label]) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>{label}</button>)}</nav>{event.is_locked && <p className="event-locked"><IconLock size={15}/>Событие заблокировано от правок.</p>}
     {tab === 'editor' && <Suspense fallback={<div className="eventor-state">Загружаю Markdown…</div>}><MarkdownEditor variant="full" value={event.content || ''} placeholder="Описание, наблюдения и материалы…" onSave={(content) => save.mutate({ content })}/></Suspense>}
     {tab === 'settings' && <StructureFields value={event} catalog={catalog} disabled={save.isPending || event.is_locked} onChange={(patch) => save.mutate(patch)}/>}
     {tab === 'settings' && <div className="event-editor-settings"><Select label="Проект" value={event.project_id || ''} onChange={(input) => change('project_id', input.target.value || null)} empty="Без проекта" rows={projects}/><Select label="Тип" value={event.type_id || ''} onChange={(input) => change('type_id', input.target.value || null)} empty="Без типа" rows={types}/><Select label="Заявитель" value={event.requester_id || ''} onChange={(input) => change('requester_id', input.target.value || null)} empty="Не указан" rows={people}/><label>Важность<select value={event.importance} onChange={(input) => change('importance', input.target.value)}>{importanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Начало<input type="datetime-local" defaultValue={localDateTime(event.starts_at)} onBlur={(input) => save.mutate({ starts_at: input.target.value ? new Date(input.target.value).toISOString() : null })}/></label><label>Окончание<input type="datetime-local" defaultValue={localDateTime(event.ends_at)} onBlur={(input) => save.mutate({ ends_at: input.target.value ? new Date(input.target.value).toISOString() : null })}/></label><label>Место<input defaultValue={event.location || ''} onBlur={(input) => save.mutate({ location: input.target.value || null })}/></label><label>Видимость<select value={event.visibility} onChange={(input) => change('visibility', input.target.value)}><option value="private">Только автор</option><option value="scope">Коллеги</option><option value="public">Все</option></select></label><div className="event-flags"><Check label="Закрепить" checked={event.is_pinned} onChange={(value) => change('is_pinned', value)}/><Check label="Размыть содержимое" checked={event.is_blurred} onChange={(value) => change('is_blurred', value)}/><Check label="Заблокировать правки" checked={event.is_locked} onChange={(value) => change('is_locked', value)}/><Check label="Комментарии" checked={event.comments_enabled ?? event.project?.event_comments_enabled ?? true} onChange={(value) => change('comments_enabled', value)}/></div></div>}
     {tab === 'recurrence' && <EventRecurrenceEditor key={event.id} event={event} people={people} pending={save.isPending} error={save.error} onSave={(payload) => save.mutateAsync(payload)}/>}
     {tab === 'links' && <><EventImportedLinks scopeId={scopeId} event={event}/><PrivateRecordLinks type="event" scopeId={scopeId} record={{ ...event, can_write: false }}/></>}
-    {tab === 'diagram' && <div className="event-diagram-pane">{event.diagram?.svg ? <img src={svgDataUrl(event.diagram.svg)} alt="Схема события"/> : <div><IconAlertTriangle size={24}/><p>Схема ещё не нарисована.</p></div>}<button onClick={() => setDiagramOpen(true)}>Открыть Excalidraw</button></div>}
     {tab === 'attachments' && <><FilePanel scopeId={scopeId} subjectType="event" subjectId={eventId}/>{Boolean(event.attachments?.length) && <EventResourceLinks icon={IconPaperclip} rows={event.attachments} onChange={(rows) => change('attachments', rows)} label="вложение"/>}</>}
     {tab === 'photos' && <><PhotoPanel scopeId={scopeId} type="event" id={eventId} feature featuredId={event.meta?.cover_file_id} onChanged={async () => { await queryClient.invalidateQueries({ queryKey: key }); onChanged(); }}/>{Boolean(event.photos?.length) && <EventResourceLinks icon={IconPhoto} rows={event.photos} onChange={(rows) => change('photos', rows)} label="фотографию" photos/>}</>}
     {(save.error || remove.error) && <p className="eventor-error">{save.error?.message || remove.error?.message}</p>}
     <footer className="event-editor-footer"><button className="event-delete" onClick={() => window.confirm(`Удалить событие «${event.title}»?`) && remove.mutate()}><IconTrash size={15}/>Удалить</button><small>{save.isPending ? 'Сохраняю…' : save.isSuccess ? 'Сохранено' : 'Изменения сохраняются по полям'}</small></footer>
-    {diagramOpen && <EventDiagramEditor event={event} onClose={() => setDiagramOpen(false)} onSave={(diagram) => save.mutateAsync({ diagram }).then(() => setDiagramOpen(false))}/>}
   </aside>;
 }
 
@@ -210,21 +194,6 @@ function EventComments({ scopeId, eventId, onClose }) {
   const { data: comments = [], isLoading, error } = useQuery({ queryKey: key, queryFn: () => eventApi.comments(scopeId, eventId) });
   const send = useMutation({ mutationFn: () => eventApi.comment(scopeId, eventId, content), onSuccess: () => { setContent(''); queryClient.invalidateQueries({ queryKey: key }); queryClient.invalidateQueries({ queryKey: ['events', scopeId] }); } });
   return <aside className="event-comments"><header><div><small>Обсуждение</small><strong>Комментарии события</strong></div><button onClick={onClose}><IconX size={18}/></button></header><section>{isLoading && <p>Загружаю…</p>}{error && <p className="eventor-error">{error.message}</p>}{comments.map((comment) => <article key={comment.id}><header><CommentAuthor author={comment.created_by}/><time>{new Date(comment.created_at).toLocaleString()}</time></header><p>{comment.content}</p></article>)}{!isLoading && !comments.length && <p className="event-comments-empty">Комментариев пока нет.</p>}</section><form onSubmit={(event) => { event.preventDefault(); if (content.trim()) send.mutate(); }}><textarea rows="3" value={content} onChange={(event) => setContent(event.target.value)} placeholder="Написать комментарий…"/><button disabled={send.isPending}><IconSend size={16}/></button></form></aside>;
-}
-
-function EventDiagramEditor({ event, onClose, onSave }) {
-  const [editor, setEditor] = useState(null);
-  const [exporter, setExporter] = useState(null);
-  const [error, setError] = useState(null);
-  const [status, setStatus] = useState('Автосохранение включено');
-  const [initialScene] = useState(() => ({ elements: event.diagram?.elements || [], files: event.diagram?.files || {}, appState: event.diagram?.appState || {} }));
-  const scene = useRef(initialScene);
-  const timer = useRef(null);
-  useEffect(() => { let alive = true; loadExcalidraw().then(({ Excalidraw, exportToSvg }) => { if (alive) { setEditor(() => Excalidraw); setExporter(() => exportToSvg); } }).catch(setError); return () => { alive = false; if (timer.current) window.clearTimeout(timer.current); }; }, []);
-  const save = async (close = false) => { if (!exporter) return; if (timer.current) window.clearTimeout(timer.current); setStatus('Сохраняю…'); const svg = await exporter({ elements: scene.current.elements, appState: scene.current.appState, files: scene.current.files }); await onSave({ ...scene.current, svg: svg.outerHTML }); setStatus('Сохранено'); if (close) onClose(); };
-  const scheduleSave = (elements, appState, files) => { scene.current = { elements, appState: { viewBackgroundColor: appState.viewBackgroundColor }, files }; setStatus('Есть изменения…'); if (timer.current) window.clearTimeout(timer.current); timer.current = window.setTimeout(() => void save(), 900); };
-  const Excalidraw = editor;
-  return <div className="excalidraw-editor-backdrop"><section className="excalidraw-editor-modal"><header><div><strong>Схема события</strong><small>{status}</small></div><button onClick={() => void save(true)}><IconX size={18}/></button></header><div className="excalidraw-editor-canvas">{error ? <div className="excalidraw-editor-loading">{error.message}</div> : !Excalidraw ? <div className="excalidraw-editor-loading">Загружаю Excalidraw…</div> : <Excalidraw initialData={initialScene} onChange={scheduleSave}/>}</div><footer><span>{status}</span><button className="primary" disabled={!exporter} onClick={() => void save(true)}>Сохранить и закрыть</button></footer></section></div>;
 }
 
 function EventResourceLinks({ icon: Icon, rows, onChange, label, photos = false }) {
@@ -247,4 +216,3 @@ function dateKey(date) { const value = new Date(date); const offset = value.getT
 function calendarDays(month) { const first = new Date(month.getFullYear(), month.getMonth(), 1); const start = new Date(first); start.setDate(first.getDate() - ((first.getDay() + 6) % 7)); return Array.from({ length: 42 }, (_, index) => { const day = new Date(start); day.setDate(start.getDate() + index); return day; }); }
 function localDateTime(value) { if (!value) return ''; const date = new Date(value); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }
 function movedDates(event, day) { const start = eventMoment(event); const target = new Date(`${day}T${String(start.getHours()).padStart(2, '0')}:${String(start.getMinutes()).padStart(2, '0')}`); const payload = { starts_at: target.toISOString() }; if (event.ends_at) { const duration = new Date(event.ends_at).getTime() - start.getTime(); payload.ends_at = new Date(target.getTime() + duration).toISOString(); } return payload; }
-function svgDataUrl(svg) { return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`; }
