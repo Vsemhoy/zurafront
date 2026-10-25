@@ -3,8 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconAlertTriangle, IconCalendar, IconCalendarEvent, IconChevronLeft, IconChevronRight, IconEye, IconEyeOff, IconFolder, IconList, IconLock, IconMessageCircle, IconPaperclip, IconPhoto, IconPin, IconPlus, IconSearch, IconSend, IconTrash, IconUser, IconX } from '@tabler/icons-react';
+import { IconAlertTriangle, IconCalendar, IconCalendarEvent, IconChevronLeft, IconChevronRight, IconEye, IconEyeOff, IconList, IconLock, IconMessageCircle, IconPaperclip, IconPhoto, IconPin, IconPlus, IconSearch, IconSend, IconTrash, IconUser, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
+import { useAuth } from '../auth';
+import { structureApi } from '../entities/content-navigation/structureApi';
+import { defaultStructureFilters, loadStructureFilters, saveStructureFilters, structureDefaults, structureFiltersKey } from '../entities/content-navigation/structure';
+import { ContentStructureManager, ContentStructureNav, StructureFields } from '../shared/ui/ContentStructure';
 import { contractorApi } from '../entities/contractor/api';
 import { eventApi } from '../entities/event/api';
 import { projectApi } from '../entities/project/api';
@@ -33,9 +37,13 @@ async function loadExcalidraw() {
 export function EventorPage() {
   const { activeScope } = useWorkspace();
   const scopeId = activeScope?.id;
+  const userId = useAuth((state) => state.user?.id);
+  const filterKey = structureFiltersKey(userId, scopeId, 'eventor');
   const queryClient = useQueryClient();
   const [view, setView] = useState(() => localStorage.getItem('zuratax:eventor-view') || 'flow');
-  const [filters, setFilters] = useState({ q: '', project_id: '', type_id: '', created_by: '', requester_id: '', importance: '' });
+  const [filters, setFilters] = useState(() => ({ type_id: '', created_by: '', requester_id: '', importance: '', ...loadStructureFilters(filterKey) }));
+  const [structureOpen, setStructureOpen] = useState(false);
+  useEffect(() => saveStructureFilters(filterKey, filters), [filterKey, filters]);
   const [month, setMonth] = useState(() => startMonth(new Date()));
   const [searchParams, setSearchParams] = useSearchParams();
   const selectedId = searchParams.get('event');
@@ -51,6 +59,8 @@ export function EventorPage() {
   const { data: projects = [] } = useQuery({ queryKey: ['projects', scopeId], queryFn: () => projectApi.list(scopeId), enabled: Boolean(scopeId) });
   const { data: peopleData = { people: [] } } = useQuery({ queryKey: ['contractors-assignable', scopeId], queryFn: () => contractorApi.assignable(scopeId), enabled: Boolean(scopeId) });
   const { data: types = [] } = useQuery({ queryKey: ['event-types', scopeId], queryFn: () => eventApi.types(scopeId), enabled: Boolean(scopeId) });
+  const structure = useQuery({ queryKey: ['content-structure', scopeId, 'eventor'], queryFn: () => structureApi.catalog(scopeId, 'eventor'), enabled: Boolean(scopeId) });
+  const catalog = structure.data || {};
   const eventProjects = projects.filter((project) => project.show_in_eventor !== false);
   const params = useMemo(() => Object.fromEntries(Object.entries(filters).filter(([, value]) => value)), [filters]);
   const flow = useInfiniteQuery({
@@ -63,7 +73,8 @@ export function EventorPage() {
     queryKey: ['events-calendar', scopeId, params, calendarRange], enabled: Boolean(scopeId) && view === 'calendar',
     queryFn: ({ signal }) => eventApi.calendar(scopeId, { ...params, ...calendarRange }, signal),
   });
-  const events = view === 'flow' ? (flow.data?.pages.flatMap((page) => page.data) ?? []) : (calendar.data ?? []);
+  const events = (view === 'flow' ? (flow.data?.pages.flatMap((page) => page.data) ?? []) : (calendar.data ?? [])).map((event) => ({ ...event,
+    section: catalog.sections?.find((row) => row.id === event.section_id), category: catalog.categories?.find((row) => row.id === event.category_id) }));
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ['events', scopeId] });
     queryClient.invalidateQueries({ queryKey: ['events-calendar', scopeId] });
@@ -82,9 +93,9 @@ export function EventorPage() {
       <button className="new-event" onClick={() => openCreate()}><IconPlus size={17}/>Новое событие</button>
     </header>
     <div className="eventor-layout">
-      <ProjectRail projects={eventProjects} value={filters.project_id} onChange={(project_id) => setFilters((current) => ({ ...current, project_id }))}/>
+      <aside className="event-projects event-sections"><ContentStructureNav catalog={catalog} value={filters.section_id} onChange={(section_id) => setFilters((current) => ({ ...current, section_id }))} onManage={() => setStructureOpen(true)}/>{structure.error && <p className="eventor-error">{structure.error.message}</p>}</aside>
       <section className="eventor-workspace">
-        <EventFilters filters={filters} setFilter={setFilter} types={types} people={peopleData.people ?? []} onReset={() => setFilters({ q: '', project_id: '', type_id: '', created_by: '', requester_id: '', importance: '' })}/>
+        <EventFilters filters={filters} setFilter={setFilter} projects={eventProjects} catalog={catalog} types={types} people={peopleData.people ?? []} onReset={() => setFilters({ ...defaultStructureFilters(), type_id: '', created_by: '', requester_id: '', importance: '' })}/>
         {view === 'calendar' && <MonthNavigation month={month} setMonth={setMonth}/>}
         {loading && <div className="eventor-state">Загружаю события…</div>}
         {error && <div className="eventor-state eventor-error">{error.message}</div>}
@@ -92,17 +103,18 @@ export function EventorPage() {
         {!loading && view === 'calendar' && <EventCalendar month={month} events={events} onOpen={setSelectedId} onComments={setCommentsId} onCreate={openCreate} onMove={(event, day) => move.mutate({ event, day })}/>}
       </section>
     </div>
-    {createOpen && <EventCreate scopeId={scopeId} types={types} projects={eventProjects} people={peopleData.people ?? []} initialDate={createDate} onClose={() => setCreateOpen(false)} onCreated={(event) => { refresh(); setCreateOpen(false); setSelectedId(event.id); }}/>}
-    {selectedId && <><div className="event-backdrop" onClick={() => setSelectedId(null)}/><EventEditor scopeId={scopeId} eventId={selectedId} types={types} projects={eventProjects} people={peopleData.people ?? []} onClose={() => setSelectedId(null)} onChanged={refresh} onComments={() => setCommentsId(selectedId)}/></>}
+    {createOpen && <EventCreate scopeId={scopeId} types={types} catalog={catalog} defaults={structureDefaults(filters)} projects={eventProjects} people={peopleData.people ?? []} initialDate={createDate} onClose={() => setCreateOpen(false)} onCreated={(event) => { refresh(); setCreateOpen(false); setSelectedId(event.id); }}/>}
+    {selectedId && <><div className="event-backdrop" onClick={() => setSelectedId(null)}/><EventEditor key={selectedId} scopeId={scopeId} eventId={selectedId} catalog={catalog} types={types} projects={eventProjects} people={peopleData.people ?? []} onClose={() => setSelectedId(null)} onChanged={refresh} onComments={() => setCommentsId(selectedId)}/></>}
     {commentsId && <><div className="event-comments-backdrop" onClick={() => setCommentsId(null)}/><EventComments scopeId={scopeId} eventId={commentsId} onClose={() => setCommentsId(null)}/></>}
+    {structureOpen && <ContentStructureManager scopeId={scopeId} module="eventor" catalog={catalog} onClose={() => setStructureOpen(false)}/>}
   </main>;
 }
 
-function ProjectRail({ projects, value, onChange }) {
-  return <aside className="event-projects"><header><IconFolder size={16}/><strong>Проекты</strong></header><button className={!value ? 'active' : ''} onClick={() => onChange('')}><i/>Все события</button>{projects.map((project) => <button key={project.id} className={value === project.id ? 'active' : ''} onClick={() => onChange(project.id)}><i style={{ background: project.color }}/><span>{project.title}</span><code>{project.key}</code></button>)}</aside>;
+function EventFilters({ filters, setFilter, types, people, projects, catalog, onReset }) {
+  return <><div className="event-structure-filters"><label>Проект<select aria-label="Фильтр по проекту" value={filters.project_id} onChange={setFilter('project_id')}><option value="">Все проекты</option><option value="none">Без проекта</option>{projects.map((row) => <option key={row.id} value={row.id}>{row.key} · {row.title}</option>)}</select></label><label>Категория<select aria-label="Фильтр по категории" value={filters.category_id} onChange={setFilter('category_id')}><option value="">Все категории</option><option value="none">Без категории</option>{(catalog.categories || []).map((row) => <option key={row.id} value={row.id}>{row.name}{row.is_archived ? ' (архив)' : ''}</option>)}</select></label></div><EventMainFilters filters={filters} setFilter={setFilter} types={types} people={people} onReset={onReset}/></>;
 }
 
-function EventFilters({ filters, setFilter, types, people, onReset }) {
+function EventMainFilters({ filters, setFilter, types, people, onReset }) {
   return <div className="event-filters"><label className="event-search"><IconSearch size={15}/><input value={filters.q} onChange={setFilter('q')} placeholder="Текст, место или комментарий…"/></label><select value={filters.type_id} onChange={setFilter('type_id')}><option value="">Все типы</option>{types.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}</select><select value={filters.importance} onChange={setFilter('importance')}><option value="">Любая важность</option>{importanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><select value={filters.created_by} onChange={setFilter('created_by')}><option value="">Все авторы</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select><select value={filters.requester_id} onChange={setFilter('requester_id')}><option value="">Все заявители</option>{people.map((person) => <option key={person.id} value={person.id}>{person.name}</option>)}</select><button onClick={onReset}>Сбросить</button></div>;
 }
 
@@ -121,7 +133,7 @@ function EventCard({ event, onOpen, onComments, compact = false }) {
       {event.recurrence_frequency && <small className="event-repeat-label">↻ {recurrenceLabel(event.recurrence_frequency)}{event.recurrence_user && ` · ${event.recurrence_user.name}`}</small>}
       {!compact && event.meta?.cover_file_id && <FileImage scopeId={event.scope_id} fileId={event.meta.cover_file_id} alt={event.title} className="event-photo-cover"/>}
       {!compact && <p>{excerpt(event.content)}</p>}
-      <footer>{event.project && <span><i style={{ background: event.project.color }}/>{event.project.key}</span>}{event.requester && <span><IconUser size={12}/>{event.requester.name}</span>}<b className={`importance importance--${event.importance}`}>{importanceMap[event.importance] || event.importance}</b></footer>
+      <footer>{event.project && <span><i style={{ background: event.project.color }}/>{event.project.key}</span>}{event.section && <span>{event.section.name}</span>}{event.category && <span><i style={{ background: event.category.color || '#8995a6' }}/>{event.category.name}</span>}{event.requester && <span><IconUser size={12}/>{event.requester.name}</span>}<b className={`importance importance--${event.importance}`}>{importanceMap[event.importance] || event.importance}</b></footer>
       {event.is_blurred && !revealed && <em><IconEye size={14}/>Показать скрытое событие</em>}
     </button>
     {event.comments_allowed && <button className="event-comment-trigger" title="Комментарии" onClick={() => onComments(event.id)}><IconMessageCircle size={15}/><small>{event.comments_count || ''}</small></button>}
@@ -138,15 +150,25 @@ function EventCalendar({ month, events, onOpen, onComments, onCreate, onMove }) 
   return <><div className="event-weekdays">{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day) => <strong key={day}>{day}</strong>)}</div><section className="event-calendar">{days.map((day) => { const key = dateKey(day); return <div key={key} className={`${day.getMonth() !== month.getMonth() ? 'muted' : ''} ${key === dateKey(new Date()) ? 'today' : ''}`} onDoubleClick={(click) => { if (!click.target.closest('.event-card')) onCreate(key); }} onDragOver={(drag) => drag.preventDefault()} onDrop={(drop) => { drop.preventDefault(); const id = drop.dataTransfer.getData('application/x-zuratax-event'); const event = events.find((item) => item.id === id); if (event && !event.recurrence_frequency) onMove(event, key); }}><header><span>{day.getDate()}</span>{day.getDate() === 1 && <small>{day.toLocaleDateString([], { month: 'short' })}</small>}</header><section>{(byDay[key] ?? []).map((event) => <EventCard key={event.occurrence_id || event.id} compact event={event} onOpen={onOpen} onComments={onComments}/>)}</section></div>; })}</section></>;
 }
 
-function EventCreate({ scopeId, types, projects, people, initialDate, onClose, onCreated }) {
+function EventCreate({ scopeId, types, projects, people, initialDate, catalog, defaults, onClose, onCreated }) {
   const defaultType = types.find((type) => type.code === 'event')?.id || '';
-  const [form, setForm] = useState({ ...recurrenceForm(), title: '', content: '', type_id: defaultType, project_id: '', requester_id: '', importance: 'undefined', visibility: 'scope', starts_at: initialDate ? `${initialDate}T09:00` : '', ends_at: '', location: '', status: 'published', is_all_day: false });
+  const [form, setForm] = useState({ ...recurrenceForm(), title: '', content: '', type_id: defaultType, ...defaults, requester_id: '', importance: 'undefined', visibility: 'scope', starts_at: initialDate ? `${initialDate}T09:00` : '', ends_at: '', location: '', status: 'published', is_all_day: false });
   const create = useMutation({ mutationFn: () => eventApi.create(scopeId, normalizeEventPayload(form)), onSuccess: onCreated });
   const set = (key) => (event) => setForm((value) => ({ ...value, [key]: event.target.type === 'checkbox' ? event.target.checked : event.target.value }));
-  return <div className="event-modal-backdrop" onMouseDown={onClose}><form className="event-modal" onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}><header><div><small>Новая запись</small><strong>Событие Eventor</strong></div><button type="button" onClick={onClose}><IconX size={18}/></button></header><label>Название<input autoFocus required value={form.title} onChange={set('title')}/></label><label>Короткое описание<textarea rows="3" value={form.content} onChange={set('content')}/></label><div className="event-form-row"><Select label="Проект" value={form.project_id} onChange={set('project_id')} empty="Без проекта" rows={projects}/><Select label="Тип" value={form.type_id} onChange={set('type_id')} empty="Без типа" rows={types}/></div><div className="event-form-row"><Select label="Заявитель" value={form.requester_id} onChange={set('requester_id')} empty="Не указан" rows={people}/><label>Важность<select value={form.importance} onChange={set('importance')}>{importanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div><div className="event-form-row"><label>Начало<input type="datetime-local" value={form.starts_at} onChange={set('starts_at')}/></label><label>Окончание<input type="datetime-local" value={form.ends_at} onChange={set('ends_at')}/></label></div><div className="event-form-row"><label>Место<input value={form.location} onChange={set('location')}/></label><label>Видимость<select value={form.visibility} onChange={set('visibility')}><option value="private">Только автор</option><option value="scope">Коллеги</option><option value="public">Все</option></select></label></div><EventRecurrenceFields form={form} people={people} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}/><label className="event-checkbox"><input type="checkbox" checked={form.is_all_day} onChange={set('is_all_day')}/>Весь день</label>{create.error && <p className="eventor-error">{create.error.message}</p>}<footer><button type="button" onClick={onClose}>Отмена</button><button className="event-primary" disabled={create.isPending}>{create.isPending ? 'Создаю…' : 'Создать'}</button></footer></form></div>;
+  return <div className="event-modal-backdrop" onMouseDown={onClose}><form className="event-modal" onMouseDown={(event) => event.stopPropagation()} onSubmit={(event) => { event.preventDefault(); create.mutate(); }}>
+    <header><div><small>Новая запись</small><strong>Событие Eventor</strong></div><button type="button" onClick={onClose}><IconX size={18}/></button></header>
+    <label>Название<input autoFocus required value={form.title} onChange={set('title')}/></label><label>Короткое описание<textarea rows="3" value={form.content} onChange={set('content')}/></label>
+    <div className="event-form-row"><Select label="Проект" value={form.project_id} onChange={set('project_id')} empty="Без проекта" rows={projects}/><Select label="Тип" value={form.type_id} onChange={set('type_id')} empty="Без типа" rows={types}/></div>
+    <StructureFields value={form} catalog={catalog} disabled={create.isPending} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}/>
+    <div className="event-form-row"><Select label="Заявитель" value={form.requester_id} onChange={set('requester_id')} empty="Не указан" rows={people}/><label>Важность<select value={form.importance} onChange={set('importance')}>{importanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label></div>
+    <div className="event-form-row"><label>Начало<input type="datetime-local" value={form.starts_at} onChange={set('starts_at')}/></label><label>Окончание<input type="datetime-local" value={form.ends_at} onChange={set('ends_at')}/></label></div>
+    <div className="event-form-row"><label>Место<input value={form.location} onChange={set('location')}/></label><label>Видимость<select value={form.visibility} onChange={set('visibility')}><option value="private">Только автор</option><option value="scope">Коллеги</option><option value="public">Все</option></select></label></div>
+    <EventRecurrenceFields form={form} people={people} onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}/><label className="event-checkbox"><input type="checkbox" checked={form.is_all_day} onChange={set('is_all_day')}/>Весь день</label>
+    {create.error && <p className="eventor-error">{create.error.message}</p>}<footer><button type="button" onClick={onClose}>Отмена</button><button className="event-primary" disabled={create.isPending}>{create.isPending ? 'Создаю…' : 'Создать'}</button></footer>
+  </form></div>;
 }
 
-function EventEditor({ scopeId, eventId, types, projects, people, onClose, onChanged, onComments }) {
+function EventEditor({ scopeId, eventId, types, projects, people, catalog, onClose, onChanged, onComments }) {
   const queryClient = useQueryClient();
   const key = ['event', scopeId, eventId];
   const [tab, setTab] = useState('editor');
@@ -161,6 +183,7 @@ function EventEditor({ scopeId, eventId, types, projects, people, onClose, onCha
   const tabs = [['editor', 'Редактор'], ['settings', 'Настройки'], ['recurrence', 'Повторение'], ['diagram', 'Схема'], ['attachments', 'Вложения'], ['photos', 'Фотографии']];
   return <aside className="event-editor"><header><AttachmentsButton scopeId={scopeId} type="event" id={eventId}/><span><IconCalendarEvent size={18}/>Событие</span><div>{event.comments_allowed && <button onClick={onComments}><IconMessageCircle size={17}/>{event.comments_count || ''}</button>}<button onClick={onClose}><IconX size={19}/></button></div></header><input className="event-title" value={event.title} disabled={event.is_locked} onChange={(input) => local({ title: input.target.value })} onBlur={(input) => save.mutate({ title: input.target.value })}/><nav className="event-editor-tabs">{tabs.map(([value, label]) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>{label}</button>)}</nav>{event.is_locked && <p className="event-locked"><IconLock size={15}/>Событие заблокировано от правок.</p>}
     {tab === 'editor' && <Suspense fallback={<div className="eventor-state">Загружаю Markdown…</div>}><MarkdownEditor variant="full" value={event.content || ''} placeholder="Описание, наблюдения и материалы…" onSave={(content) => save.mutate({ content })}/></Suspense>}
+    {tab === 'settings' && <StructureFields value={event} catalog={catalog} disabled={save.isPending || event.is_locked} onChange={(patch) => save.mutate(patch)}/>}
     {tab === 'settings' && <div className="event-editor-settings"><Select label="Проект" value={event.project_id || ''} onChange={(input) => change('project_id', input.target.value || null)} empty="Без проекта" rows={projects}/><Select label="Тип" value={event.type_id || ''} onChange={(input) => change('type_id', input.target.value || null)} empty="Без типа" rows={types}/><Select label="Заявитель" value={event.requester_id || ''} onChange={(input) => change('requester_id', input.target.value || null)} empty="Не указан" rows={people}/><label>Важность<select value={event.importance} onChange={(input) => change('importance', input.target.value)}>{importanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Начало<input type="datetime-local" defaultValue={localDateTime(event.starts_at)} onBlur={(input) => save.mutate({ starts_at: input.target.value ? new Date(input.target.value).toISOString() : null })}/></label><label>Окончание<input type="datetime-local" defaultValue={localDateTime(event.ends_at)} onBlur={(input) => save.mutate({ ends_at: input.target.value ? new Date(input.target.value).toISOString() : null })}/></label><label>Место<input defaultValue={event.location || ''} onBlur={(input) => save.mutate({ location: input.target.value || null })}/></label><label>Видимость<select value={event.visibility} onChange={(input) => change('visibility', input.target.value)}><option value="private">Только автор</option><option value="scope">Коллеги</option><option value="public">Все</option></select></label><div className="event-flags"><Check label="Закрепить" checked={event.is_pinned} onChange={(value) => change('is_pinned', value)}/><Check label="Размыть содержимое" checked={event.is_blurred} onChange={(value) => change('is_blurred', value)}/><Check label="Заблокировать правки" checked={event.is_locked} onChange={(value) => change('is_locked', value)}/><Check label="Комментарии" checked={event.comments_enabled ?? event.project?.event_comments_enabled ?? true} onChange={(value) => change('comments_enabled', value)}/></div></div>}
     {tab === 'recurrence' && <EventRecurrenceEditor key={event.id} event={event} people={people} pending={save.isPending} error={save.error} onSave={(payload) => save.mutateAsync(payload)}/>}
     {tab === 'diagram' && <div className="event-diagram-pane">{event.diagram?.svg ? <img src={svgDataUrl(event.diagram.svg)} alt="Схема события"/> : <div><IconAlertTriangle size={24}/><p>Схема ещё не нарисована.</p></div>}<button onClick={() => setDiagramOpen(true)}>Открыть Excalidraw</button></div>}
@@ -205,7 +228,7 @@ function EventResourceLinks({ icon: Icon, rows, onChange, label, photos = false 
 
 function Select({ label, value, onChange, empty, rows }) { const options = empty === 'Без типа' ? eventTypeOptions(rows, value) : { rows, value }; return <label>{label}<select value={options.value} onChange={onChange}><option value="">{empty}</option>{options.rows.map((row) => <option key={row.id} value={row.id}>{row.key ? `${row.key} · ${row.title}` : row.name}</option>)}</select></label>; }
 function Check({ label, checked, onChange }) { return <label><input type="checkbox" checked={Boolean(checked)} onChange={(event) => onChange(event.target.checked)}/>{label}</label>; }
-function normalizeEventPayload(form) { return { ...form, ...recurrencePayload(form), type_id: form.type_id || null, project_id: form.project_id || null, requester_id: form.requester_id || null, location: form.location || null }; }
+function normalizeEventPayload(form) { return { ...form, ...recurrencePayload(form), type_id: form.type_id || null, project_id: form.project_id || null, section_id: form.section_id || null, category_id: form.category_id || null, requester_id: form.requester_id || null, location: form.location || null }; }
 function excerpt(value) { const clean = (value || '').replace(/[#*_`>]/g, '').trim(); return clean.length > 220 ? `${clean.slice(0, 220)}…` : clean; }
 function eventMoment(event) { return new Date(event.occurrence_start || event.starts_at || event.occurred_at || event.created_at); }
 function eventDate(event) { const value = eventMoment(event); return value.toLocaleDateString([], { day: '2-digit', month: 'short', year: value.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined }); }

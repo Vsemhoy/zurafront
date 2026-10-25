@@ -6,7 +6,7 @@ const base = (scopeId) => `/scopes/${scopeId}/lightbooks`;
 const pagePath = (scopeId, lightbookId, pageId) => `${base(scopeId)}/${lightbookId}/pages/${pageId}`;
 
 export const lightbookApi = {
-  list: (scopeId) => data(apiRequest(base(scopeId))),
+  list: (scopeId, params = {}) => data(apiRequest(`${base(scopeId)}?${new URLSearchParams(Object.entries(params).filter(([, value]) => value !== '' && value != null))}`)),
   create: (scopeId, payload) => data(apiRequest(base(scopeId), json('POST', payload))),
   show: (scopeId, lightbookId) => data(apiRequest(`${base(scopeId)}/${lightbookId}`)),
   update: (scopeId, lightbookId, payload) => data(apiRequest(`${base(scopeId)}/${lightbookId}`, json('PATCH', payload))),
