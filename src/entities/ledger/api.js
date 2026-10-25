@@ -5,6 +5,7 @@ const save = async (scopeId, collection, id, payload) => (await apiRequest(`${ba
 export const ledgerApi = {
   options: async (scopeId) => (await apiRequest(`${base(scopeId)}/options`)).data,
   accounts: (scopeId, params, signal) => apiRequest(`${base(scopeId)}/accounts?${new URLSearchParams(params)}`, { signal }),
+  statement: async (scopeId, id, month, signal) => (await apiRequest(`${base(scopeId)}/accounts/${id}/statement?${new URLSearchParams({ month })}`, { signal })).data,
   transactions: (scopeId, params, signal) => apiRequest(`${base(scopeId)}/transactions?${new URLSearchParams(params)}`, { signal }),
   transaction: async (scopeId, id) => (await apiRequest(`${base(scopeId)}/transactions/${id}`)).data,
   saveAccount: (scopeId, id, payload) => save(scopeId, 'accounts', id, payload),

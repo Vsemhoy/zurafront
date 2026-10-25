@@ -1,0 +1,5 @@
+.ledger-statement{width:min(940px,calc(100vw - 20px))}
+.ledger-statement-month{max-width:200px;margin-bottom:10px}
+.ledger-statement-totals{display:flex;flex-wrap:wrap;gap:12px 24px;margin:16px 0;font-size:11px;color:#788596}
+.ledger-statement-totals strong{display:block;margin-top:4px;font-size:15px;font-weight:500;color:#344155;font-variant-numeric:tabular-nums}
+.ledger-statement .ledger-table td:nth-child(2){min-width:110px}

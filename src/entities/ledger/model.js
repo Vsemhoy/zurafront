@@ -1,6 +1,6 @@
 export const ledgerKinds = { income: 'Доход', expense: 'Расход', transfer: 'Перевод' };
 export const ledgerStatuses = { planned: 'Запланировано', posted: 'Проведено', void: 'Отменено' };
-export const accountTypes = { bank: 'Банковский счёт', cash: 'Касса', wallet: 'Кошелёк' };
+export const accountTypes = { bank: 'Банковский счёт', cash: 'Касса', wallet: 'Кошелёк', credit: 'Кредитный счёт' };
 export const categoryKinds = { both: 'Доходы и расходы', income: 'Доходы', expense: 'Расходы' };
 export const costTypes = { labor: 'Работа', parts: 'Запчасти', consumables: 'Расходники', delivery: 'Доставка', service: 'Услуги', other: 'Прочее', combined: 'Общие затраты' };
 export function moneyToMinor(value) {
@@ -21,11 +21,17 @@ export function formatMoney(minor, currency = '') {
 }
 export function moneyTotals(accounts) {
   const result = new Map();
-  for (const account of accounts) result.set(account.currency, (result.get(account.currency) || 0n) + BigInt(account.balance_minor || '0'));
+  for (const account of accounts) result.set(account.currency, (result.get(account.currency) || 0n) + BigInt(account.balance_today_minor ?? account.balance_minor ?? '0'));
   return [...result].map(([currency, minor]) => ({ currency, minor: String(minor) }));
 }
 export function newAccount(projectId = '') {
-  return { project_id: projectId, title: '', type: 'bank', currency: 'RUB', opening_balance: '0.00', description: '', color: '#7c6a46', sort_order: 0, is_archived: false };
+  return { project_id: projectId, title: '', type: 'bank', currency: 'RUB', opening_balance: '0.00', description: '', color: '#7c6a46', sort_order: 0, is_archived: false, interest_rate: '', interest_start_on: '', interest_end_on: '' };
+}
+export function rateToBasisPoints(value) {
+  if (value === '' || value == null) return null;
+  const points = moneyToMinor(value);
+  if (points < 0n || points > 100000n) throw new Error('Годовая ставка: от 0 до 1000%, не более двух знаков после точки.');
+  return Number(points);
 }
 export function newCategory(projectId = '') {
   return { project_id: projectId, title: '', kind: 'both', color: '#7c6a46', sort_order: 0, is_archived: false };
@@ -37,16 +43,20 @@ export function newTransaction(account = null, kind = 'expense', date = new Date
 export function ledgerForm(type, data) {
   const result = { ...(type === 'account' ? newAccount() : type === 'category' ? newCategory() : { category_id: '', target_account_id: '', note_md: '' }), ...data };
   for (const key of ['category_id', 'target_account_id', 'note_md', 'description']) if (result[key] == null) result[key] = '';
+  if (type === 'account') {
+    result.interest_rate = data.interest_rate_bps == null ? result.interest_rate : minorToDecimal(data.interest_rate_bps);
+    for (const key of ['interest_start_on', 'interest_end_on']) result[key] ||= '';
+  }
   return result;
 }
 export function ledgerPayload(type, form, original = null) {
   const existing = Boolean(original?.id);
-  const fields = type === 'account' ? ['title', 'type', 'opening_balance', 'description', 'color', 'sort_order', 'is_archived'] : type === 'category' ? ['title', 'kind', 'color', 'sort_order', 'is_archived'] : ['title', 'amount', 'occurred_on', 'status', 'category_id', 'note_md', 'is_pinned'];
-  const normalize = (field, value) => ['amount', 'opening_balance'].includes(field) ? minorToDecimal(moneyToMinor(value || '0')) : ['category_id', 'note_md', 'description'].includes(field) ? value || null : field === 'sort_order' ? Number(value) : field === 'title' ? String(value).trim() : value;
+  const fields = type === 'account' ? ['title', 'type', 'opening_balance', 'description', 'color', 'sort_order', 'is_archived', 'interest_rate', 'interest_start_on', 'interest_end_on'] : type === 'category' ? ['title', 'kind', 'color', 'sort_order', 'is_archived'] : ['title', 'amount', 'occurred_on', 'status', 'category_id', 'note_md', 'is_pinned'];
+  const normalize = (field, value) => field === 'interest_rate' ? rateToBasisPoints(value) : ['amount', 'opening_balance'].includes(field) ? minorToDecimal(moneyToMinor(value || '0')) : ['category_id', 'note_md', 'description', 'interest_start_on', 'interest_end_on'].includes(field) ? value || null : field === 'sort_order' ? Number(value) : field === 'title' ? String(value).trim() : value;
   const result = {};
   for (const field of fields) {
     if (existing && normalize(field, form[field]) === normalize(field, original[field])) continue;
-    result[field] = normalize(field, form[field]);
+    result[field === 'interest_rate' ? 'interest_rate_bps' : field] = normalize(field, form[field]);
   }
   if (existing) result.revision = original.revision;
   else if (type === 'account') { result.project_id = form.project_id; result.currency = form.currency; }
