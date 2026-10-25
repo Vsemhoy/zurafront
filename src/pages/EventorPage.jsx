@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconCalendar, IconCalendarEvent, IconChevronLeft, IconChevronRight, IconEye, IconEyeOff, IconList, IconLock, IconMessageCircle, IconPaperclip, IconPhoto, IconPin, IconPlus, IconSearch, IconSend, IconTrash, IconUser, IconX } from '@tabler/icons-react';
+import { IconArrowDown, IconArrowUp, IconCalendar, IconCalendarEvent, IconChevronLeft, IconChevronRight, IconEye, IconEyeOff, IconList, IconLock, IconMessageCircle, IconPaperclip, IconPhoto, IconPin, IconPlus, IconSearch, IconSend, IconTrash, IconUser, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { structureApi } from '../entities/content-navigation/structureApi';
@@ -88,8 +88,9 @@ export function EventorPage() {
       <aside className="event-projects event-sections"><ContentStructureNav catalog={catalog} value={filters.section_id} onChange={(section_id) => setFilters((current) => ({ ...current, section_id }))} onManage={() => setStructureOpen(true)}/>{structure.error && <p className="eventor-error">{structure.error.message}</p>}</aside>
       <section className="eventor-workspace">
         <EventFilters filters={filters} setFilter={setFilter} projects={eventProjects} catalog={catalog} types={types} people={peopleData.people ?? []} onReset={() => setFilters({ ...defaultStructureFilters(), type_id: '', created_by: '', requester_id: '', importance: '' })}/>
-        {view !== 'flow' && <MonthNavigation month={month} setMonth={setMonth}/>}
-        {view === 'days' && <button className="event-day-direction" onClick={() => setDescending(!descending)}>{descending ? 'Сначала новые ↓' : 'По порядку дат ↑'}</button>}
+        {view !== 'flow' && <MonthNavigation month={month} setMonth={setMonth}>
+          {view === 'days' && <button className="event-day-direction" title={descending ? 'Сначала новые' : 'По порядку дат'} aria-label={descending ? 'По порядку дат — переключить' : 'Сначала новые — переключить'} onClick={() => setDescending(!descending)}>{descending ? <IconArrowDown size={16}/> : <IconArrowUp size={16}/>}</button>}
+        </MonthNavigation>}
         {loading && <div className="eventor-state">Загружаю события…</div>}
         {error && <div className="eventor-state eventor-error">{error.message}</div>}
         {!loading && view === 'flow' && <EventFlow events={events} onOpen={setSelectedId} onComments={setCommentsId} hasMore={flow.hasNextPage} loadingMore={flow.isFetchingNextPage} loadMore={() => flow.fetchNextPage()}/>}
@@ -134,8 +135,8 @@ function EventCard({ event, onOpen, onComments, compact = false }) {
   </article>;
 }
 
-function MonthNavigation({ month, setMonth }) {
-  return <div className="event-month-nav"><button aria-label="Предыдущий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><IconChevronLeft size={17}/></button><strong>{month.toLocaleDateString([], { month: 'long', year: 'numeric' })}</strong><input className="event-month-picker" type="month" aria-label="Выбрать месяц событий" value={`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`} onChange={(event) => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value)) { const [year, nextMonth] = event.target.value.split('-').map(Number); if (year >= 1900 && year <= 9999) setMonth(new Date(year, nextMonth - 1, 1)); } }}/><button aria-label="Следующий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><IconChevronRight size={17}/></button><button onClick={() => setMonth(startMonth(new Date()))}>Сегодня</button></div>;
+function MonthNavigation({ month, setMonth, children }) {
+  return <div className="event-month-nav">{children}<button aria-label="Предыдущий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><IconChevronLeft size={17}/></button><strong>{month.toLocaleDateString([], { month: 'long', year: 'numeric' })}</strong><input className="event-month-picker" type="month" aria-label="Выбрать месяц событий" value={`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`} onChange={(event) => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value)) { const [year, nextMonth] = event.target.value.split('-').map(Number); if (year >= 1900 && year <= 9999) setMonth(new Date(year, nextMonth - 1, 1)); } }}/><button aria-label="Следующий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><IconChevronRight size={17}/></button><button onClick={() => setMonth(startMonth(new Date()))}>Сегодня</button></div>;
 }
 
 function EventCalendar({ month, events, onOpen, onComments, onCreate, onMove }) {

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canMoveLedgerCard, flowSlots, ledgerDays, reportSeries, shiftLedgerMonth, summarizeLedgerReport } from './flow.js';
+import { canMoveLedgerCard, flowSlots, ledgerDays, ledgerFlowMonthTotals, ledgerMonthGroups, ledgerPeriodFilters, reportSeries, shiftLedgerMonth, shiftLedgerPeriod, summarizeLedgerReport } from './flow.js';
 import { ledgerForm, ledgerPayload, newAccount } from './model.js';
 
 test('flow spans calendar months including leap days without timezone shifts', () => {
@@ -9,6 +9,48 @@ test('flow spans calendar months including leap days without timezone shifts', (
   assert.deepEqual(ledgerDays('2026-13', '2026-13'), []);
   assert.deepEqual(ledgerDays('2026-10', '2026-09'), []);
   assert.equal(shiftLedgerMonth('2026-01', -1), '2025-12');
+});
+test('month groups and their days follow the selected direction, including leap February', () => {
+  const descending = ledgerMonthGroups('2024-02', '2024-03');
+  assert.deepEqual(descending.map(({ month }) => month), ['2024-03', '2024-02']);
+  assert.equal(descending[0].dates[0], '2024-03-31');
+  assert.equal(descending[1].dates[0], '2024-02-29');
+  assert.equal(descending[1].dates.at(-1), '2024-02-01');
+  const ascending = ledgerMonthGroups('2024-02', '2024-03', false);
+  assert.deepEqual(ascending.map(({ month }) => month), ['2024-02', '2024-03']);
+  assert.equal(ascending[0].dates[0], '2024-02-01');
+  assert.equal(ascending[1].dates.at(-1), '2024-03-31');
+});
+test('period navigation shifts both bounds across a year and direction stays out of API filters', () => {
+  assert.deepEqual(shiftLedgerPeriod('2025-12', '2026-02', 1), { start: '2026-01', end: '2026-03' });
+  assert.deepEqual(shiftLedgerPeriod('2026-01', '2026-03', -1), { start: '2025-12', end: '2026-02' });
+  assert.deepEqual(ledgerPeriodFilters(new URLSearchParams('start=2026-01&end=2026-03&direction=desc&account_id=a')), { start: '2026-01', end: '2026-03', account_id: 'a' });
+});
+test('flow month totals keep accounts separate, count only posted past movements, and use daily closing balances', () => {
+  const accounts = [{ id: 'a', currency: 'RUB', exclude_from_reports: true }, { id: 'b', currency: 'RUB' }, { id: 'usd', currency: 'USD' }];
+  const tx = (kind, amount, extra = {}) => ({ kind, amount_minor: amount, account_id: 'a', occurred_on: '2026-10-02', status: 'posted', ...extra });
+  const transactions = [tx('income', '9007199254740993'), tx('income', '7'), tx('expense', '100'), tx('transfer', '25', { target_account_id: 'b' }), tx('transfer', '5', { account_id: null, target_account_id: 'a' }), tx('adjustment_out', '8'), tx('income', '99', { status: 'planned' }), tx('expense', '99', { status: 'void' }), tx('income', '99', { occurred_on: '2026-10-30' }), tx('income', '99', { occurred_on: '2026-09-30' }), tx('income', '50', { account_id: 'usd' })];
+  const daily = { a: [
+    { date: '2026-10-02', opening_minor: '100', closing_minor: '200', interest_minor: '-2' },
+    { date: '2026-10-01', opening_minor: '80', closing_minor: '100', interest_minor: '-1' },
+    { date: '2026-09-30', opening_minor: '0', closing_minor: '80', interest_minor: '-99' },
+  ] };
+  const totals = ledgerFlowMonthTotals('2026-10', accounts, transactions, daily, '2026-10-26');
+  assert.equal(totals.get('a').income, '9007199254741000');
+  assert.equal(totals.get('a').expense, '100');
+  assert.equal(totals.get('a').net, '9007199254740900');
+  assert.equal(totals.get('a').transfers, '-20');
+  assert.equal(totals.get('a').adjustments, '-8');
+  assert.equal(totals.get('a').interest, '-3');
+  assert.equal(totals.get('a').opening_minor, '80');
+  assert.equal(totals.get('a').closing_minor, '200');
+  assert.equal(totals.get('a').balance_date, '2026-10-02');
+  assert.equal(totals.get('b').received, '25');
+  assert.equal(totals.get('b').closing_minor, null);
+  assert.equal(totals.get('usd').income, '50');
+  const future = ledgerFlowMonthTotals('2026-11', accounts, transactions, daily, '2026-10-26').get('a');
+  assert.equal(future.closing_minor, null);
+  assert.equal(future.income, '0');
 });
 test('a transfer appears in both visible account columns as one record with separate drag sides', () => {
   const transfer = { id: 'tx', kind: 'transfer', account_id: 'source', target_account_id: 'target', occurred_on: '2026-10-25' };

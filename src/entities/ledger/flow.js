@@ -7,6 +7,53 @@ export function shiftLedgerMonth(month, offset) {
   const [year, number] = month.split('-').map(Number);
   return currentLedgerMonth(new Date(year, number - 1 + offset, 1));
 }
+export function shiftLedgerPeriod(start, end, offset) {
+  return { start: shiftLedgerMonth(start, offset), end: shiftLedgerMonth(end, offset) };
+}
+export function ledgerMonthGroups(start, end, descending = true) {
+  const days = ledgerDays(start, end);
+  if (descending) days.reverse();
+  const groups = new Map();
+  for (const day of days) {
+    const month = day.slice(0, 7);
+    if (!groups.has(month)) groups.set(month, []);
+    groups.get(month).push(day);
+  }
+  return [...groups].map(([month, dates]) => ({ month, dates }));
+}
+// Flow includes every visible account, including those excluded from reports.
+// Match daily balances: only posted movements through the server's as-of date.
+export function ledgerFlowMonthTotals(month, accounts, transactions, daily, asOf) {
+  const rows = new Map(accounts.map(({ id }) => [id, {
+    income: 0n, expense: 0n, received: 0n, sent: 0n, adjustment_in: 0n, adjustment_out: 0n,
+    interest: 0n, opening_minor: null, closing_minor: null, balance_date: null,
+  }]));
+  for (const transaction of transactions) {
+    const date = ledgerDate(transaction.occurred_on);
+    if (transaction.status !== 'posted' || date.slice(0, 7) !== month || date > asOf) continue;
+    const amount = BigInt(transaction.amount_minor);
+    const source = rows.get(transaction.account_id);
+    if (transaction.kind === 'transfer') {
+      if (source) source.sent += amount;
+      const target = rows.get(transaction.target_account_id);
+      if (target) target.received += amount;
+    } else if (source && ['income', 'expense', 'adjustment_in', 'adjustment_out'].includes(transaction.kind)) {
+      source[transaction.kind] += amount;
+    }
+  }
+  for (const [id, row] of rows) {
+    const days = (daily[id] ?? []).filter((day) => day.date.slice(0, 7) === month && day.date <= asOf).sort((a, b) => a.date.localeCompare(b.date));
+    row.opening_minor = days[0]?.opening_minor ?? null;
+    row.closing_minor = days.at(-1)?.closing_minor ?? null;
+    row.balance_date = days.at(-1)?.date ?? null;
+    for (const day of days) row.interest += BigInt(day.interest_minor || '0');
+    row.net = row.income - row.expense;
+    row.transfers = row.received - row.sent;
+    row.adjustments = row.adjustment_in - row.adjustment_out;
+    for (const [key, value] of Object.entries(row)) if (typeof value === 'bigint') row[key] = String(value);
+  }
+  return rows;
+}
 export function ledgerDays(start, end) {
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(start) || !/^\d{4}-(0[1-9]|1[0-2])$/.test(end) || end < start) return [];
   const [year, month] = start.split('-').map(Number);
