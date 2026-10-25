@@ -1,3 +1,5 @@
+import { ledgerDate } from './dates.js';
+
 export const ledgerKinds = { income: 'Доход', expense: 'Расход', transfer: 'Перевод', adjustment_in: 'Корректировка +', adjustment_out: 'Корректировка −' };
 export const ledgerStatuses = { planned: 'Запланировано', posted: 'Проведено', void: 'Отменено' };
 export const accountTypes = { bank: 'Банковский счёт', cash: 'Касса', wallet: 'Кошелёк', credit: 'Кредитный счёт' };
@@ -51,12 +53,13 @@ export function ledgerForm(type, data) {
     result.interest_rate = data.interest_rate_bps == null ? result.interest_rate : minorToDecimal(data.interest_rate_bps);
     for (const key of ['interest_start_on', 'interest_end_on']) result[key] ||= '';
   }
+  if (type === 'transaction' && result.occurred_on != null) result.occurred_on = ledgerDate(result.occurred_on);
   return result;
 }
 export function ledgerPayload(type, form, original = null) {
   const existing = Boolean(original?.id);
   const fields = type === 'account' ? ['title', 'type', 'opening_balance', 'balance_is_known', 'description', 'color', 'sort_order', 'is_archived', 'interest_rate', 'interest_start_on', 'interest_end_on'] : type === 'category' ? ['title', 'kind', 'color', 'sort_order', 'is_archived'] : ['title', 'amount', 'occurred_on', 'status', 'category_id', 'note_md', 'is_pinned'];
-  const normalize = (field, value) => field === 'interest_rate' ? rateToBasisPoints(value) : ['amount', 'opening_balance'].includes(field) ? minorToDecimal(moneyToMinor(value || '0')) : ['category_id', 'note_md', 'description', 'interest_start_on', 'interest_end_on'].includes(field) ? value || null : field === 'sort_order' ? Number(value) : field === 'title' ? String(value).trim() : value;
+  const normalize = (field, value) => field === 'occurred_on' ? ledgerDate(value) : field === 'interest_rate' ? rateToBasisPoints(value) : ['amount', 'opening_balance'].includes(field) ? minorToDecimal(moneyToMinor(value || '0')) : ['category_id', 'note_md', 'description', 'interest_start_on', 'interest_end_on'].includes(field) ? value || null : field === 'sort_order' ? Number(value) : field === 'title' ? String(value).trim() : value;
   const result = {};
   for (const field of fields) {
     if (existing && normalize(field, form[field]) === normalize(field, original[field])) continue;
@@ -72,12 +75,12 @@ export function ledgerPayload(type, form, original = null) {
 }
 
 export function newExploitationExpense(entry) {
-  return { account_id: '', amount: '', cost_type: 'labor', title: '', note_md: '', occurred_on: entry.occurred_on, status: 'planned', idempotency_key: crypto.randomUUID() };
+  return { account_id: '', amount: '', cost_type: 'labor', title: '', note_md: '', occurred_on: ledgerDate(entry.occurred_on), status: 'planned', idempotency_key: crypto.randomUUID() };
 }
 
 export function exploitationExpensePayload(form, entryRevision) {
   const { title, ...data } = form;
-  return { ...data, amount: minorToDecimal(moneyToMinor(form.amount)), ...(title.trim() ? { title: title.trim() } : {}), note_md: form.note_md || null, entry_revision: entryRevision };
+  return { ...data, occurred_on: ledgerDate(form.occurred_on), amount: minorToDecimal(moneyToMinor(form.amount)), ...(title.trim() ? { title: title.trim() } : {}), note_md: form.note_md || null, entry_revision: entryRevision };
 }
 export function transactionSign(transaction, accountId = '') {
   if (['income', 'adjustment_in'].includes(transaction.kind)) return '+';

@@ -5,6 +5,7 @@ import { IconCoin, IconPlus, IconTool, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { ledgerApi } from '../entities/ledger/api';
 import { useLedgerRefresh } from '../entities/ledger/hooks';
+import { displayLedgerDate as displayDate, displayLedgerMonth as displayMonth } from '../entities/ledger/dates';
 import { accountTypes, categoryKinds, costTypes, formatMoney, ledgerForm, ledgerKinds, ledgerPayload, ledgerStatuses, minorToDecimal, moneyTotals, newAccount, newCategory, newTransaction, transactionSign } from '../entities/ledger/model';
 import LedgerStatement from './LedgerStatement';
 import { useSaveForm } from '../shared/ui/useSaveForm';
@@ -13,8 +14,6 @@ import CompactMarkdownEditor from '../shared/ui/CompactMarkdownEditor';
 import MarkdownRenderer from '../shared/ui/MarkdownRenderer';
 import './LedgerPage.css';
 
-const displayDate = (date) => new Date(`${date}T12:00:00`).toLocaleDateString('ru-RU');
-const displayMonth = (date) => new Date(`${date.slice(0, 7)}-01T12:00:00`).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' });
 export function LedgerPage() {
   const { activeScope } = useWorkspace();
   const { transactionId } = useParams();
