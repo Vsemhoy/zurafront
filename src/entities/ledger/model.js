@@ -1,3 +1,4 @@
+import { parseCategoryKeywords } from './categories.js';
 import { ledgerDate } from './dates.js';
 
 export const ledgerKinds = { income: 'Доход', expense: 'Расход', transfer: 'Перевод', adjustment_in: 'Корректировка +', adjustment_out: 'Корректировка −' };
@@ -40,15 +41,16 @@ export function rateToBasisPoints(value) {
   return Number(points);
 }
 export function newCategory(projectId = '') {
-  return { project_id: projectId, title: '', kind: 'both', color: '#7c6a46', sort_order: 0, is_archived: false };
+  return { project_id: projectId, title: '', parent_id: '', keywords: [], keywords_text: '', kind: 'both', color: '#7c6a46', sort_order: 0, is_archived: false };
 }
 export function newTransaction(account = null, kind = 'expense', date = new Date()) {
   const occurred_on = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-  return { account_id: account?.id || '', target_account_id: '', kind, amount: '', occurred_on, status: 'planned', title: '', category_id: '', note_md: '', is_pinned: false, idempotency_key: crypto.randomUUID() };
+  return { account_id: account?.id || '', target_account_id: '', kind, amount: '', occurred_on, status: 'posted', title: '', allocation_project_id: '', category_id: '', note_md: '', is_pinned: false, idempotency_key: crypto.randomUUID() };
 }
 export function ledgerForm(type, data) {
-  const result = { ...(type === 'account' ? newAccount() : type === 'category' ? newCategory() : { category_id: '', target_account_id: '', note_md: '' }), ...data };
-  for (const key of ['category_id', 'target_account_id', 'note_md', 'description']) if (result[key] == null) result[key] = '';
+  const result = { ...(type === 'account' ? newAccount() : type === 'category' ? newCategory() : { category_id: '', allocation_project_id: '', target_account_id: '', note_md: '' }), ...data };
+  for (const key of ['category_id', 'allocation_project_id', 'target_account_id', 'note_md', 'description']) if (result[key] == null) result[key] = '';
+  if (type === 'category') { result.parent_id ||= ''; result.keywords_text = (data.keywords ?? []).join(', '); }
   if (type === 'account') {
     result.interest_rate = data.interest_rate_bps == null ? result.interest_rate : minorToDecimal(data.interest_rate_bps);
     for (const key of ['interest_start_on', 'interest_end_on']) result[key] ||= '';
@@ -58,12 +60,13 @@ export function ledgerForm(type, data) {
 }
 export function ledgerPayload(type, form, original = null) {
   const existing = Boolean(original?.id);
-  const fields = type === 'account' ? ['title', 'type', 'opening_balance', 'balance_is_known', 'description', 'color', 'sort_order', 'is_archived', 'exclude_from_reports', 'interest_rate', 'interest_start_on', 'interest_end_on'] : type === 'category' ? ['title', 'kind', 'color', 'sort_order', 'is_archived'] : ['title', 'amount', 'occurred_on', 'status', 'category_id', 'note_md', 'is_pinned'];
-  const normalize = (field, value) => field === 'occurred_on' ? ledgerDate(value) : field === 'interest_rate' ? rateToBasisPoints(value) : ['amount', 'opening_balance'].includes(field) ? minorToDecimal(moneyToMinor(value || '0')) : ['category_id', 'note_md', 'description', 'interest_start_on', 'interest_end_on'].includes(field) ? value || null : field === 'sort_order' ? Number(value) : field === 'title' ? String(value).trim() : value;
+  const fields = type === 'account' ? ['title', 'type', 'opening_balance', 'balance_is_known', 'description', 'color', 'sort_order', 'is_archived', 'exclude_from_reports', 'interest_rate', 'interest_start_on', 'interest_end_on'] : type === 'category' ? ['title', 'parent_id', 'keywords_text', 'kind', 'color', 'sort_order', 'is_archived'] : ['title', 'amount', 'occurred_on', 'status', 'allocation_project_id', 'category_id', 'note_md', 'is_pinned'];
+  const normalize = (field, value) => field === 'keywords_text' ? JSON.stringify(parseCategoryKeywords(value)) : field === 'occurred_on' ? ledgerDate(value) : field === 'interest_rate' ? rateToBasisPoints(value) : ['amount', 'opening_balance'].includes(field) ? minorToDecimal(moneyToMinor(value || '0')) : ['parent_id', 'category_id', 'allocation_project_id', 'note_md', 'description', 'interest_start_on', 'interest_end_on'].includes(field) ? value || null : field === 'sort_order' ? Number(value) : field === 'title' ? String(value).trim() : value;
   const result = {};
   for (const field of fields) {
     if (existing && normalize(field, form[field]) === normalize(field, original[field])) continue;
-    result[field === 'interest_rate' ? 'interest_rate_bps' : field] = normalize(field, form[field]);
+    if (field === 'keywords_text') result.keywords = parseCategoryKeywords(form[field]);
+    else result[field === 'interest_rate' ? 'interest_rate_bps' : field] = normalize(field, form[field]);
   }
   if (type === 'account' && original?.balance_is_known === false && form.balance_is_known) result.opening_balance = normalize('opening_balance', form.opening_balance);
   if (existing) result.revision = original.revision;
@@ -75,7 +78,7 @@ export function ledgerPayload(type, form, original = null) {
 }
 
 export function newExploitationExpense(entry) {
-  return { account_id: '', amount: '', cost_type: 'labor', title: '', note_md: '', occurred_on: ledgerDate(entry.occurred_on), status: 'planned', idempotency_key: crypto.randomUUID() };
+  return { account_id: '', amount: '', cost_type: 'labor', title: '', note_md: '', occurred_on: ledgerDate(entry.occurred_on), status: 'posted', idempotency_key: crypto.randomUUID() };
 }
 
 export function exploitationExpensePayload(form, entryRevision) {

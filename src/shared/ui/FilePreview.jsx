@@ -14,7 +14,7 @@ const markdownComponents = {
     table: ({ children }) => <div className="markdown-table-scroll"><table>{children}</table></div>,
 };
 
-export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog = false, embedded = false, onLink }) {
+export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog = false, embedded = false, onLink, fileBase = 'files' }) {
     const { kind, mime } = filePreviewFormat(file);
     const [content, setContent] = useState({});
     const [attempt, setAttempt] = useState(0);
@@ -46,7 +46,7 @@ export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog =
         if (kind === 'unsupported') return;
         const controller = new AbortController();
         let active = true; let objectUrl; let timer;
-        const base = `/scopes/${scopeId}/files/${file.id}`;
+        const base = `/scopes/${scopeId}/${fileBase}/${file.id}`;
         const started = Date.now();
         const fail = (error) => { if (active) setContent({ error: error.message }); };
         const load = async (path) => {
@@ -75,7 +75,7 @@ export function FilePreview({ scopeId, file, onClose, onDownload, nativeDialog =
         };
         (kind === 'office' ? poll(true) : load(`${base}/download`)).catch(fail);
         return () => { active = false; controller.abort(); clearTimeout(timer); if (objectUrl) URL.revokeObjectURL(objectUrl); };
-    }, [scopeId, file.id, kind, mime, attempt]);
+    }, [scopeId, fileBase, file.id, kind, mime, attempt]);
     const Viewer = nativeDialog ? 'dialog' : 'section';
     const viewer = <Viewer className={`file-viewer${nativeDialog ? ' file-viewer--native' : ''}${embedded ? ' file-viewer--embedded' : ''}`} ref={dialog} tabIndex={-1} role={embedded ? 'region' : 'dialog'} aria-modal={embedded ? undefined : 'true'} aria-label={`Просмотр: ${file.name}`} onCancel={(event) => { event.preventDefault(); onClose?.(); }} onClick={(event) => event.stopPropagation()}>
         <header className="file-viewer-header"><div className="file-viewer-title"><strong>{file.name}</strong><small>Только просмотр{kind === 'office' ? ' · PDF-копия · листы Excel без разбиения по ширине' : ''}</small></div>

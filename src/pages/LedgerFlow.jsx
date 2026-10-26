@@ -39,11 +39,11 @@ function LedgerAccountPicker({ accounts, selected, onChange }) {
     return () => document.removeEventListener('pointerdown', outside);
   }, [open]);
   const names = selected.map((key) => accounts.find((account) => account.id === key)?.title || 'Недоступный счёт');
-  return <div className="ledger-account-picker" ref={container} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus(); } }}>
+  return <div className="ledger-account-picker" ref={container} onBlur={(event) => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) setOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus(); } }}>
     <button ref={trigger} type="button" aria-expanded={open} aria-controls={id} aria-label="Отображаемые счета" title={names.join(', ') || 'Все счета'} onClick={() => setOpen((value) => !value)}>{selected.length === 0 ? 'Все счета' : selected.length === 1 ? names[0] : `Счета: ${selected.length}`} ▾</button>
     {open && <div id={id} className="ledger-account-picker-menu" role="group" aria-label="Отображаемые счета">
       <button type="button" onClick={() => onChange([])} disabled={!selected.length}>Показать все счета</button>
-      {accounts.map((account) => <label key={account.id}><input type="checkbox" checked={selected.includes(account.id)} onChange={(event) => onChange(event.target.checked ? [...selected, account.id] : selected.filter((key) => key !== account.id))}/><span>{account.title}<small>{account.currency}{account.is_archived ? ' · Архив' : ''}</small></span></label>)}
+      {accounts.map((account) => <button key={account.id} type="button" role="checkbox" aria-checked={selected.includes(account.id)} className="ledger-account-option" onClick={() => onChange(selected.includes(account.id) ? selected.filter((key) => key !== account.id) : [...selected, account.id])}><span className="ledger-account-check" aria-hidden="true">{selected.includes(account.id) ? '✓' : ''}</span><span>{account.title}<small>{account.currency}{account.is_archived ? ' · Архив' : ''}</small></span></button>)}
       {!accounts.length && <small>Нет доступных счетов</small>}
       <small>Без отметок показываются все счета. Архивные — по переключателю «С архивными».</small>
     </div>}
@@ -55,9 +55,20 @@ export default function LedgerFlow({ scopeId, params, change, onOpen, onCreate }
   const query = useQuery({ queryKey: ['ledger-flow', scopeId, filters], queryFn: ({ signal }) => ledgerApi.flow(scopeId, filters, signal) });
   const refresh = useLedgerRefresh(scopeId);
   const [dragging, setDragging] = useState(null);
+  const [copying, setCopying] = useState(false);
+  const copyHeld = useRef(false);
+  useEffect(() => {
+    const update = (event) => { copyHeld.current = event.shiftKey; setCopying(event.shiftKey); };
+    const reset = () => { copyHeld.current = false; setCopying(false); };
+    window.addEventListener('keydown', update);
+    window.addEventListener('keyup', update);
+    window.addEventListener('pointerup', update, true);
+    window.addEventListener('blur', reset);
+    return () => { window.removeEventListener('keydown', update); window.removeEventListener('keyup', update); window.removeEventListener('pointerup', update, true); window.removeEventListener('blur', reset); };
+  }, []);
   const [notice, setNotice] = useState('');
-  const move = useMutation({ mutationFn: ({ transaction, side, account, date }) => ledgerApi.move(scopeId, transaction.id, { revision: transaction.revision, account_id: account.id, occurred_on: date, side }),
-    onSuccess: () => { refresh(); setNotice('Операция перенесена'); }, onError: () => refresh() });
+  const move = useMutation({ mutationFn: ({ transaction, side, account, date, copy, idempotencyKey }) => ledgerApi.move(scopeId, transaction.id, { revision: transaction.revision, account_id: account.id, occurred_on: date, side, ...(copy ? { copy: true, idempotency_key: idempotencyKey } : {}) }),
+    onSuccess: (_, variables) => { refresh(); setNotice(variables.copy ? 'Создана копия операции' : 'Операция перенесена'); }, onError: () => refresh() });
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 7 } }), useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 7 } }), useSensor(KeyboardSensor));
   const accounts = query.data?.accounts ?? [];
   const slots = useMemo(() => flowSlots(query.data?.transactions ?? [], query.data?.accounts ?? []), [query.data]);
@@ -73,22 +84,22 @@ export default function LedgerFlow({ scopeId, params, change, onOpen, onCreate }
     if (!canMoveLedgerCard(transaction, side, destination.account, accounts)) { setNotice('Выберите доступный счёт того же проекта и валюты. Стороны перевода должны различаться.'); return; }
     const original = side === 'target' ? transaction.target_account_id : transaction.account_id;
     if (original === destination.account.id && transaction.occurred_on === destination.date) return;
-    setNotice(''); move.mutate({ ...card, ...destination });
+    setNotice(''); move.mutate({ ...card, ...destination, copy: copyHeld.current, idempotencyKey: crypto.randomUUID() });
   };
   if (query.isPending) return <p>Загружаю поток…</p>;
   if (query.error) return <div className="ledger-error" role="alert">{query.error.message}<button onClick={() => query.refetch()}>Повторить</button></div>;
   if (!accounts.length) return <p className="ledger-empty">Нет счетов для выбранного фильтра.</p>;
   return <section className="ledger-flow">
-    <p className="ledger-help">Двойной клик по ячейке — новая операция, по карточке — просмотр. Тяните за ручку, чтобы поменять дату или счёт. Остатки — только проведённые операции и проценты, по сегодняшний день.</p>
+    <p className="ledger-help">Двойной клик по ячейке — новая операция, по карточке — просмотр. Тяните за ручку для переноса, с Shift — для копирования в другую ячейку. Копия создаётся без фотографий и связи с эксплуатацией. Остатки — только проведённые операции и проценты, по сегодняшний день.</p>
     {notice && <p role="status" className="ledger-notice">{notice}</p>}{move.error && <p role="alert" className="ledger-error">{move.error.message}</p>}
-    <DndContext sensors={sensors} collisionDetection={(args) => { const hits = pointerWithin(args); return hits.length ? hits : rectIntersection(args); }} onDragStart={({ active }) => { move.reset(); setDragging(active.data.current); }} onDragCancel={() => setDragging(null)} onDragEnd={finish}>
+    <DndContext sensors={sensors} collisionDetection={(args) => { const hits = pointerWithin(args); return hits.length ? hits : rectIntersection(args); }} onDragStart={({ active, activatorEvent }) => { move.reset(); copyHeld.current = Boolean(activatorEvent.shiftKey); setCopying(copyHeld.current); setDragging(active.data.current); }} onDragCancel={() => setDragging(null)} onDragEnd={finish}>
       <div className="ledger-flow-scroll" aria-busy={move.isPending}><table className="ledger-flow-table"><thead><tr><th aria-sort={descending ? 'descending' : 'ascending'}><span className="ledger-date-heading">Дата<button title={descending ? 'От последнего числа · переключить на первое' : 'От первого числа · переключить на последнее'} aria-label={descending ? 'Показать от первого числа' : 'Показать от последнего числа'} onClick={() => change('direction', descending ? 'asc' : 'desc')}>{descending ? <IconArrowDown size={16}/> : <IconArrowUp size={16}/>}</button></span></th>{accounts.map((account) => <th key={account.id} style={{ '--account-color': account.color }}><strong>{account.title}</strong><small>{account.project?.key} · {account.currency}{account.is_archived ? ' · Архив' : ''}</small></th>)}</tr></thead>
         <tbody>{months.map(({ month, dates }) => <Fragment key={month}>
           <FlowMonthRow month={month} accounts={accounts} transactions={query.data.transactions ?? []} daily={query.data.daily ?? {}} asOf={query.data.as_of}/>
           {dates.map((date) => <FlowRow key={date} date={date} accounts={accounts} slots={slots} daily={daily} dragging={dragging} busy={move.isPending} today={query.data.as_of} onOpen={onOpen} onCreate={(account) => onCreate({ ...newTransaction(account), occurred_on: date })}/>)}
         </Fragment>)}</tbody>
       </table></div>
-      <DragOverlay>{dragging && <div className="ledger-flow-card ledger-flow-card--overlay"><strong>{dragging.transaction.title}</strong><span>{formatMoney(dragging.transaction.amount_minor, dragging.transaction.currency)}</span></div>}</DragOverlay>
+      <DragOverlay>{dragging && <div className="ledger-flow-card ledger-flow-card--overlay"><small>{copying ? '+ Копировать' : 'Перенести'}</small><strong>{dragging.transaction.title}</strong><span>{formatMoney(dragging.transaction.amount_minor, dragging.transaction.currency)}</span></div>}</DragOverlay>
     </DndContext>
   </section>;
 }
