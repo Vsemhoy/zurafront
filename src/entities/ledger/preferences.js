@@ -1,5 +1,5 @@
-export function ledgerAccountStorageKey(userId, scopeId, params) {
-  const mode = params.get('view') === 'flow' ? 'flow' : params.get('view') === 'report' ? 'report' : 'journal';
+export function ledgerAccountStorageKey(userId, scopeId, params, view = params.get('view')) {
+  const mode = view === 'flow' ? 'flow' : view === 'report' ? 'report' : 'journal';
   return `zuratax:ledger:accounts:${userId}:${scopeId}:${params.get('project_id') || 'all'}:${mode}`;
 }
 
@@ -15,7 +15,7 @@ export function restoreLedgerAccounts(params, storage, key) {
   } catch { return params; }
 }
 
-export function rememberLedgerAccounts(params, storage, key) {
-  const field = params.get('view') === 'flow' && params.has('account_ids') ? 'account_ids' : 'account_id';
+export function rememberLedgerAccounts(params, storage, key, view = params.get('view')) {
+  const field = view === 'flow' && params.has('account_ids') ? 'account_ids' : 'account_id';
   try { storage.setItem(key, JSON.stringify({ field, ids: params.getAll(field).filter(Boolean) })); } catch { /* Storage may be disabled. */ }
 }

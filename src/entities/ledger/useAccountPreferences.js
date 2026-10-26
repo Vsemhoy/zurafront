@@ -3,10 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../auth';
 import { ledgerAccountStorageKey, rememberLedgerAccounts, restoreLedgerAccounts } from './preferences';
 
-export function useLedgerAccountParams(scopeId) {
+export function useLedgerAccountParams(scopeId, view) {
   const userId = useAuth((state) => state.user?.id);
   const [urlParams, setParams] = useSearchParams();
-  const key = ledgerAccountStorageKey(userId, scopeId, urlParams);
+  const key = ledgerAccountStorageKey(userId, scopeId, urlParams, view);
   const [restoredFor, setRestoredFor] = useState(null);
   let params = urlParams;
   if (restoredFor !== key) {
@@ -21,7 +21,7 @@ export function useLedgerAccountParams(scopeId) {
       if (urlParams.toString() !== search) setParams(new URLSearchParams(search), { replace: true });
       return;
     }
-    try { rememberLedgerAccounts(urlParams, window.localStorage, key); } catch { /* Storage may be disabled. */ }
-  }, [key, restoredFor, search, urlParams, setParams]);
+    try { rememberLedgerAccounts(urlParams, window.localStorage, key, view); } catch { /* Storage may be disabled. */ }
+  }, [key, restoredFor, search, urlParams, setParams, view]);
   return [params, setParams];
 }

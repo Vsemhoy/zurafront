@@ -4,9 +4,14 @@ import { Area, CartesianGrid, ComposedChart, ReferenceLine, ResponsiveContainer,
 import { ledgerApi } from '../entities/ledger/api';
 import { formatMoney } from '../entities/ledger/model';
 import { ledgerPeriodFilters, reportMetrics, reportSeries, summarizeLedgerReport } from '../entities/ledger/flow';
+import LedgerExpenseReport from './LedgerExpenseReport';
 import { displayLedgerMonth } from '../entities/ledger/dates';
 
-export default function LedgerReport({ scopeId, params, change }) {
+export default function LedgerReport({ scopeId, params, change, projects }) {
+  const groupBy = ['categories', 'projects'].includes(params.get('group_by')) ? params.get('group_by') : 'accounts';
+  return <><div className="ledger-tabs" aria-label="Вид отчёта">{[['accounts', 'Остатки'], ['categories', 'По категориям'], ['projects', 'По проектам']].map(([id, title]) => <button key={id} aria-pressed={groupBy === id} onClick={() => change({ group_by: id, all_time: '' })}>{title}</button>)}</div>{groupBy === 'accounts' ? <LedgerBalanceReport scopeId={scopeId} params={params} change={change}/> : <LedgerExpenseReport scopeId={scopeId} params={params} change={change} projects={projects} groupBy={groupBy}/>}</>;
+}
+function LedgerBalanceReport({ scopeId, params, change }) {
   const filters = ledgerPeriodFilters(params, true);
   const query = useQuery({ queryKey: ['ledger-report', scopeId, filters], queryFn: ({ signal }) => ledgerApi.report(scopeId, filters, signal) });
   const currencies = [...new Set((query.data?.accounts ?? []).map((account) => account.currency))];
@@ -17,7 +22,7 @@ export default function LedgerReport({ scopeId, params, change }) {
   if (query.error) return <div className="ledger-error" role="alert">{query.error.message}<button onClick={() => query.refetch()}>Повторить</button></div>;
   if (!accounts.length) return <p className="ledger-empty">Нет счетов для отчёта. Счета с флагом «Не добавлять в отчёт» здесь не отображаются и не учитываются.</p>;
   return <section className="ledger-report">
-    <div className="ledger-period-toolbar"><label>Валюта<select aria-label="Валюта итогов" value={currency} onChange={(event) => change('currency', event.target.value)}>{currencies.map((value) => <option key={value}>{value}</option>)}</select></label><small>Проведённые операции по {query.data.as_of}. Валюты считаются отдельно; переводы не являются доходами или расходами.</small></div>
+    <div className="ledger-period-toolbar"><label>Валюта<select aria-label="Валюта итогов" value={currency} onChange={(event) => change('currency', event.target.value)}>{currencies.map((value) => <option key={value}>{value}</option>)}</select></label><small>{query.data.forecast ? 'Прогноз: проведённые и запланированные операции' : 'Проведённые операции'} по {query.data.as_of}. Валюты считаются отдельно; переводы не являются доходами или расходами.</small></div>
     {accounts.some((account) => account.balance_is_known === false) && <p className="ledger-notice">Остаток счетов с неподтверждённой начальной суммой не входит в общий остаток. Их проведённые доходы и расходы учитываются.</p>}
     <ReportChart title="Общие итоги" rows={summary} currency={currency}/>
     <div className="ledger-report-grid">{accounts.map((account) => <ReportChart key={account.id} title={`${account.title}${account.is_archived ? ' · Архив' : ''}`} rows={query.data.months.filter((row) => row.account_id === account.id)} currency={currency} color={account.color}/>)}</div>

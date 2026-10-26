@@ -24,7 +24,7 @@ test('month groups and their days follow the selected direction, including leap 
 test('period navigation shifts both bounds across a year and direction stays out of API filters', () => {
   assert.deepEqual(shiftLedgerPeriod('2025-12', '2026-02', 1), { start: '2026-01', end: '2026-03' });
   assert.deepEqual(shiftLedgerPeriod('2026-01', '2026-03', -1), { start: '2025-12', end: '2026-02' });
-  assert.deepEqual(ledgerPeriodFilters(new URLSearchParams('start=2026-01&end=2026-03&direction=desc&account_id=a')), { start: '2026-01', end: '2026-03', account_id: 'a' });
+  assert.deepEqual(ledgerPeriodFilters(new URLSearchParams('start=2026-01&end=2026-03&direction=desc&account_id=a')), { start: '2026-01', end: '2026-03', forecast: '1', account_id: 'a' });
 });
 
 test('flow account selection round trips multiple IDs and serializes PHP arrays without a stale single filter', () => {

@@ -23,11 +23,13 @@ export function formatMoney(minor, currency = '') {
   const absolute = value < 0n ? -value : value;
   return `${value < 0n ? '−' : ''}${new Intl.NumberFormat('ru-RU').format(absolute / 100n)},${String(absolute % 100n).padStart(2, '0')}${currency ? ` ${currency}` : ''}`;
 }
-export function moneyTotals(accounts) {
+export function moneyTotals(accounts, field = null) {
   const result = new Map();
   for (const account of accounts) {
     if (account.is_archived || account.balance_is_known === false) continue;
-    result.set(account.currency, (result.get(account.currency) || 0n) + BigInt(account.balance_today_minor ?? account.balance_minor ?? '0'));
+    const value = field ? account[field] : account.balance_today_minor ?? account.balance_minor ?? '0';
+    if (value == null) continue;
+    result.set(account.currency, (result.get(account.currency) || 0n) + BigInt(value));
   }
   return [...result].map(([currency, minor]) => ({ currency, minor: String(minor) }));
 }

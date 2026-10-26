@@ -25,3 +25,16 @@
 .ledger-account-picker-menu small{display:block;font-size:10px;color:#68788c}
 .ledger-account-picker-menu>button{padding:5px 7px;text-align:left;border:1px solid #dce3ec;border-radius:3px;background:#f4f7fb;font:inherit}
 @media(max-width:680px){.ledger-period-toolbar{position:relative}.ledger-account-picker{position:static}.ledger-account-picker-menu{top:100%;left:0}}
+.ledger-flow{--ledger-date-width:98px;--ledger-account-width:230px}
+.ledger-flow-sticky{position:sticky;top:var(--app-header-height,50px);z-index:8}
+.ledger-flow-heading-scroll{scrollbar-width:none;border-radius:3px 3px 0 0;box-shadow:0 2px 4px #23375320}
+.ledger-flow-heading-scroll::-webkit-scrollbar{display:none}
+.ledger-flow-table{width:calc(var(--ledger-date-width) + var(--ledger-account-count) * var(--ledger-account-width));min-width:100%}
+.ledger-flow-table thead.ledger-flow-semantic-head th{height:0;padding:0;border-top:0;border-bottom:0}
+.ledger-flow-semantic-head span{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ledger-balances--forecast{background:#edf5ff;border-color:#c7daf0}
+@media(max-width:680px){.ledger-flow{--ledger-date-width:82px;--ledger-account-width:190px}}
+@media(max-width:680px),(orientation:landscape) and (hover:none) and (pointer:coarse){.ledger-flow-sticky{top:0}}
+.ledger-expense-table th:first-child{min-width:200px;max-width:320px;white-space:normal;overflow-wrap:anywhere}
+.ledger-expense-table tfoot{font-weight:600;background:#edf2f7}
+.ledger-expense-report .ledger-chart-toggles{max-height:150px;overflow:auto}

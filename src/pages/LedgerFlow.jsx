@@ -13,14 +13,18 @@ export function LedgerPeriodToolbar({ params, change, report = false, accounts }
   const current = currentLedgerMonth();
   const start = params.get('start') || (report ? shiftLedgerMonth(current, -11) : current);
   const end = params.get('end') || current;
-  const maximum = report ? current : '2100-12';
+  const forecast = params.get('calculation') !== 'actual';
+  const maximum = report && !forecast ? current : '2100-12';
+  const horizon = accounts.find((account) => !account.is_archived && account.forecast_as_of)?.forecast_as_of?.slice(0, 7);
   const validRange = /^\d{4}-(0[1-9]|1[0-2])$/.test(start) && /^\d{4}-(0[1-9]|1[0-2])$/.test(end) && start <= end;
   return <div className="ledger-period-toolbar">
     <button className="ledger-period-arrow" title="На месяц назад" aria-label="На месяц назад" disabled={!validRange || start <= '1900-01'} onClick={() => change(shiftLedgerPeriod(start, end, -1))}><IconChevronLeft size={16}/></button>
-    <label>С месяца<input type="month" aria-label="Начало периода" min="1900-01" max={report ? current : '2100-12'} value={start} onChange={(event) => change('start', event.target.value)}/></label>
-    <label>По месяц<input type="month" aria-label="Конец периода" min={start} max={report ? current : '2100-12'} value={end} onChange={(event) => change('end', event.target.value)}/></label>
+    <label>С месяца<input type="month" aria-label="Начало периода" min="1900-01" max={maximum} value={start} onChange={(event) => change('start', event.target.value)}/></label>
+    <label>По месяц<input type="month" aria-label="Конец периода" min={start} max={maximum} value={end} onChange={(event) => change('end', event.target.value)}/></label>
     <button className="ledger-period-arrow" title="На месяц вперёд" aria-label="На месяц вперёд" disabled={!validRange || end >= maximum} onClick={() => change(shiftLedgerPeriod(start, end, 1))}><IconChevronRight size={16}/></button>
     <button title="Показать текущий месяц" onClick={() => change({ start: current, end: current })}>Сегодня</button>
+    <select aria-label="Режим расчёта" value={forecast ? 'forecast' : 'actual'} onChange={(event) => change({ calculation: event.target.value, ...(event.target.value === 'actual' && report && end > current ? { start: start > current ? current : start, end: current } : {}) })}><option value="forecast">Прогноз</option><option value="actual">Факт</option></select>
+    {forecast && horizon && <button title="Месяц последней операции по активным счетам" onClick={() => change({ start: horizon, end: horizon })}>Последняя операция</button>}
     {report ? <select aria-label="Счёт в периоде" value={params.get('account_id') || ''} onChange={(event) => change('account_id', event.target.value)}><option value="">Все счета</option>{accounts.filter((account) => !account.exclude_from_reports).map((account) => <option key={account.id} value={account.id}>{account.title} · {account.currency}</option>)}</select> : <LedgerAccountPicker accounts={accounts} selected={ledgerSelectedAccountIds(params)} onChange={(ids) => change({ account_id: '', account_ids: ids })}/>}
     <label className="ledger-check"><input type="checkbox" checked={params.get('archived') === '1'} onChange={(event) => change('archived', event.target.checked ? '1' : '')}/>С архивными</label>
     <small>{report ? 'До 24 месяцев' : 'До 3 месяцев'}</small>
@@ -57,6 +61,9 @@ export default function LedgerFlow({ scopeId, params, change, onOpen, onCreate }
   const [dragging, setDragging] = useState(null);
   const [copying, setCopying] = useState(false);
   const copyHeld = useRef(false);
+  const headerScroll = useRef(null);
+  const bodyScroll = useRef(null);
+  const syncScroll = (event, target) => { if (target.current && target.current.scrollLeft !== event.currentTarget.scrollLeft) target.current.scrollLeft = event.currentTarget.scrollLeft; };
   useEffect(() => {
     const update = (event) => { copyHeld.current = event.shiftKey; setCopying(event.shiftKey); };
     const reset = () => { copyHeld.current = false; setCopying(false); };
@@ -90,12 +97,13 @@ export default function LedgerFlow({ scopeId, params, change, onOpen, onCreate }
   if (query.error) return <div className="ledger-error" role="alert">{query.error.message}<button onClick={() => query.refetch()}>Повторить</button></div>;
   if (!accounts.length) return <p className="ledger-empty">Нет счетов для выбранного фильтра.</p>;
   return <section className="ledger-flow">
-    <p className="ledger-help">Двойной клик по ячейке — новая операция, по карточке — просмотр. Тяните за ручку для переноса, с Shift — для копирования в другую ячейку. Копия создаётся без фотографий и связи с эксплуатацией. Остатки — только проведённые операции и проценты, по сегодняшний день.</p>
+    <p className="ledger-help">Двойной клик по ячейке — новая операция, по карточке — просмотр. Тяните за ручку для переноса, с Shift — для копирования в другую ячейку. Копия создаётся без фотографий и связи с эксплуатацией. {query.data.forecast ? 'Прогноз: проведённые и запланированные операции, включая будущие, с расчётными процентами до конца выбранного периода.' : 'Факт: только проведённые операции и проценты, по сегодняшний день.'}</p>
     {notice && <p role="status" className="ledger-notice">{notice}</p>}{move.error && <p role="alert" className="ledger-error">{move.error.message}</p>}
     <DndContext sensors={sensors} collisionDetection={(args) => { const hits = pointerWithin(args); return hits.length ? hits : rectIntersection(args); }} onDragStart={({ active, activatorEvent }) => { move.reset(); copyHeld.current = Boolean(activatorEvent.shiftKey); setCopying(copyHeld.current); setDragging(active.data.current); }} onDragCancel={() => setDragging(null)} onDragEnd={finish}>
-      <div className="ledger-flow-scroll" aria-busy={move.isPending}><table className="ledger-flow-table"><thead><tr><th aria-sort={descending ? 'descending' : 'ascending'}><span className="ledger-date-heading">Дата<button title={descending ? 'От последнего числа · переключить на первое' : 'От первого числа · переключить на последнее'} aria-label={descending ? 'Показать от первого числа' : 'Показать от последнего числа'} onClick={() => change('direction', descending ? 'asc' : 'desc')}>{descending ? <IconArrowDown size={16}/> : <IconArrowUp size={16}/>}</button></span></th>{accounts.map((account) => <th key={account.id} style={{ '--account-color': account.color }}><strong>{account.title}</strong><small>{account.project?.key} · {account.currency}{account.is_archived ? ' · Архив' : ''}</small></th>)}</tr></thead>
+      <div className="ledger-flow-sticky"><div className="ledger-flow-scroll ledger-flow-heading-scroll" ref={headerScroll} onScroll={(event) => syncScroll(event, bodyScroll)}><table className="ledger-flow-table" style={{ '--ledger-account-count': accounts.length }}><thead><tr><th aria-sort={descending ? 'descending' : 'ascending'}><span className="ledger-date-heading">Дата<button title={descending ? 'От последнего числа · переключить на первое' : 'От первого числа · переключить на последнее'} aria-label={descending ? 'Показать от первого числа' : 'Показать от последнего числа'} onClick={() => change('direction', descending ? 'asc' : 'desc')}>{descending ? <IconArrowDown size={16}/> : <IconArrowUp size={16}/>}</button></span></th>{accounts.map((account) => <th key={account.id} style={{ '--account-color': account.color }}><strong>{account.title}</strong><small>{account.project?.key} · {account.currency}{account.is_archived ? ' · Архив' : ''}</small></th>)}</tr></thead></table></div></div>
+      <div className="ledger-flow-scroll" ref={bodyScroll} onScroll={(event) => syncScroll(event, headerScroll)} aria-busy={move.isPending}><table className="ledger-flow-table" style={{ '--ledger-account-count': accounts.length }} aria-label="Операции по дням и счетам"><thead className="ledger-flow-semantic-head"><tr><th scope="col"><span>Дата</span></th>{accounts.map((account) => <th scope="col" key={account.id}><span>{account.title} · {account.currency}</span></th>)}</tr></thead>
         <tbody>{months.map(({ month, dates }) => <Fragment key={month}>
-          <FlowMonthRow month={month} accounts={accounts} transactions={query.data.transactions ?? []} daily={query.data.daily ?? {}} asOf={query.data.as_of}/>
+          <FlowMonthRow month={month} accounts={accounts} transactions={query.data.transactions ?? []} daily={query.data.daily ?? {}} asOf={query.data.calculated_through ?? query.data.as_of} forecast={query.data.forecast}/>
           {dates.map((date) => <FlowRow key={date} date={date} accounts={accounts} slots={slots} daily={daily} dragging={dragging} busy={move.isPending} today={query.data.as_of} onOpen={onOpen} onCreate={(account) => onCreate({ ...newTransaction(account), occurred_on: date })}/>)}
         </Fragment>)}</tbody>
       </table></div>
@@ -104,10 +112,10 @@ export default function LedgerFlow({ scopeId, params, change, onOpen, onCreate }
   </section>;
 }
 
-function FlowMonthRow({ month, accounts, transactions, daily, asOf }) {
-  const totals = useMemo(() => ledgerFlowMonthTotals(month, accounts, transactions, daily, asOf), [month, accounts, transactions, daily, asOf]);
+function FlowMonthRow({ month, accounts, transactions, daily, asOf, forecast }) {
+  const totals = useMemo(() => ledgerFlowMonthTotals(month, accounts, transactions, daily, asOf, forecast), [month, accounts, transactions, daily, asOf, forecast]);
   const future = month > asOf.slice(0, 7);
-  return <tr className="ledger-flow-month"><th scope="row">{displayLedgerMonth(`${month}-01`)}<small>{future ? 'Месяц ещё не наступил' : month === asOf.slice(0, 7) ? `Итоги на ${displayLedgerDate(asOf)}` : 'Итоги месяца'}</small></th>{accounts.map((account) => {
+  return <tr className="ledger-flow-month"><th scope="row">{displayLedgerMonth(`${month}-01`)}<small>{forecast ? 'Прогноз месяца' : future ? 'Месяц ещё не наступил' : month === asOf.slice(0, 7) ? `Итоги на ${displayLedgerDate(asOf)}` : 'Итоги месяца'}</small></th>{accounts.map((account) => {
     const total = totals.get(account.id);
     return <td key={account.id}><div className="ledger-month-totals">
       <span className="ledger-income">Доходы <b>{formatMoney(total.income, account.currency)}</b></span>

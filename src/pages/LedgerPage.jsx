@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { IconCoin, IconPlus, IconTool, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { ledgerApi } from '../entities/ledger/api';
@@ -21,21 +21,33 @@ import { ledgerCategoryOptions, suggestLedgerCategory } from '../entities/ledger
 import { PhotoPanel } from '../shared/ui/PhotoPanel';
 import './LedgerPage.css';
 
-export function LedgerPage() {
+export function LedgerPage({ view = 'journal' }) {
+  const [legacyParams] = useSearchParams();
   const { activeScope } = useWorkspace();
   const { transactionId } = useParams();
-  return activeScope ? <LedgerWorkspace key={activeScope.id} scope={activeScope} transactionId={transactionId}/> : <main className="ledger-page">Выберите скоуп.</main>;
+  if (!transactionId && legacyParams.has('view')) {
+    const next = new URLSearchParams(legacyParams);
+    const legacyView = next.get('view');
+    next.delete('view');
+    const target = view === 'journal' && ['flow', 'report', 'accounts', 'categories'].includes(legacyView) ? legacyView : view;
+    return <Navigate replace to={`/ledger${target === 'journal' ? '' : '/' + target}${next.size ? '?' + next : ''}`}/>;
+  }
+  return activeScope ? <LedgerWorkspace key={activeScope.id} scope={activeScope} transactionId={transactionId} view={view}/> : <main className="ledger-page">Выберите скоуп.</main>;
 }
 
-function LedgerWorkspace({ scope, transactionId }) {
-  const [params, setParams] = useLedgerAccountParams(scope.id);
+function LedgerWorkspace({ scope, transactionId, view }) {
+  const [params, setParams] = useLedgerAccountParams(scope.id, view);
   const navigate = useNavigate();
   const [editor, setEditor] = useState(null);
   const [statementAccount, setStatementAccount] = useState(null);
   const [notice, setNotice] = useState('');
   const refresh = useLedgerRefresh(scope.id);
   const options = useQuery({ queryKey: ['ledger-options', scope.id], queryFn: () => ledgerApi.options(scope.id), refetchInterval: 30000 });
-  const view = ['flow', 'report', 'accounts', 'categories'].includes(params.get('view')) ? params.get('view') : 'journal';
+  const switchView = (target) => {
+    const next = new URLSearchParams(params);
+    for (const key of ['view', 'account_id', 'account_ids', 'page']) next.delete(key);
+    navigate(`/ledger${target === 'journal' ? '' : '/' + target}${next.size ? '?' + next : ''}`);
+  };
   const projectId = params.get('project_id') || '';
   const filterKey = new URLSearchParams([...params].filter(([key]) => ['project_id', 'allocation_project_id', 'account_id', 'kind', 'status', 'category_id', 'q', 'from', 'to', 'page', 'trash', 'cost_type'].includes(key))).toString();
   const transactions = useQuery({ queryKey: ['ledger-transactions', scope.id, filterKey], queryFn: ({ signal }) => ledgerApi.transactions(scope.id, filterKey, signal), enabled: options.isSuccess && view === 'journal' });
@@ -60,6 +72,7 @@ function LedgerWorkspace({ scope, transactionId }) {
   const projectAccounts = data?.accounts.filter((account) => !projectId || account.project_id === projectId) ?? [];
   const selectedAccounts = view === 'flow' ? ledgerSelectedAccountIds(params) : [params.get('account_id')].filter(Boolean);
   const balanceAccounts = projectAccounts.filter((account) => !account.is_archived && (!selectedAccounts.length || selectedAccounts.includes(account.id)));
+  const forecastDate = balanceAccounts.find((account) => account.forecast_as_of)?.forecast_as_of;
   const writable = projectAccounts.filter((account) => account.can_write);
   const preferredAccount = writable.find((account) => selectedAccounts.includes(account.id)) ?? writable[0];
   const manageable = data?.projects.filter((project) => project.can_manage) ?? [];
@@ -68,12 +81,13 @@ function LedgerWorkspace({ scope, transactionId }) {
   const selection = transactionId ? { type: 'transaction', id: transactionId } : editor;
   return <main className="ledger-page"><header className="ledger-heading"><span><IconCoin size={28}/></span><div><h1>Ledger</h1><p>Проектные счета и движение денег</p></div>{data && writable.length > 0 && <button className="ledger-primary" onClick={() => setEditor({ type: 'transaction', draft: newTransaction(preferredAccount) })}><IconPlus size={17}/>Новая операция</button>}</header>
     {options.isPending ? <p>Загружаю Ledger…</p> : options.error ? <div className="ledger-error" role="alert"><p>{options.error.status === 403 ? 'Нет доступа к Ledger. Нужны отдельные финансовые права и доступ к проекту.' : options.error.message}</p><button onClick={() => options.refetch()}>Повторить</button></div> : <>
-      <div className="ledger-tabs" role="navigation" aria-label="Разделы Ledger">{[['journal', 'Операции'], ['flow', 'Поток'], ['report', 'Итоги'], ['accounts', 'Счета'], ['categories', 'Категории']].map(([id, title]) => <button key={id} aria-pressed={view === id} onClick={() => change('view', id === 'journal' ? '' : id)}>{title}</button>)}<select aria-label="Проект счетов Ledger" title="Проект счетов — определяет доступ к деньгам" value={projectId} onChange={(event) => change('project_id', event.target.value)}><option value="">Все проекты счетов</option>{data.projects.map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}{project.deleted_at ? ' (архив проекта)' : ''}</option>)}</select></div>
+      <div className="ledger-tabs" role="navigation" aria-label="Разделы Ledger">{[['journal', 'Операции'], ['flow', 'Поток'], ['report', 'Итоги'], ['accounts', 'Счета'], ['categories', 'Категории']].map(([id, title]) => <button key={id} aria-pressed={view === id} onClick={() => switchView(id)}>{title}</button>)}<select aria-label="Проект счетов Ledger" title="Проект счетов — определяет доступ к деньгам" value={projectId} onChange={(event) => change('project_id', event.target.value)}><option value="">Все проекты счетов</option>{data.projects.map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}{project.deleted_at ? ' (архив проекта)' : ''}</option>)}</select></div>
       {notice && <p role="status" className="ledger-notice">{notice}</p>}
       {view !== 'report' && <section className="ledger-balances" aria-label="Остатки по валютам"><small>Остатки на сегодня · проведённые операции и расчётные проценты · без будущих операций</small><div>{moneyTotals(balanceAccounts).map((item) => <strong key={item.currency}>{formatMoney(item.minor, item.currency)}</strong>)}{!balanceAccounts.length && <span>Нет доступных счетов</span>}</div></section>}
+      {view !== 'report' && forecastDate && <section className="ledger-balances ledger-balances--forecast" aria-label="Прогноз остатков"><small>Прогноз на {displayDate(forecastDate)} · до последней операции по активным счетам · проведённые и запланированные операции с расчётными процентами</small><div>{moneyTotals(balanceAccounts, 'forecast_balance_minor').map((item) => <strong key={item.currency}>{formatMoney(item.minor, item.currency)}</strong>)}</div>{balanceAccounts.some((account) => account.forecast_error) && <small role="alert">Часть счетов не вошла в прогноз: сумма превышает диапазон расчёта.</small>}{balanceAccounts.some((account) => account.balance_is_known === false) && <small>Счета с неизвестным начальным остатком не входят в сумму.</small>}</section>}
       {['flow', 'report'].includes(view) && <LedgerPeriodToolbar params={params} change={change} report={view === 'report'} accounts={projectAccounts}/>}
       {view === 'flow' && <LedgerFlow scopeId={scope.id} params={params} change={change} onOpen={(transaction) => setEditor({ type: 'transaction', id: transaction.id })} onCreate={(draft) => setEditor({ type: 'transaction', draft })}/>}
-      {view === 'report' && <LedgerReport scopeId={scope.id} params={params} change={change}/>}
+      {view === 'report' && <LedgerReport scopeId={scope.id} params={params} change={change} projects={data.projects}/>}
       {view === 'journal' && <><div className="ledger-filters"><input aria-label="Поиск операций" placeholder="Название операции…" value={params.get('q') || ''} maxLength={120} onChange={(event) => change('q', event.target.value)}/><select aria-label="Счёт Ledger" value={params.get('account_id') || ''} onChange={(event) => change('account_id', event.target.value)}><option value="">Все счета</option>{projectAccounts.map((account) => <option key={account.id} value={account.id}>{account.title} · {account.currency}{account.is_archived ? ' (архив)' : ''}</option>)}</select><select aria-label="Проект операции" title="Проект операции" value={params.get('allocation_project_id') || ''} onChange={(event) => change('allocation_project_id', event.target.value)}><option value="">Все проекты операций</option>{data.projects.map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}</option>)}</select><select aria-label="Вид денежной операции" value={params.get('kind') || ''} onChange={(event) => change('kind', event.target.value)}><option value="">Все виды</option>{Object.entries(ledgerKinds).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><select aria-label="Тип затрат эксплуатации" value={params.get('cost_type') || ''} onChange={(event) => change('cost_type', event.target.value)}><option value="">Все типы затрат</option>{Object.entries(costTypes).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><select aria-label="Статус денежной операции" value={params.get('status') || ''} onChange={(event) => change('status', event.target.value)}><option value="">Все статусы</option>{Object.entries(ledgerStatuses).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select><select aria-label="Категория Ledger" value={params.get('category_id') || ''} onChange={(event) => change('category_id', event.target.value)}><option value="">Все категории</option>{ledgerCategoryOptions(data.categories.filter((category) => !projectId || category.project_id === projectId)).map((category) => <option key={category.id} value={category.id}>{category.path}</option>)}</select>
         <label>С<input type="date" aria-label="Дата начала Ledger" value={params.get('from') || ''} onChange={(event) => change('from', event.target.value)}/></label><label>По<input type="date" aria-label="Дата конца Ledger" value={params.get('to') || ''} onChange={(event) => change('to', event.target.value)}/></label><label><input type="checkbox" checked={params.get('trash') === '1'} onChange={(event) => change('trash', event.target.checked ? '1' : '')}/>Корзина</label><button onClick={() => setParams(new URLSearchParams({ account_id: '' }))}>Сбросить</button></div>
         {transactions.data && !params.get('trash') && <div className="ledger-turnover"><small>Проведённый оборот по фильтру · за весь диапазон, не только эту страницу</small>{transactions.data.meta.totals.map((total) => <div key={total.currency}><span className="ledger-income">Доход {formatMoney(total.income, total.currency)}</span><span className="ledger-expense">Расход {formatMoney(total.expense, total.currency)}</span><span>Переводы: → {formatMoney(total.sent, total.currency)} · ← {formatMoney(total.received, total.currency)}</span><span>Корректировки: + {formatMoney(total.adjustment_in, total.currency)} · − {formatMoney(total.adjustment_out, total.currency)}</span></div>)}</div>}

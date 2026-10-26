@@ -22,15 +22,15 @@ export function ledgerMonthGroups(start, end, descending = true) {
   return [...groups].map(([month, dates]) => ({ month, dates }));
 }
 // Flow includes every visible account, including those excluded from reports.
-// Match daily balances: only posted movements through the server's as-of date.
-export function ledgerFlowMonthTotals(month, accounts, transactions, daily, asOf) {
+// Match the mode and calculation horizon returned with the daily balances.
+export function ledgerFlowMonthTotals(month, accounts, transactions, daily, asOf, forecast = false) {
   const rows = new Map(accounts.map(({ id }) => [id, {
     income: 0n, expense: 0n, received: 0n, sent: 0n, adjustment_in: 0n, adjustment_out: 0n,
     interest: 0n, opening_minor: null, closing_minor: null, balance_date: null,
   }]));
   for (const transaction of transactions) {
     const date = ledgerDate(transaction.occurred_on);
-    if (transaction.status !== 'posted' || date.slice(0, 7) !== month || date > asOf) continue;
+    if (!(forecast ? ['posted', 'planned'] : ['posted']).includes(transaction.status) || date.slice(0, 7) !== month || date > asOf) continue;
     const amount = BigInt(transaction.amount_minor);
     const source = rows.get(transaction.account_id);
     if (transaction.kind === 'transfer') {
@@ -108,7 +108,7 @@ export function summarizeLedgerReport(rows, accounts, currency) {
 
 export function ledgerPeriodFilters(params, report = false) {
   const current = currentLedgerMonth();
-  return { start: params.get('start') || (report ? shiftLedgerMonth(current, -11) : current), end: params.get('end') || current,
+  return { start: params.get('start') || (report ? shiftLedgerMonth(current, -11) : current), end: params.get('end') || current, forecast: params.get('calculation') === 'actual' ? '0' : '1',
     ...Object.fromEntries([...params].filter(([key, value]) => ['project_id', 'account_id', 'archived'].includes(key) && value)),
     ...(!report && params.has('account_ids') ? { account_id: '', account_ids: ledgerSelectedAccountIds(params) } : {}) };
 }
