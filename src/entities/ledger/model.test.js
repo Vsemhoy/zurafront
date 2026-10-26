@@ -60,3 +60,15 @@ test('linked payment editing changes only its own amount and cost type', () => {
   assert.deepEqual(ledgerPayload('transaction', { ...original, amount: '20', cost_type: 'labor' }, original), { amount: '20.00', cost_type: 'labor', revision: 3 });
   assert.equal('cost_type' in ledgerPayload('transaction', { ...original, has_exploitation: false, cost_type: 'labor' }, { ...original, has_exploitation: false }), false);
 });
+
+test('forecast totals use only explicit known forecasts and keep currencies separate', () => {
+  const accounts = [
+    { currency: 'RUB', balance_today_minor: '1', forecast_balance_minor: '9007199254740993' },
+    { currency: 'RUB', forecast_balance_minor: '2' },
+    { currency: 'USD', forecast_balance_minor: '-10' },
+    { currency: 'RUB', forecast_balance_minor: null, balance_minor: '999' },
+    { currency: 'RUB', forecast_balance_minor: '999', is_archived: true },
+    { currency: 'RUB', forecast_balance_minor: '999', balance_is_known: false },
+  ];
+  assert.deepEqual(moneyTotals(accounts, 'forecast_balance_minor'), [{ currency: 'RUB', minor: '9007199254740995' }, { currency: 'USD', minor: '-10' }]);
+});

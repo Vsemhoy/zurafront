@@ -42,3 +42,15 @@ test('new operations are posted; editing preserves status and sends only changed
   assert.deepEqual(ledgerPayload('transaction', { ...existing, allocation_project_id: '' }, existing), { allocation_project_id: null, revision: 2 });
   assert.deepEqual(ledgerPayload('transaction', { ...existing, title: 'Server' }, existing), { title: 'Server', revision: 2 });
 });
+
+test('route views preserve existing account preferences without a view query parameter', () => {
+  const params = new URLSearchParams(`account_ids=${first}&account_ids=${second}`);
+  const store = storage();
+  const key = ledgerAccountStorageKey('user', 'scope', params, 'flow');
+  assert.equal(key, ledgerAccountStorageKey('user', 'scope', new URLSearchParams('view=flow')));
+  rememberLedgerAccounts(params, store, key, 'flow');
+  const restored = restoreLedgerAccounts(new URLSearchParams(), store, key);
+  assert.deepEqual(restored.getAll('account_ids'), [first, second]);
+  assert.equal(restored.has('view'), false);
+  assert.notEqual(key, ledgerAccountStorageKey('user', 'scope', params, 'report'));
+});

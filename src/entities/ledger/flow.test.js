@@ -100,3 +100,23 @@ test('account exclusion is explicit in new accounts and a minimal versioned edit
   const account = ledgerForm('account', { id: 'a', revision: 3, title: 'Cash', opening_balance: '0.00', exclude_from_reports: false });
   assert.deepEqual(ledgerPayload('account', { ...account, exclude_from_reports: true }, account), { revision: 3, exclude_from_reports: true });
 });
+
+test('forecast month totals include planned and future postings but never void operations', () => {
+  const accounts = [{ id: 'a' }, { id: 'b' }];
+  const transactions = [
+    { account_id: 'a', kind: 'income', status: 'posted', occurred_on: '2026-11-01', amount_minor: '500' },
+    { account_id: 'a', kind: 'expense', status: 'planned', occurred_on: '2026-11-02', amount_minor: '200' },
+    { account_id: 'a', target_account_id: 'b', kind: 'transfer', status: 'planned', occurred_on: '2026-11-03', amount_minor: '50' },
+    { account_id: 'a', kind: 'expense', status: 'void', occurred_on: '2026-11-02', amount_minor: '99999' },
+  ];
+  const daily = { a: [{ date: '2026-11-03', opening_minor: '300', closing_minor: '248', interest_minor: '-2' }] };
+  const rows = ledgerFlowMonthTotals('2026-11', accounts, transactions, daily, '2026-11-30', true);
+  assert.equal(rows.get('a').income, '500');
+  assert.equal(rows.get('a').expense, '200');
+  assert.equal(rows.get('a').transfers, '-50');
+  assert.equal(rows.get('b').transfers, '50');
+  assert.equal(rows.get('a').closing_minor, '248');
+  assert.equal(rows.get('a').interest, '-2');
+  assert.equal(ledgerPeriodFilters(new URLSearchParams()).forecast, '1');
+  assert.equal(ledgerPeriodFilters(new URLSearchParams('calculation=actual')).forecast, '0');
+});
