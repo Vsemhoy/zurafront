@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canMoveLedgerCard, flowSlots, ledgerDays, ledgerFlowMonthTotals, ledgerMonthGroups, ledgerPeriodFilters, reportSeries, shiftLedgerMonth, shiftLedgerPeriod, summarizeLedgerReport } from './flow.js';
+import { canMoveLedgerCard, flowSlots, ledgerDays, ledgerFlowMonthTotals, ledgerMonthGroups, ledgerPeriodFilters, ledgerPeriodQuery, ledgerSelectedAccountIds, reportSeries, shiftLedgerMonth, shiftLedgerPeriod, summarizeLedgerReport } from './flow.js';
 import { ledgerForm, ledgerPayload, newAccount } from './model.js';
 
 test('flow spans calendar months including leap days without timezone shifts', () => {
@@ -25,6 +25,19 @@ test('period navigation shifts both bounds across a year and direction stays out
   assert.deepEqual(shiftLedgerPeriod('2025-12', '2026-02', 1), { start: '2026-01', end: '2026-03' });
   assert.deepEqual(shiftLedgerPeriod('2026-01', '2026-03', -1), { start: '2025-12', end: '2026-02' });
   assert.deepEqual(ledgerPeriodFilters(new URLSearchParams('start=2026-01&end=2026-03&direction=desc&account_id=a')), { start: '2026-01', end: '2026-03', account_id: 'a' });
+});
+
+test('flow account selection round trips multiple IDs and serializes PHP arrays without a stale single filter', () => {
+  const params = new URLSearchParams('start=2026-10&end=2026-10&account_id=old&account_ids=a&account_ids=b&account_ids=a&direction=asc');
+  assert.deepEqual(ledgerSelectedAccountIds(params), ['a', 'b']);
+  const query = new URLSearchParams(ledgerPeriodQuery(ledgerPeriodFilters(params)));
+  assert.deepEqual(query.getAll('account_ids[]'), ['a', 'b']);
+  assert.equal(query.has('account_id'), false);
+  assert.equal(query.has('direction'), false);
+  assert.deepEqual(ledgerSelectedAccountIds(new URLSearchParams('account_id=old')), ['old']);
+  assert.deepEqual(ledgerSelectedAccountIds(new URLSearchParams()), []);
+  assert.equal(ledgerPeriodFilters(params, true).account_id, 'old');
+  assert.equal(ledgerPeriodFilters(params, true).account_ids, undefined);
 });
 test('flow month totals keep accounts separate, count only posted past movements, and use daily closing balances', () => {
   const accounts = [{ id: 'a', currency: 'RUB', exclude_from_reports: true }, { id: 'b', currency: 'RUB' }, { id: 'usd', currency: 'USD' }];

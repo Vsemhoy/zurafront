@@ -10,6 +10,7 @@ import { accountTypes, categoryKinds, costTypes, formatMoney, ledgerForm, ledger
 import LedgerStatement from './LedgerStatement';
 import LedgerFlow, { LedgerPeriodToolbar } from './LedgerFlow';
 import LedgerReport from './LedgerReport';
+import { ledgerSelectedAccountIds } from '../entities/ledger/flow';
 import { useSaveForm } from '../shared/ui/useSaveForm';
 import { EditorSaveBar } from '../shared/ui/EditorSaveBar';
 import CompactMarkdownEditor from '../shared/ui/CompactMarkdownEditor';
@@ -39,16 +40,21 @@ function LedgerWorkspace({ scope, transactionId }) {
   const change = (key, value) => setParams((previous) => {
     const next = new URLSearchParams(previous);
     const patch = typeof key === 'object' ? key : { [key]: value };
-    for (const [name, entry] of Object.entries(patch)) { if (entry) next.set(name, entry); else next.delete(name); }
+    for (const [name, entry] of Object.entries(patch)) {
+      next.delete(name);
+      if (Array.isArray(entry)) entry.forEach((id) => next.append(name, id));
+      else if (entry) next.set(name, entry);
+    }
     if (Object.keys(patch).some((name) => name !== 'page')) next.delete('page');
-    if ('project_id' in patch) { next.delete('account_id'); next.delete('category_id'); }
+    if ('project_id' in patch) { next.delete('account_id'); next.delete('account_ids'); next.delete('category_id'); }
     return next;
   });
   const data = options.data;
   const projectAccounts = data?.accounts.filter((account) => !projectId || account.project_id === projectId) ?? [];
-  const balanceAccounts = projectAccounts.filter((account) => !account.is_archived && (!params.get('account_id') || account.id === params.get('account_id')));
+  const selectedAccounts = view === 'flow' ? ledgerSelectedAccountIds(params) : [params.get('account_id')].filter(Boolean);
+  const balanceAccounts = projectAccounts.filter((account) => !account.is_archived && (!selectedAccounts.length || selectedAccounts.includes(account.id)));
   const writable = projectAccounts.filter((account) => account.can_write);
-  const preferredAccount = writable.find((account) => account.id === params.get('account_id')) ?? writable[0];
+  const preferredAccount = writable.find((account) => selectedAccounts.includes(account.id)) ?? writable[0];
   const manageable = data?.projects.filter((project) => project.can_manage) ?? [];
   const preferredProject = manageable.find((project) => project.id === projectId)?.id ?? manageable[0]?.id ?? '';
   const closeEditor = () => { setEditor(null); if (transactionId) navigate(`/ledger${params.toString() ? `?${params}` : ''}`, { replace: true }); };
@@ -135,8 +141,8 @@ function LedgerEditorForm({ type, scopeId, options, initial, overlayContainer, o
       <fieldset disabled={!active || form.busy} hidden={tab !== 'main'}><legend>{heading}</legend>
         {field('title', 'Название *', 'text', { required: true, maxLength: type === 'category' ? 120 : type === 'account' ? 160 : 255, autoFocus: !initial.id })}
         {type !== 'transaction' && <label>Проект *<select value={draft.project_id} required disabled={Boolean(initial.id)} onChange={(event) => set('project_id', event.target.value)}><option value="">Выберите проект</option>{options.projects.filter((project) => project.can_manage || project.id === draft.project_id).map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}</option>)}</select></label>}
-        {type === 'account' && <><div className="ledger-form-row"><label>Вид счёта<select value={draft.type} disabled={initial.type === 'credit' && initial.opening_locked} onChange={(event) => { const next = event.target.value; form.change((old) => ({ ...old, type: next, ...(next === 'credit' ? {} : { interest_rate: '', interest_start_on: '', interest_end_on: '' }) })); }}>{Object.entries(accountTypes).map(([id, name]) => <option key={id} value={id} disabled={id === 'credit' && initial.opening_locked && initial.type !== 'credit'}>{name}</option>)}</select></label><label>Валюта *<select required value={draft.currency} disabled={Boolean(initial.id)} onChange={(event) => set('currency', event.target.value)}>{options.currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label></div>{field('opening_balance', 'Начальный остаток', 'text', { required: true, inputMode: 'decimal', pattern: '-?[0-9]{1,10}([.,][0-9]{1,2})?', disabled: initial.opening_locked })}<small>Проект и валюта счёта неизменны. После первой операции начальный остаток фиксируется.</small>
-          {draft.type === 'credit' && <><div className="ledger-form-row">{field('interest_rate', 'Годовая ставка, % *', 'text', { required: true, inputMode: 'decimal', pattern: '[0-9]{1,4}([.,][0-9]{1,2})?', disabled: initial.opening_locked })}{field('interest_start_on', 'Начислять с *', 'date', { required: true, min: '1900-01-01', max: '2100-12-31', disabled: initial.opening_locked })}</div>{field('interest_end_on', 'Последний день начисления (необязательно)', 'date', { min: draft.interest_start_on || '1900-01-01', max: '2100-12-31', disabled: initial.opening_locked })}<p className="ledger-help">Долг — отрицательный остаток. Проценты начисляются после движений каждого дня и капитализируются ежедневно. Это расчётная модель, не банковская выписка. После первой операции условия фиксируются. Архивирование само по себе не прекращает начисление — для этого задайте последний день.</p></>}
+        {type === 'account' && <><div className="ledger-form-row"><label>Вид счёта<select value={draft.type} disabled={initial.type === 'credit' && initial.opening_locked} onChange={(event) => { const next = event.target.value; form.change((old) => ({ ...old, type: next, ...(next === 'credit' ? { opening_balance: '0.00' } : { interest_rate: '', interest_start_on: '', interest_end_on: '' }) })); }}>{Object.entries(accountTypes).map(([id, name]) => <option key={id} value={id} disabled={id === 'credit' && initial.opening_locked && initial.type !== 'credit'}>{name}</option>)}</select></label><label>Валюта *<select required value={draft.currency} disabled={Boolean(initial.id)} onChange={(event) => set('currency', event.target.value)}>{options.currencies.map((currency) => <option key={currency}>{currency}</option>)}</select></label></div>{field('opening_balance', 'Начальный остаток', 'text', { required: true, inputMode: 'decimal', pattern: '-?[0-9]{1,10}([.,][0-9]{1,2})?', disabled: initial.opening_locked || draft.type === 'credit' })}{draft.type === 'credit' && initial.type === 'credit' && Number(draft.opening_balance) !== 0 && <button type="button" onClick={() => set('opening_balance', '0.00')}>Обнулить начальный остаток</button>}<small>Проект и валюта счёта неизменны. После первой операции начальный остаток фиксируется.</small>
+          {draft.type === 'credit' && <><div className="ledger-form-row">{field('interest_rate', 'Годовая ставка, % *', 'text', { required: true, inputMode: 'decimal', pattern: '[0-9]{1,4}([.,][0-9]{1,2})?', disabled: initial.opening_locked })}{field('interest_start_on', 'Начислять с *', 'date', { required: true, min: '1900-01-01', max: '2100-12-31', disabled: initial.opening_locked })}</div>{field('interest_end_on', 'Последний день начисления (необязательно)', 'date', { min: draft.interest_start_on || '1900-01-01', max: '2100-12-31', disabled: initial.opening_locked })}<p className="ledger-help">Кредитный счёт открывается с нулём. Долг возникает из проведённых операций и отображается отрицательным остатком. Обнуление ошибочного начального остатка пересчитает проценты за весь период. Проценты начисляются после движений каждого дня и капитализируются ежедневно. Это расчётная модель, не банковская выписка. После первой операции условия фиксируются. Архивирование само по себе не прекращает начисление — для этого задайте последний день.</p></>}
           {initial.balance_is_known === false && <label className="ledger-check"><input type="checkbox" checked={draft.balance_is_known} onChange={(event) => set('balance_is_known', event.target.checked)}/>Подтверждаю начальный остаток, указанный выше (в том числе ноль)</label>}
           <label>Описание<textarea value={draft.description || ''} maxLength={10000} onChange={(event) => set('description', event.target.value)}/></label></>}
         {type === 'category' && <label>Для операций<select value={draft.kind} onChange={(event) => set('kind', event.target.value)}>{Object.entries(categoryKinds).map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select></label>}

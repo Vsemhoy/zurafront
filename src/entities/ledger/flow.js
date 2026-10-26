@@ -109,6 +109,20 @@ export function summarizeLedgerReport(rows, accounts, currency) {
 export function ledgerPeriodFilters(params, report = false) {
   const current = currentLedgerMonth();
   return { start: params.get('start') || (report ? shiftLedgerMonth(current, -11) : current), end: params.get('end') || current,
-    ...Object.fromEntries([...params].filter(([key, value]) => ['project_id', 'account_id', 'archived'].includes(key) && value)) };
+    ...Object.fromEntries([...params].filter(([key, value]) => ['project_id', 'account_id', 'archived'].includes(key) && value)),
+    ...(!report && params.has('account_ids') ? { account_id: '', account_ids: ledgerSelectedAccountIds(params) } : {}) };
+}
+
+export function ledgerSelectedAccountIds(params) {
+  return [...new Set((params.has('account_ids') ? params.getAll('account_ids') : [params.get('account_id')]).filter(Boolean))];
+}
+
+export function ledgerPeriodQuery(filters) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (Array.isArray(value)) value.forEach((id) => params.append(`${key}[]`, id));
+    else if (value) params.set(key, value);
+  }
+  return params.toString();
 }
 

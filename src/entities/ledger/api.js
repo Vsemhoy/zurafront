@@ -1,9 +1,10 @@
 import { apiRequest } from '../../api';
+import { ledgerPeriodQuery } from './flow';
 
 const base = (scopeId) => `/scopes/${scopeId}/ledger`;
 const save = async (scopeId, collection, id, payload) => (await apiRequest(`${base(scopeId)}/${collection}${id ? `/${id}` : ''}`, { method: id ? 'PATCH' : 'POST', body: JSON.stringify(payload) })).data;
 export const ledgerApi = {
-  flow: async (scopeId, params, signal) => (await apiRequest(`${base(scopeId)}/flow?${new URLSearchParams(params)}`, { signal })).data,
+  flow: async (scopeId, params, signal) => (await apiRequest(`${base(scopeId)}/flow?${ledgerPeriodQuery(params)}`, { signal })).data,
   report: async (scopeId, params, signal) => (await apiRequest(`${base(scopeId)}/report?${new URLSearchParams(params)}`, { signal })).data,
   move: async (scopeId, id, payload) => (await apiRequest(`${base(scopeId)}/transactions/${id}/move`, { method: 'POST', body: JSON.stringify(payload) })).data,
   options: async (scopeId) => (await apiRequest(`${base(scopeId)}/options`)).data,

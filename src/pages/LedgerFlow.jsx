@@ -1,10 +1,10 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, KeyboardSensor, useSensor, useSensors, useDraggable, useDroppable, pointerWithin, rectIntersection } from '@dnd-kit/core';
 import { IconArrowDown, IconArrowUp, IconChevronLeft, IconChevronRight, IconGripVertical, IconPlus } from '@tabler/icons-react';
 import { ledgerApi } from '../entities/ledger/api';
 import { useLedgerRefresh } from '../entities/ledger/hooks';
-import { canMoveLedgerCard, currentLedgerMonth, flowSlots, ledgerFlowMonthTotals, ledgerMonthGroups, ledgerPeriodFilters, shiftLedgerMonth, shiftLedgerPeriod } from '../entities/ledger/flow';
+import { canMoveLedgerCard, currentLedgerMonth, flowSlots, ledgerFlowMonthTotals, ledgerMonthGroups, ledgerPeriodFilters, ledgerSelectedAccountIds, shiftLedgerMonth, shiftLedgerPeriod } from '../entities/ledger/flow';
 import { displayLedgerDate, displayLedgerMonth } from '../entities/ledger/dates';
 import { formatMoney, ledgerKinds, ledgerStatuses, newTransaction, transactionSign } from '../entities/ledger/model';
 import './LedgerFlow.css';
@@ -21,9 +21,32 @@ export function LedgerPeriodToolbar({ params, change, report = false, accounts }
     <label>По месяц<input type="month" aria-label="Конец периода" min={start} max={report ? current : '2100-12'} value={end} onChange={(event) => change('end', event.target.value)}/></label>
     <button className="ledger-period-arrow" title="На месяц вперёд" aria-label="На месяц вперёд" disabled={!validRange || end >= maximum} onClick={() => change(shiftLedgerPeriod(start, end, 1))}><IconChevronRight size={16}/></button>
     <button title="Показать текущий месяц" onClick={() => change({ start: current, end: current })}>Сегодня</button>
-    <select aria-label="Счёт в периоде" value={params.get('account_id') || ''} onChange={(event) => change('account_id', event.target.value)}><option value="">Все счета</option>{accounts.filter((account) => !report || !account.exclude_from_reports).map((account) => <option key={account.id} value={account.id}>{account.title} · {account.currency}</option>)}</select>
+    {report ? <select aria-label="Счёт в периоде" value={params.get('account_id') || ''} onChange={(event) => change('account_id', event.target.value)}><option value="">Все счета</option>{accounts.filter((account) => !account.exclude_from_reports).map((account) => <option key={account.id} value={account.id}>{account.title} · {account.currency}</option>)}</select> : <LedgerAccountPicker accounts={accounts} selected={ledgerSelectedAccountIds(params)} onChange={(ids) => change({ account_id: '', account_ids: ids })}/>}
     <label className="ledger-check"><input type="checkbox" checked={params.get('archived') === '1'} onChange={(event) => change('archived', event.target.checked ? '1' : '')}/>С архивными</label>
     <small>{report ? 'До 24 месяцев' : 'До 3 месяцев'}</small>
+  </div>;
+}
+
+function LedgerAccountPicker({ accounts, selected, onChange }) {
+  const [open, setOpen] = useState(false);
+  const container = useRef(null);
+  const trigger = useRef(null);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event) => { if (!container.current?.contains(event.target)) setOpen(false); };
+    document.addEventListener('pointerdown', outside);
+    return () => document.removeEventListener('pointerdown', outside);
+  }, [open]);
+  const names = selected.map((key) => accounts.find((account) => account.id === key)?.title || 'Недоступный счёт');
+  return <div className="ledger-account-picker" ref={container} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }} onKeyDown={(event) => { if (event.key === 'Escape') { setOpen(false); trigger.current?.focus(); } }}>
+    <button ref={trigger} type="button" aria-expanded={open} aria-controls={id} aria-label="Отображаемые счета" title={names.join(', ') || 'Все счета'} onClick={() => setOpen((value) => !value)}>{selected.length === 0 ? 'Все счета' : selected.length === 1 ? names[0] : `Счета: ${selected.length}`} ▾</button>
+    {open && <div id={id} className="ledger-account-picker-menu" role="group" aria-label="Отображаемые счета">
+      <button type="button" onClick={() => onChange([])} disabled={!selected.length}>Показать все счета</button>
+      {accounts.map((account) => <label key={account.id}><input type="checkbox" checked={selected.includes(account.id)} onChange={(event) => onChange(event.target.checked ? [...selected, account.id] : selected.filter((key) => key !== account.id))}/><span>{account.title}<small>{account.currency}{account.is_archived ? ' · Архив' : ''}</small></span></label>)}
+      {!accounts.length && <small>Нет доступных счетов</small>}
+      <small>Без отметок показываются все счета. Архивные — по переключателю «С архивными».</small>
+    </div>}
   </div>;
 }
 

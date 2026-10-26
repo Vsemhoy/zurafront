@@ -2,6 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { ledgerForm, ledgerPayload, moneyTotals, newAccount, rateToBasisPoints } from './model.js';
 
+test('correcting legacy credit opening sends only zero and revision, preserving locked interest terms', () => {
+  const original = ledgerForm('account', { id: 'credit', revision: 3, type: 'credit', opening_balance: '-450000.00', opening_locked: true, interest_rate_bps: 2390, interest_start_on: '2026-04-15' });
+  assert.deepEqual(ledgerPayload('account', { ...original, opening_balance: '0.00' }, original), { opening_balance: '0.00', revision: 3 });
+});
+
 test('credit rates are exact integer basis points and accept decimal comma', () => {
   assert.equal(rateToBasisPoints('23.50'), 2350);
   assert.equal(rateToBasisPoints('0,01'), 1);
