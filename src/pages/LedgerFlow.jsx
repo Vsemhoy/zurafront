@@ -14,20 +14,21 @@ export function LedgerPeriodToolbar({ params, change, report = false, accounts }
   const start = params.get('start') || (report ? shiftLedgerMonth(current, -11) : current);
   const end = params.get('end') || current;
   const forecast = params.get('calculation') !== 'actual';
+  const allTime = report && ['categories', 'projects'].includes(params.get('group_by')) && params.get('all_time') === '1';
   const maximum = report && !forecast ? current : '2100-12';
   const horizon = accounts.find((account) => !account.is_archived && account.forecast_as_of)?.forecast_as_of?.slice(0, 7);
   const validRange = /^\d{4}-(0[1-9]|1[0-2])$/.test(start) && /^\d{4}-(0[1-9]|1[0-2])$/.test(end) && start <= end;
   return <div className="ledger-period-toolbar">
-    <button className="ledger-period-arrow" title="На месяц назад" aria-label="На месяц назад" disabled={!validRange || start <= '1900-01'} onClick={() => change(shiftLedgerPeriod(start, end, -1))}><IconChevronLeft size={16}/></button>
-    <label>С месяца<input type="month" aria-label="Начало периода" min="1900-01" max={maximum} value={start} onChange={(event) => change('start', event.target.value)}/></label>
-    <label>По месяц<input type="month" aria-label="Конец периода" min={start} max={maximum} value={end} onChange={(event) => change('end', event.target.value)}/></label>
-    <button className="ledger-period-arrow" title="На месяц вперёд" aria-label="На месяц вперёд" disabled={!validRange || end >= maximum} onClick={() => change(shiftLedgerPeriod(start, end, 1))}><IconChevronRight size={16}/></button>
-    <button title="Показать текущий месяц" onClick={() => change({ start: current, end: current })}>Сегодня</button>
+    <button className="ledger-period-arrow" title="На месяц назад" aria-label="На месяц назад" disabled={allTime || !validRange || start <= '1900-01'} onClick={() => change(shiftLedgerPeriod(start, end, -1))}><IconChevronLeft size={16}/></button>
+    <label>С месяца<input type="month" aria-label="Начало периода" disabled={allTime} min="1900-01" max={maximum} value={start} onChange={(event) => change('start', event.target.value)}/></label>
+    <label>По месяц<input type="month" aria-label="Конец периода" disabled={allTime} min={start} max={maximum} value={end} onChange={(event) => change('end', event.target.value)}/></label>
+    <button className="ledger-period-arrow" title="На месяц вперёд" aria-label="На месяц вперёд" disabled={allTime || !validRange || end >= maximum} onClick={() => change(shiftLedgerPeriod(start, end, 1))}><IconChevronRight size={16}/></button>
+    <button disabled={allTime} title="Показать текущий месяц" onClick={() => change({ start: current, end: current })}>Сегодня</button>
     <select aria-label="Режим расчёта" value={forecast ? 'forecast' : 'actual'} onChange={(event) => change({ calculation: event.target.value, ...(event.target.value === 'actual' && report && end > current ? { start: start > current ? current : start, end: current } : {}) })}><option value="forecast">Прогноз</option><option value="actual">Факт</option></select>
-    {forecast && horizon && <button title="Месяц последней операции по активным счетам" onClick={() => change({ start: horizon, end: horizon })}>Последняя операция</button>}
+    {forecast && horizon && !allTime && <button title="Месяц последней операции по активным счетам" onClick={() => change({ start: horizon, end: horizon })}>Последняя операция</button>}
     {report ? <select aria-label="Счёт в периоде" value={params.get('account_id') || ''} onChange={(event) => change('account_id', event.target.value)}><option value="">Все счета</option>{accounts.filter((account) => !account.exclude_from_reports).map((account) => <option key={account.id} value={account.id}>{account.title} · {account.currency}</option>)}</select> : <LedgerAccountPicker accounts={accounts} selected={ledgerSelectedAccountIds(params)} onChange={(ids) => change({ account_id: '', account_ids: ids })}/>}
     <label className="ledger-check"><input type="checkbox" checked={params.get('archived') === '1'} onChange={(event) => change('archived', event.target.checked ? '1' : '')}/>С архивными</label>
-    <small>{report ? 'До 24 месяцев' : 'До 3 месяцев'}</small>
+    <small>{allTime ? 'Вся история операций' : report ? 'До 24 месяцев' : 'До 3 месяцев'}</small>
   </div>;
 }
 

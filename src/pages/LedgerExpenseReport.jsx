@@ -14,11 +14,13 @@ export default function LedgerExpenseReport({ scopeId, params, change, projects,
   const currency = currencies.includes(params.get('currency')) ? params.get('currency') : currencies[0];
   const rows = useMemo(() => (query.data?.[groupBy] ?? []).filter((row) => row.currency === currency).sort((a, b) => BigInt(a.total_minor) === BigInt(b.total_minor) ? a.title.localeCompare(b.title) : BigInt(a.total_minor) > BigInt(b.total_minor) ? -1 : 1), [query.data, groupBy, currency]);
   const months = useMemo(() => {
-    if (query.data?.all_time) return [...new Set(rows.flatMap((row) => Object.keys(row.months)))].sort();
+    const start = query.data?.all_time ? query.data.from?.slice(0, 7) : filters.start;
+    const end = query.data?.all_time ? query.data.as_of?.slice(0, 7) : filters.end;
+    if (!start || !end) return [];
     const result = [];
-    for (let month = filters.start; month <= filters.end && result.length < 24; month = shiftLedgerMonth(month, 1)) result.push(month);
+    for (let month = start; month <= end && result.length < 2412; month = shiftLedgerMonth(month, 1)) result.push(month);
     return result;
-  }, [query.data?.all_time, rows, filters.start, filters.end]);
+  }, [query.data, filters.start, filters.end]);
   return <section className="ledger-report ledger-expense-report">
     <div className="ledger-period-toolbar">
       <select aria-label="Проект расходов" value={params.get('allocation_project_id') || ''} onChange={(event) => change('allocation_project_id', event.target.value)}><option value="">Все проекты операций</option>{projects.map((project) => <option key={project.id} value={project.id}>{project.key} · {project.title}</option>)}</select>
