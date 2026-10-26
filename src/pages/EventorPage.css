@@ -24,3 +24,7 @@
 .event-flags label{justify-content:flex-start;text-align:left;min-width:0}.event-editor-settings .event-flags input[type=checkbox],.event-modal input[type=checkbox]{appearance:auto;flex:0 0 14px;width:14px;height:14px;min-height:0;margin:0;padding:0;accent-color:#075aaf}
 
 .event-month-nav .event-day-direction{display:inline-flex;align-items:center;justify-content:center;width:29px;min-width:29px;padding:0;margin:0;flex-shrink:0}
+
+.event-card,.event-day-card{box-shadow:0 1px 3px #26324618}
+.event-card.is-pinned{box-shadow:inset 0 0 0 1px #b8cfec,0 1px 3px #26324618}
+.event-sections .content-structure-nav span{font-size:12px;color:#343434;font-weight:600}

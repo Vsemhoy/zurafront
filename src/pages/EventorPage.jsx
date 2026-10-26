@@ -1,7 +1,7 @@
 import { CommentAuthor } from '../shared/ui/CommentAuthor';
 import { useSearchParams } from 'react-router-dom';
 import { AttachmentsButton } from '../shared/ui/AttachmentsButton';
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { IconArrowDown, IconArrowUp, IconCalendar, IconCalendarEvent, IconChevronLeft, IconChevronRight, IconEye, IconEyeOff, IconList, IconLock, IconMessageCircle, IconPaperclip, IconPhoto, IconPin, IconPlus, IconSearch, IconSend, IconTrash, IconUser, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
@@ -20,6 +20,7 @@ import { PhotoPanel, FileImage } from '../shared/ui/PhotoPanel';
 import { PrivateRecordLinks } from '../shared/ui/PrivateRecordLinks';
 import { EventDayStream } from './EventDayStream';
 import { loadEventView } from '../entities/event/days';
+import { eventMonthKey, readEventSearch, writeEventSearch } from '../entities/event/navigation';
 import { EventImportedLinks } from './EventImportedLinks';
 import { FilePanel } from './FilerPage';
 const MarkdownEditor = lazy(() => import('../shared/ui/CompactMarkdownEditor'));
@@ -31,13 +32,28 @@ export function EventorPage() {
   const userId = useAuth((state) => state.user?.id);
   const filterKey = structureFiltersKey(userId, scopeId, 'eventor');
   const queryClient = useQueryClient();
-  const [view, setView] = useState(() => loadEventView(filterKey));
-  const [descending, setDescending] = useState(false);
-  const [filters, setFilters] = useState(() => ({ type_id: '', created_by: '', requester_id: '', importance: '', ...loadStructureFilters(filterKey) }));
+  const [searchParams, setSearchParams] = useSearchParams();
+  const defaults = useMemo(() => ({ filters: loadStructureFilters(filterKey), view: loadEventView(filterKey) }), [filterKey]);
+  const navigation = useMemo(() => readEventSearch(searchParams, defaults), [searchParams, defaults]);
+  const { view, descending, filters, monthKey } = navigation;
+  const month = useMemo(() => { const [year, number] = monthKey.split('-').map(Number); return new Date(year, number - 1, 1); }, [monthKey]);
+  const updateNavigation = (patch, options) => setSearchParams((current) => {
+    const state = readEventSearch(current, defaults);
+    return writeEventSearch(current, { ...state, ...(typeof patch === 'function' ? patch(state) : patch) });
+  }, options);
+  const setFilters = (next, options) => updateNavigation((state) => ({ filters: typeof next === 'function' ? next(state.filters) : next }), options);
+  const setMonth = (date) => updateNavigation({ monthKey: eventMonthKey(date) });
+  const [todayRequest, setTodayRequest] = useState(0);
+  const workspaceRef = useRef(null);
+  const centeredDate = useRef(null);
+  const goToday = () => { setMonth(new Date()); setTodayRequest((request) => request + 1); };
   const [structureOpen, setStructureOpen] = useState(false);
   useEffect(() => saveStructureFilters(filterKey, filters), [filterKey, filters]);
-  const [month, setMonth] = useState(() => startMonth(new Date()));
-  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => { try { localStorage.setItem(`${filterKey}:view`, view); } catch { /* Storage can be disabled. */ } }, [filterKey, view]);
+  useEffect(() => {
+    const next = writeEventSearch(searchParams, navigation);
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+  }, [searchParams, navigation, setSearchParams]);
   const selectedId = searchParams.get('event');
   const setSelectedId = (id) => setSearchParams((current) => {
     const next = new URLSearchParams(current);
@@ -72,11 +88,24 @@ export function EventorPage() {
     queryClient.invalidateQueries({ queryKey: ['events-calendar', scopeId] });
   };
   const move = useMutation({ mutationFn: ({ event, day }) => eventApi.update(scopeId, event.id, movedDates(event, day)), onSuccess: refresh });
-  const changeView = (next) => { setView(next); try { localStorage.setItem(`${filterKey}:view`, next); } catch { /* Storage can be disabled. */ } };
-  const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }));
+  const changeView = (next) => updateNavigation({ view: next });
+  const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }), { replace: key === 'q' });
   const openCreate = (date = null) => { setCreateDate(date); setCreateOpen(true); };
   const loading = view === 'flow' ? flow.isLoading : calendar.isLoading;
   const error = (view === 'flow' ? flow.error : calendar.error) || move.error;
+  useEffect(() => {
+    if (view === 'flow' || monthKey !== eventMonthKey(new Date())) { centeredDate.current = null; return; }
+    if (!scopeId || loading || calendar.error || selectedId) return;
+    const key = `${scopeId}:${view}:${monthKey}:${descending}:${todayRequest}`;
+    if (centeredDate.current === key) return;
+    const today = workspaceRef.current?.querySelector(`[data-event-day="${dateKey(new Date())}"]`);
+    if (!today) return;
+    const frame = requestAnimationFrame(() => {
+      today.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' });
+      centeredDate.current = key;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [scopeId, view, monthKey, descending, todayRequest, loading, calendar.error, selectedId]);
 
   return <main className="eventor-page">
     <header className="eventor-head">
@@ -86,10 +115,10 @@ export function EventorPage() {
     </header>
     <div className="eventor-layout">
       <aside className="event-projects event-sections"><ContentStructureNav catalog={catalog} value={filters.section_id} onChange={(section_id) => setFilters((current) => ({ ...current, section_id }))} onManage={() => setStructureOpen(true)}/>{structure.error && <p className="eventor-error">{structure.error.message}</p>}</aside>
-      <section className="eventor-workspace">
+      <section className="eventor-workspace" ref={workspaceRef}>
         <EventFilters filters={filters} setFilter={setFilter} projects={eventProjects} catalog={catalog} types={types} people={peopleData.people ?? []} onReset={() => setFilters({ ...defaultStructureFilters(), type_id: '', created_by: '', requester_id: '', importance: '' })}/>
-        {view !== 'flow' && <MonthNavigation month={month} setMonth={setMonth}>
-          {view === 'days' && <button className="event-day-direction" title={descending ? 'Сначала новые' : 'По порядку дат'} aria-label={descending ? 'По порядку дат — переключить' : 'Сначала новые — переключить'} onClick={() => setDescending(!descending)}>{descending ? <IconArrowDown size={16}/> : <IconArrowUp size={16}/>}</button>}
+        {view !== 'flow' && <MonthNavigation month={month} setMonth={setMonth} onToday={goToday}>
+          {view === 'days' && <button className="event-day-direction" title={descending ? 'Сначала новые' : 'По порядку дат'} aria-label={descending ? 'По порядку дат — переключить' : 'Сначала новые — переключить'} onClick={() => updateNavigation({ descending: !descending })}>{descending ? <IconArrowDown size={16}/> : <IconArrowUp size={16}/>}</button>}
         </MonthNavigation>}
         {loading && <div className="eventor-state">Загружаю события…</div>}
         {error && <div className="eventor-state eventor-error">{error.message}</div>}
@@ -135,14 +164,14 @@ function EventCard({ event, onOpen, onComments, compact = false }) {
   </article>;
 }
 
-function MonthNavigation({ month, setMonth, children }) {
-  return <div className="event-month-nav">{children}<button aria-label="Предыдущий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><IconChevronLeft size={17}/></button><strong>{month.toLocaleDateString([], { month: 'long', year: 'numeric' })}</strong><input className="event-month-picker" type="month" aria-label="Выбрать месяц событий" value={`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`} onChange={(event) => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value)) { const [year, nextMonth] = event.target.value.split('-').map(Number); if (year >= 1900 && year <= 9999) setMonth(new Date(year, nextMonth - 1, 1)); } }}/><button aria-label="Следующий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><IconChevronRight size={17}/></button><button onClick={() => setMonth(startMonth(new Date()))}>Сегодня</button></div>;
+function MonthNavigation({ month, setMonth, onToday, children }) {
+  return <div className="event-month-nav">{children}<button aria-label="Предыдущий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}><IconChevronLeft size={17}/></button><strong>{month.toLocaleDateString([], { month: 'long', year: 'numeric' })}</strong><input className="event-month-picker" type="month" aria-label="Выбрать месяц событий" value={`${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`} onChange={(event) => { if (/^\d{4}-(0[1-9]|1[0-2])$/.test(event.target.value)) { const [year, nextMonth] = event.target.value.split('-').map(Number); if (year >= 1900 && year <= 9999) setMonth(new Date(year, nextMonth - 1, 1)); } }}/><button aria-label="Следующий месяц" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() + 1, 1))}><IconChevronRight size={17}/></button><button onClick={onToday}>Сегодня</button></div>;
 }
 
 function EventCalendar({ month, events, onOpen, onComments, onCreate, onMove }) {
   const days = calendarDays(month);
   const byDay = useMemo(() => { const map = {}; events.forEach((event) => { const key = dateKey(eventMoment(event)); (map[key] ||= []).push(event); }); return map; }, [events]);
-  return <><div className="event-weekdays">{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day) => <strong key={day}>{day}</strong>)}</div><section className="event-calendar">{days.map((day) => { const key = dateKey(day); return <div key={key} className={`${day.getMonth() !== month.getMonth() ? 'muted' : ''} ${key === dateKey(new Date()) ? 'today' : ''}`} onDoubleClick={(click) => { if (!click.target.closest('.event-card')) onCreate(key); }} onDragOver={(drag) => drag.preventDefault()} onDrop={(drop) => { drop.preventDefault(); const id = drop.dataTransfer.getData('application/x-zuratax-event'); const event = events.find((item) => item.id === id); if (event && !event.recurrence_frequency) onMove(event, key); }}><header><span>{day.getDate()}</span>{day.getDate() === 1 && <small>{day.toLocaleDateString([], { month: 'short' })}</small>}</header><section>{(byDay[key] ?? []).map((event) => <EventCard key={event.occurrence_id || event.id} compact event={event} onOpen={onOpen} onComments={onComments}/>)}</section></div>; })}</section></>;
+  return <><div className="event-weekdays">{['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].map((day) => <strong key={day}>{day}</strong>)}</div><section className="event-calendar">{days.map((day) => { const key = dateKey(day); return <div key={key} data-event-day={key} className={`${day.getMonth() !== month.getMonth() ? 'muted' : ''} ${key === dateKey(new Date()) ? 'today' : ''}`} onDoubleClick={(click) => { if (!click.target.closest('.event-card')) onCreate(key); }} onDragOver={(drag) => drag.preventDefault()} onDrop={(drop) => { drop.preventDefault(); const id = drop.dataTransfer.getData('application/x-zuratax-event'); const event = events.find((item) => item.id === id); if (event && !event.recurrence_frequency) onMove(event, key); }}><header><span>{day.getDate()}</span>{day.getDate() === 1 && <small>{day.toLocaleDateString([], { month: 'short' })}</small>}</header><section>{(byDay[key] ?? []).map((event) => <EventCard key={event.occurrence_id || event.id} compact event={event} onOpen={onOpen} onComments={onComments}/>)}</section></div>; })}</section></>;
 }
 
 function EventCreate({ scopeId, types, projects, people, initialDate, catalog, defaults, onClose, onCreated }) {
@@ -176,7 +205,7 @@ function EventEditor({ scopeId, eventId, types, projects, people, catalog, onClo
   const change = (keyName, value) => { local({ [keyName]: value }); save.mutate({ [keyName]: value }); };
   const tabs = [['editor', 'Редактор'], ['settings', 'Настройки'], ['links', 'Связи'], ['recurrence', 'Повторение'], ['attachments', 'Вложения'], ['photos', 'Фотографии']];
   return <aside className="event-editor"><header><AttachmentsButton scopeId={scopeId} type="event" id={eventId}/><span><IconCalendarEvent size={18}/>Событие</span><div>{event.comments_allowed && <button onClick={onComments}><IconMessageCircle size={17}/>{event.comments_count || ''}</button>}<button onClick={onClose}><IconX size={19}/></button></div></header><input className="event-title" value={event.title} disabled={event.is_locked} onChange={(input) => local({ title: input.target.value })} onBlur={(input) => save.mutate({ title: input.target.value })}/><nav className="event-editor-tabs">{tabs.map(([value, label]) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => setTab(value)}>{label}</button>)}</nav>{event.is_locked && <p className="event-locked"><IconLock size={15}/>Событие заблокировано от правок.</p>}
-    {tab === 'editor' && <Suspense fallback={<div className="eventor-state">Загружаю Markdown…</div>}><MarkdownEditor variant="full" value={event.content || ''} placeholder="Описание, наблюдения и материалы…" onSave={(content) => save.mutate({ content })}/></Suspense>}
+    {tab === 'editor' && <Suspense fallback={<div className="eventor-state">Загружаю Markdown…</div>}><MarkdownEditor variant="full" toolbarOpen hideToolbarTrigger value={event.content || ''} placeholder="Описание, наблюдения и материалы…" onSave={(content) => save.mutate({ content })}/></Suspense>}
     {tab === 'settings' && <StructureFields value={event} catalog={catalog} disabled={save.isPending || event.is_locked} onChange={(patch) => save.mutate(patch)}/>}
     {tab === 'settings' && <div className="event-editor-settings"><Select label="Проект" value={event.project_id || ''} onChange={(input) => change('project_id', input.target.value || null)} empty="Без проекта" rows={projects}/><Select label="Тип" value={event.type_id || ''} onChange={(input) => change('type_id', input.target.value || null)} empty="Без типа" rows={types}/><Select label="Заявитель" value={event.requester_id || ''} onChange={(input) => change('requester_id', input.target.value || null)} empty="Не указан" rows={people}/><label>Важность<select value={event.importance} onChange={(input) => change('importance', input.target.value)}>{importanceOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label><label>Начало<input type="datetime-local" defaultValue={localDateTime(event.starts_at)} onBlur={(input) => save.mutate({ starts_at: input.target.value ? new Date(input.target.value).toISOString() : null })}/></label><label>Окончание<input type="datetime-local" defaultValue={localDateTime(event.ends_at)} onBlur={(input) => save.mutate({ ends_at: input.target.value ? new Date(input.target.value).toISOString() : null })}/></label><label>Место<input defaultValue={event.location || ''} onBlur={(input) => save.mutate({ location: input.target.value || null })}/></label><label>Видимость<select value={event.visibility} onChange={(input) => change('visibility', input.target.value)}><option value="private">Только автор</option><option value="scope">Коллеги</option><option value="public">Все</option></select></label><div className="event-flags"><Check label="Закрепить" checked={event.is_pinned} onChange={(value) => change('is_pinned', value)}/><Check label="Размыть содержимое" checked={event.is_blurred} onChange={(value) => change('is_blurred', value)}/><Check label="Заблокировать правки" checked={event.is_locked} onChange={(value) => change('is_locked', value)}/><Check label="Комментарии" checked={event.comments_enabled ?? event.project?.event_comments_enabled ?? true} onChange={(value) => change('comments_enabled', value)}/></div></div>}
     {tab === 'recurrence' && <EventRecurrenceEditor key={event.id} event={event} people={people} pending={save.isPending} error={save.error} onSave={(payload) => save.mutateAsync(payload)}/>}
@@ -212,7 +241,6 @@ function eventMoment(event) { return new Date(event.occurrence_start || event.st
 function eventDate(event) { const value = eventMoment(event); return value.toLocaleDateString([], { day: '2-digit', month: 'short', year: value.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined }); }
 function eventTime(event) { return event.is_all_day ? 'Весь день' : eventMoment(event).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); }
 function monthLabel(date) { return date.toLocaleDateString([], { month: 'long', year: 'numeric' }); }
-function startMonth(date) { return new Date(date.getFullYear(), date.getMonth(), 1); }
 function dateKey(date) { const value = new Date(date); const offset = value.getTimezoneOffset() * 60000; return new Date(value.getTime() - offset).toISOString().slice(0, 10); }
 function calendarDays(month) { const first = new Date(month.getFullYear(), month.getMonth(), 1); const start = new Date(first); start.setDate(first.getDate() - ((first.getDay() + 6) % 7)); return Array.from({ length: 42 }, (_, index) => { const day = new Date(start); day.setDate(start.getDate() + index); return day; }); }
 function localDateTime(value) { if (!value) return ''; const date = new Date(value); return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16); }

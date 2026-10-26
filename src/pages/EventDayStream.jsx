@@ -8,7 +8,7 @@ import './EventDayStream.css';
 export function EventDayStream({ month, events, descending, onOpen, onComments, onCreate }) {
   const days = useMemo(() => eventDays(month, events, descending), [month, events, descending]);
   const today = eventDayKey(new Date());
-  return <section className="event-day-stream" aria-label="Поток по дням">{days.map((day) => <div key={day.key} className={`event-day-row ${day.weekend ? 'is-weekend' : ''} ${day.key === today ? 'is-today' : ''}`}>
+  return <section className="event-day-stream" aria-label="Поток по дням">{days.map((day) => <div key={day.key} data-event-day={day.key} className={`event-day-row ${day.weekend ? 'is-weekend' : ''} ${day.key === today ? 'is-today' : ''}`}>
     <button className="event-day-label" aria-label={`Создать событие ${day.key}`} title="Двойной клик — новое событие" onDoubleClick={() => onCreate(day.key)}><time dateTime={day.key}><strong>{day.date.getDate()}</strong><small>{day.date.toLocaleDateString([], { weekday: 'short' })}</small></time></button>
     <div className="event-day-content" onDoubleClick={(click) => { if (!click.target.closest('.event-day-card,button,a,input')) onCreate(day.key); }}>
       <div className="event-day-cards">{day.events.map((event) => <DayCard key={event.occurrence_id || event.id} event={event} onOpen={onOpen} onComments={onComments}/>)}</div>

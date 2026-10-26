@@ -12,6 +12,12 @@ test('money is parsed and summed as exact minor units, never binary floats', () 
 test('balances never mix currencies or lose precision at the JavaScript integer boundary', () => {
   assert.deepEqual(moneyTotals([{ currency: 'RUB', balance_minor: '9007199254740993' }, { currency: 'USD', balance_minor: '5' }, { currency: 'RUB', balance_minor: '1' }]), [{ currency: 'RUB', minor: '9007199254740994' }, { currency: 'USD', minor: '5' }]);
 });
+test('today balance ignores archived accounts even when the account list includes them', () => {
+  const active = { currency: 'RUB', balance_today_minor: '10000', balance_minor: '20000' };
+  const archived = { currency: 'RUB', is_archived: true, balance_today_minor: '-196675325' };
+  assert.deepEqual(moneyTotals([active, archived, { ...archived, currency: 'USD' }]), [{ currency: 'RUB', minor: '10000' }]);
+  assert.deepEqual(moneyTotals([archived]), []);
+});
 test('existing account edits cannot change project or currency and keep a revision', () => {
   const original = { ...newAccount('project-a'), id: 'account', revision: 4, title: 'Cash' };
   assert.deepEqual(ledgerPayload('account', { ...original, project_id: 'project-b', currency: 'USD', title: 'New' }, original), { title: 'New', revision: 4 });

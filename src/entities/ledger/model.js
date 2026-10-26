@@ -25,7 +25,7 @@ export function formatMoney(minor, currency = '') {
 export function moneyTotals(accounts) {
   const result = new Map();
   for (const account of accounts) {
-    if (account.balance_is_known === false) continue;
+    if (account.is_archived || account.balance_is_known === false) continue;
     result.set(account.currency, (result.get(account.currency) || 0n) + BigInt(account.balance_today_minor ?? account.balance_minor ?? '0'));
   }
   return [...result].map(([currency, minor]) => ({ currency, minor: String(minor) }));

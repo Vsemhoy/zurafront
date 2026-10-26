@@ -46,7 +46,7 @@ function LedgerWorkspace({ scope, transactionId }) {
   });
   const data = options.data;
   const projectAccounts = data?.accounts.filter((account) => !projectId || account.project_id === projectId) ?? [];
-  const balanceAccounts = projectAccounts.filter((account) => !params.get('account_id') || account.id === params.get('account_id'));
+  const balanceAccounts = projectAccounts.filter((account) => !account.is_archived && (!params.get('account_id') || account.id === params.get('account_id')));
   const writable = projectAccounts.filter((account) => account.can_write);
   const preferredAccount = writable.find((account) => account.id === params.get('account_id')) ?? writable[0];
   const manageable = data?.projects.filter((project) => project.can_manage) ?? [];
