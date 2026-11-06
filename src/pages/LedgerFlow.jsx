@@ -136,7 +136,9 @@ function FlowRow({ date, accounts, slots, daily, dragging, busy, today, onOpen, 
 function FlowCell({ date, account, accounts, dragging, busy, balance, cards, onOpen, onCreate }) {
   const { setNodeRef, isOver } = useDroppable({ id: `${date}:${account.id}`, data: { date, account }, disabled: busy || !account.can_write || Boolean(dragging && !canMoveLedgerCard(dragging.transaction, dragging.side, account, accounts)) });
   return <div ref={setNodeRef} className={`ledger-flow-cell ${isOver ? 'is-over' : ''}`} onDoubleClick={(event) => { if (account.can_write && !busy && !event.target.closest('button,.ledger-flow-card')) onCreate(); }}>
-    {cards.map((card) => <FlowCard key={`${card.transaction.id}:${card.side}`} {...card} accountId={account.id} busy={busy} onOpen={onOpen}/>)}
+    <div className="ledger-flow-transactions">
+      {cards.map((card) => <FlowCard key={`${card.transaction.id}:${card.side}`} {...card} accountId={account.id} busy={busy} onOpen={onOpen}/>)}
+    </div>
     <footer><small title={balance ? `На начало дня: ${formatMoney(balance.opening_minor, account.currency)}` : 'Остаток неизвестен или дата ещё не наступила'}>{balance ? formatMoney(balance.closing_minor, account.currency) : '—'}{balance && balance.interest_minor !== '0' && <em>Проценты: {formatMoney(balance.interest_minor, account.currency)}</em>}</small>{account.can_write && <button disabled={busy} aria-label={`Новая операция: ${account.title}, ${date}`} title="Новая операция" onClick={onCreate}><IconPlus size={13}/></button>}</footer>
   </div>;
 }

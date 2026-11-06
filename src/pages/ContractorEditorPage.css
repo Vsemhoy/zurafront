@@ -1,0 +1,51 @@
+.contractor-detail-page{padding:12px 16px 24px;background:#f4f6fa;min-height:calc(100dvh - var(--app-header-height,50px))}
+.contractor-editor.contractor-editor--page{position:relative;inset:auto;z-index:auto;width:100%;max-width:1400px;overflow:visible;margin:0 auto;padding:0;background:transparent;box-shadow:none;min-width:0}
+.contractor-editor--page>header{grid-template-columns:44px minmax(0,1fr) auto;padding:0 0 10px}
+.contractor-editor--page .contractor-editor-icon{width:44px;height:44px;overflow:hidden;border-radius:50%}
+.contractor-editor--page .contractor-editor-identity{display:flex!important;align-items:center;gap:5px 12px;flex-wrap:wrap;min-width:0}
+.contractor-editor--page .contractor-editor-identity>h1{margin:0;font-size:20px;font-weight:600;overflow-wrap:anywhere}
+.contractor-editor--page .contractor-editor-identity>small{font-size:11px}
+.contractor-editor--page .contractor-back-link{display:flex;align-items:center;gap:5px;color:#53677f;font:inherit;font-size:12px;white-space:nowrap}
+.contractor-editor-save{position:sticky;top:var(--app-header-height,50px);z-index:9;padding:8px 0;background:#f4f6faf2;backdrop-filter:blur(8px)}
+.contractor-editor-save .editor-save-bar{justify-content:space-between}
+.contractor-editor--page .contractor-editor-tabs{padding:4px 0 8px;gap:4px;flex-wrap:wrap}
+.contractor-editor--page .contractor-editor-tabs button{min-height:34px;font-size:12px;background:transparent;border-bottom:2px solid transparent}
+.contractor-editor--page .contractor-editor-tabs button.active{background:#e8e2f5;color:#6540a5;border-bottom-color:#7c3aed}
+.contractor-editor--page section{padding:14px 0}
+.contractor-editor--page section[hidden],.contractor-editor--page div[hidden]{display:none}
+.contractor-editor--page .contractor-edit-fields{min-width:0;margin:0;padding:0;border:0}
+.contractor-editor--page form>.contractor-edit-fields{display:grid;gap:12px;max-width:850px}
+.contractor-editor--page label{font-weight:500}
+.contractor-editor--page label>small{font-weight:400;color:#748095;line-height:1.5}
+.contractor-editor--page .contractor-form-row{gap:12px}
+.contractor-editor--page input,.contractor-editor--page select{height:34px;font:inherit;font-size:12px;border-radius:3px}
+.contractor-editor--page .contractor-account-section{max-width:850px}
+.contractor-editor--page .contractor-projects{max-height:260px;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));padding:0;gap:4px;background:transparent}
+.contractor-editor--page .contractor-projects label{padding:8px}
+.contractor-editor--page .contractor-projects input,.contractor-editor--page .contractor-scope-add input{height:auto;width:auto;flex-shrink:0}
+.contractor-editor--page .contractor-hint{margin:6px 0 10px;line-height:1.6}
+.contractor-role-hint{margin-top:12px!important}
+.contractor-permission-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 10px;flex-wrap:wrap}
+.contractor-permission-heading h3{margin:0}
+.contractor-editor--page .contractor-permission-search{display:flex;align-items:center;gap:6px;width:min(360px,100%);font-weight:400;background:#fff;padding:0 8px;border:1px solid #cbd3df;border-radius:3px}
+.contractor-permission-search input{border:0;background:transparent;padding:0;outline-offset:1px}
+.contractor-permission-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:start}
+.contractor-permission-group{min-width:0;background:#fff;border:1px solid #e0e5ed;border-radius:4px;overflow:hidden}
+.contractor-permission-group>summary{padding:10px;cursor:pointer;color:#344760}
+.contractor-permission-group>summary strong{font-size:12px;font-weight:600}
+.contractor-permission-group>summary>span{display:flex;gap:10px;flex-wrap:wrap;padding-left:14px;margin-top:4px;color:#748095;font-size:10px}
+.contractor-permission-group>summary .contractor-denied-count{color:#b42318}
+.contractor-editor--page .contractor-abilities{gap:0}
+.contractor-editor--page .contractor-abilities label{grid-template-columns:minmax(0,1fr) 120px;gap:10px;padding:8px 10px;border-top:1px solid #edf0f4;background:transparent}
+.contractor-editor--page .contractor-abilities label>span{overflow-wrap:anywhere}
+.contractor-editor--page .contractor-abilities label[data-permission=deny] select{color:#b42318;background:#fff7f6}
+.contractor-editor--page .contractor-abilities label[data-permission=allow] select{color:#277047;background:#f6fbf8}
+.contractor-editor--page .contractor-book-access{padding:10px;border-top:1px solid #edf0f4;background:#f8fafc}
+.contractor-editor--page .contractor-scope-list{margin:10px 0}
+.contractor-editor--page .contractor-scope-add{grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr))}
+.contractor-editor--page .contractor-persona{margin-top:12px}
+.contractor-editor--page .contractor-account-tools small{position:static}
+.contractor-editor--page button:disabled{cursor:default;opacity:.55}
+.contractor-editor--page .contractor-token-comment{max-width:850px}
+@media(max-width:900px){.contractor-permission-groups{grid-template-columns:1fr}}
+@media(max-width:600px){.contractor-detail-page{padding:10px}.contractor-editor--page>header{grid-template-columns:36px minmax(0,1fr)}.contractor-editor--page .contractor-editor-icon{width:36px;height:36px}.contractor-editor--page .contractor-back-link{grid-column:1/-1;justify-self:start;padding-left:0}.contractor-editor--page .contractor-editor-identity>h1{font-size:17px}.contractor-editor--page .contractor-abilities label{grid-template-columns:minmax(0,1fr) 108px;gap:6px}.contractor-editor--page .contractor-form-row{grid-template-columns:1fr}.contractor-editor-save .editor-save-state{flex-basis:auto}.contractor-editor-save .editor-save-actions{width:auto}}

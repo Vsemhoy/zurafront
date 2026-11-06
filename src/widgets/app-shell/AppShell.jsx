@@ -59,7 +59,7 @@ export function AppShell() {
     const [appearanceOpen, setAppearanceOpen] = useState(false);
     const [appearancePreview, setAppearancePreview] = useState(null);
     const [avatarOpen, setAvatarOpen] = useState(false);
-    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog|ledger|exploiter|factor|contacts)\/([^/]+)\//)?.[1]
+    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog|ledger|exploiter|factor|contacts|contractors)\/([^/]+)\//)?.[1]
         ?? location.pathname.match(/^\/content\/diagrams\/([^/]+)\//)?.[1];
     const activeScope = scopes.find((scope) => scope.id === routeScopeId) ?? scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)

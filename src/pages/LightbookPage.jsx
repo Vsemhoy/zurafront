@@ -1,15 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams } from 'react-router-dom';
-import { IconFileDescription, IconPlus, IconSettings, IconTrash, IconX } from '@tabler/icons-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { IconArrowLeft, IconFileDescription, IconSettings, IconTrash, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { structureApi } from '../entities/content-navigation/structureApi';
-import { defaultStructureFilters, loadStructureFilters, saveStructureFilters, structureDefaults, structureFiltersKey } from '../entities/content-navigation/structure';
+import { loadStructureFilters, saveStructureFilters, structureDefaults, structureFiltersKey } from '../entities/content-navigation/structure';
 import { ContentStructureManager, ContentStructureNav, StructureFields } from '../shared/ui/ContentStructure';
 import { lightbookApi } from '../entities/lightbook/api';
 import { projectApi } from '../entities/project/api';
 import { BookPage, PageStructure } from './BookerPage';
+import { LightbookLibrary } from './LightbookLibrary';
 import './LightbookPage.css';
 
 export function LightbookPage() {
@@ -22,13 +23,17 @@ export function LightbookPage() {
   const scopeId = activeScope?.id;
   const userId = useAuth((state) => state.user?.id);
   const filterKey = structureFiltersKey(userId, scopeId, 'lightbook');
-  const [filters, setFilters] = useState(() => loadStructureFilters(filterKey));
+  const [filterSelection, setFilterSelection] = useState(() => ({ key: filterKey, filters: loadStructureFilters(filterKey) }));
+  const filters = useMemo(() => filterSelection.key === filterKey ? filterSelection.filters : loadStructureFilters(filterKey), [filterSelection, filterKey]);
+  const setFilters = (update) => setFilterSelection((current) => {
+    const previous = current.key === filterKey ? current.filters : loadStructureFilters(filterKey);
+    return { key: filterKey, filters: typeof update === 'function' ? update(previous) : update };
+  });
   const [structureOpen, setStructureOpen] = useState(false);
   useEffect(() => saveStructureFilters(filterKey, filters), [filterKey, filters]);
   const structure = useQuery({ queryKey: ['content-structure', scopeId, 'lightbook'], queryFn: () => structureApi.catalog(scopeId, 'lightbook'), enabled: Boolean(scopeId) });
   const projects = useQuery({ queryKey: ['projects', scopeId], queryFn: () => projectApi.list(scopeId), enabled: Boolean(scopeId) });
   const catalog = structure.data || {};
-  const setFilter = (key) => (event) => setFilters((current) => ({ ...current, [key]: event.target.value }));
   const listKey = ['lightbooks', scopeId];
   const itemKey = ['lightbook', scopeId, lightbookId];
   const list = useQuery({ queryKey: [...listKey, filters], queryFn: () => lightbookApi.list(scopeId, filters), enabled: Boolean(scopeId) });
@@ -50,15 +55,27 @@ export function LightbookPage() {
     const frame = requestAnimationFrame(() => document.getElementById(`block-${blockId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
     return () => cancelAnimationFrame(frame);
   }, [blockId, page?.id, page?.groups?.length]);
-  return <main className="lightbook-page">
-    <aside className="lightbook-list"><header><span><IconFileDescription size={18}/><strong>Lightbook</strong></span><button title="Новый документ" aria-label="Новый документ" onClick={() => setCreating(true)}><IconPlus size={17}/></button></header>
-      <div className="lightbook-filters"><input aria-label="Поиск документов" value={filters.q} onChange={setFilter('q')} placeholder="Найти документ…"/><select aria-label="Фильтр по проекту" value={filters.project_id} onChange={setFilter('project_id')}><option value="">Все проекты</option><option value="none">Без проекта</option>{projects.data?.map((row) => <option key={row.id} value={row.id}>{row.key} · {row.title}</option>)}</select><select aria-label="Фильтр по категории" value={filters.category_id} onChange={setFilter('category_id')}><option value="">Все категории</option><option value="none">Без категории</option>{catalog.categories?.map((row) => <option key={row.id} value={row.id}>{row.name}{row.is_archived ? ' (архив)' : ''}</option>)}</select><button onClick={() => setFilters(defaultStructureFilters())}>Сбросить фильтры</button></div>
-      <ContentStructureNav catalog={catalog} value={filters.section_id} onChange={(section_id) => setFilters((current) => ({ ...current, section_id }))} onManage={() => setStructureOpen(true)}/>
-      {structure.error && <p className="booker-error">{structure.error.message}</p>}
-      <div className="lightbook-documents">{list.isPending && <p>Загружаю документы…</p>}{list.error && <p className="booker-error">{list.error.message}</p>}{list.data?.map((entry) => <button key={entry.id} className={entry.id === lightbookId ? 'active' : ''} onClick={() => navigate(`/content/lightbooks/${entry.id}`)}><strong>{entry.title}</strong><small>{entry.project?.key || 'Без проекта'} · {catalog.sections?.find((row) => row.id === entry.section_id)?.name || 'Без секции'}</small><small>{catalog.categories?.find((row) => row.id === entry.category_id)?.name} · {new Date(entry.updated_at).toLocaleDateString()}</small></button>)}{!list.isPending && !list.data?.length && <p>По этим фильтрам документов нет.</p>}</div>
+  const selectSection = (section_id) => {
+    setFilters((current) => ({ ...current, section_id }));
+    if (lightbookId) navigate('/content/lightbooks');
+  };
+  return <main className={`lightbook-page ${!lightbookId ? 'lightbook-page--library' : ''}`}>
+    <aside className="lightbook-list">
+      <header><Link to="/content/lightbooks"><IconFileDescription size={18}/><strong>Lightbook</strong></Link></header>
+      <ContentStructureNav catalog={catalog} value={filters.section_id} onChange={selectSection} onManage={() => setStructureOpen(true)}/>
+      {structure.error && <p className="booker-error" role="alert">{structure.error.message} <button type="button" onClick={() => structure.refetch()}>Повторить</button></p>}
     </aside>
-    <section className="booker-content lightbook-content">{!lightbookId && <div className="lightbook-welcome"><IconFileDescription size={42}/><h1>Lightbook</h1><p>Инструкции, регламенты и другие самостоятельные документы без дерева страниц.</p><button onClick={() => setCreating(true)}><IconPlus size={16}/>Создать документ</button></div>}{(item.isPending || pageQuery.isPending) && lightbookId && <div className="booker-empty">Загружаю документ…</div>}{(item.error || pageQuery.error) && <p className="booker-error">{item.error?.message || pageQuery.error?.message}</p>}{lightbook && page && <><div className="lightbook-toolbar"><span>{lightbook.project?.key || 'Без проекта'} · {visibilityLabel(lightbook.visibility)}</span><button onClick={() => setSettings(true)}><IconSettings size={15}/>Свойства</button></div><BookPage scopeId={scopeId} scopeOwnerId={activeScope.owner_id} book={lightbook} bookCreatedBy={lightbook.created_by} bookId={lightbook.id} page={page} refresh={refresh} api={lightbookApi} cacheKey={pageKey}/></>}{lightbook && !pageQuery.isPending && !page && <div className="booker-empty">Страница документа не найдена.</div>}</section>
-    {lightbook && page ? <PageStructure scopeId={scopeId} bookId={lightbook.id} pageId={page.id} page={page} editingBy={page.editing_by} groups={page.groups ?? []} refresh={refresh} api={lightbookApi} basePath={`/content/lightbooks/${lightbook.id}`}/> : <aside className="booker-structure"/>}
+    <section className="booker-content lightbook-content">
+      {!lightbookId ? <LightbookLibrary scopeId={scopeId} list={list} filters={filters} setFilters={setFilters} projects={projects.data ?? []} catalog={catalog} onCreate={() => setCreating(true)}/> : <>
+        <div className="lightbook-toolbar"><Link to="/content/lightbooks"><IconArrowLeft size={15}/>К документам</Link>{lightbook && <><span>{lightbook.project?.key || 'Без проекта'} · {visibilityLabel(lightbook.visibility)}</span><button onClick={() => setSettings(true)}><IconSettings size={15}/>Свойства</button></>}</div>
+        {(item.isPending || (pageId && pageQuery.isPending)) && <div className="booker-empty" role="status">Загружаю документ…</div>}
+        {(item.error || pageQuery.error) && <p className="booker-error" role="alert">{item.error?.message || pageQuery.error?.message}</p>}
+        {lightbook && page && <BookPage scopeId={scopeId} scopeOwnerId={activeScope.owner_id} book={lightbook} bookCreatedBy={lightbook.created_by} bookId={lightbook.id} page={page} refresh={refresh} api={lightbookApi} cacheKey={pageKey}/>}
+        {lightbook && !pageQuery.isPending && !page && <div className="booker-empty">Страница документа не найдена.</div>}
+      </>}
+      {projects.error && <p className="booker-error" role="alert">Не удалось загрузить проекты. <button type="button" onClick={() => projects.refetch()}>Повторить</button></p>}
+    </section>
+    {lightbookId && lightbook && page && <PageStructure scopeId={scopeId} bookId={lightbook.id} pageId={page.id} page={page} editingBy={page.editing_by} groups={page.groups ?? []} refresh={refresh} api={lightbookApi} basePath={`/content/lightbooks/${lightbook.id}`}/>}
     {creating && <LightbookForm title="Новый Lightbook" initial={structureDefaults(filters)} submitLabel="Создать" onClose={() => setCreating(false)} onSubmit={async (payload) => { const created = await lightbookApi.create(scopeId, payload); await client.invalidateQueries({ queryKey: listKey }); setCreating(false); navigate(`/content/lightbooks/${created.id}`); }}/>}
     {settings && lightbook && <LightbookForm title="Свойства документа" initial={lightbook} submitLabel="Сохранить" allowDelete onClose={() => setSettings(false)} onDelete={async () => { if (!window.confirm('Удалить Lightbook? Документ можно будет восстановить только из базы.')) return; await lightbookApi.delete(scopeId, lightbook.id); await client.invalidateQueries({ queryKey: listKey }); setSettings(false); navigate('/content/lightbooks'); }} onSubmit={async (payload) => { const updated = await lightbookApi.update(scopeId, lightbook.id, payload); client.setQueryData(itemKey, updated); client.setQueryData(['lightbook-page', scopeId, lightbook.id, updated.page_id], updated.page); await client.invalidateQueries({ queryKey: listKey }); setSettings(false); }}/>} 
     {structureOpen && <ContentStructureManager scopeId={scopeId} module="lightbook" catalog={catalog} onClose={() => setStructureOpen(false)}/>}
