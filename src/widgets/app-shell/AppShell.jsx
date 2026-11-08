@@ -4,7 +4,7 @@ import { AvatarImage } from '../../shared/ui/AvatarImage';
 import { IconAddressBook, IconBox, IconCoin, IconTool } from '@tabler/icons-react';
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { IconMoon, IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconLogout, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
+import { IconListDetails, IconMoon, IconFiles, IconActivity, IconBell, IconBook2, IconBrain, IconBriefcase2, IconBuildingFactory2, IconCalendarEvent, IconCalendarStats, IconChartBar, IconChecklist, IconChevronDown, IconFolder, IconHome, IconLogout, IconRoute, IconSearch, IconUser, IconUsers, IconX } from '@tabler/icons-react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth';
@@ -34,6 +34,7 @@ const modules = [
     ['/darklog', 'Darklog', IconMoon, false, darklogTheme.color, darklogTheme.tint],
     ['/lore', 'Lore', IconBrain, false, '#4f46a5', '#eeecff'],
     ['/books', 'Booker', IconBook2, false, '#d85a30', '#fdf1e7'],
+    ['/specifications', 'Specifier · Спецификации', IconListDetails, false, '#0f7282', '#e2f4f5'],
     ['/content', 'Контент', IconFiles, false, '#366a91', '#e2eef7'],
     ['/equip', 'Equip · Экипа', IconBox, false, '#087f72', '#e1f3ee'],
     ['/ledger', 'Ledger', IconCoin, false, '#7c6a46', '#f3eedf'],
@@ -59,7 +60,7 @@ export function AppShell() {
     const [appearanceOpen, setAppearanceOpen] = useState(false);
     const [appearancePreview, setAppearancePreview] = useState(null);
     const [avatarOpen, setAvatarOpen] = useState(false);
-    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog|ledger|exploiter|factor|contacts|contractors)\/([^/]+)\//)?.[1]
+    const routeScopeId = location.pathname.match(/^\/(?:lore|darklog|ledger|exploiter|factor|contacts|contractors|specifications)\/([^/]+)\//)?.[1]
         ?? location.pathname.match(/^\/content\/diagrams\/([^/]+)\//)?.[1];
     const activeScope = scopes.find((scope) => scope.id === routeScopeId) ?? scopes.find((scope) => scope.id === activeScopeId) ?? scopes[0] ?? null;
     useEffect(() => { if (activeScope)

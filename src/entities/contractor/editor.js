@@ -1,4 +1,9 @@
 export const abilityLabels = {
+  'specifier.view': 'Смотреть спецификации',
+  'specifier.create': 'Создавать спецификации',
+  'specifier.update': 'Редактировать спецификации и назначенные пункты',
+  'specifier.delete': 'Удалять спецификации',
+  'specifier.approve': 'Согласовывать спецификации и принимать требования',
   'fact.view': 'Смотреть доступные факты',
   'fact.write': 'Создавать и редактировать факты',
   'fact.reveal': 'Раскрывать чувствительные значения фактов',
@@ -61,6 +66,7 @@ export function explicitPermissions(contractor) {
 }
 
 const moduleLabels = {
+  specifier: 'Specifier · Спецификации',
   task: 'Tasker · Задачи', project: 'Projector · Проекты', book: 'Booker · Книги',
   fact: 'Factor · Факты', contact: 'Contactor · Контакты', report: 'Reporter · Отчёты',
   equip: 'Equip · Оборудование', ledger: 'Ledger · Финансы',

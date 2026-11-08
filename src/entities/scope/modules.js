@@ -12,6 +12,7 @@ export const moduleCatalog = {
   darklog: { label: 'Darklog', path: '/darklog' },
   lore: { label: 'Lore', path: '/lore' },
   booker: { label: 'Booker', path: '/books' },
+  specifier: { label: 'Specifier · Спецификации', path: '/specifications' },
   content: { label: 'Контент · схемы и Lightbook', path: '/content' },
   equip: { label: 'Equip · Экипа', path: '/equip' },
   ledger: { label: 'Ledger · Финансы', path: '/ledger' },
