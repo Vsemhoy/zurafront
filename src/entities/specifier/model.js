@@ -4,7 +4,8 @@ export const implementationStates = { todo: 'Не начато', in_progress: '�
 export const acceptanceStates = { unchecked: 'Не проверено', review: 'На проверке', accepted: 'Принято', changes_requested: 'Нужны исправления' };
 const compare = (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id.localeCompare(b.id);
 
-export function specificationOutline(items = []) {
+export function specificationOutline(items = [], placement = []) {
+  const rank = new Map(placement.map((id, index) => [id, index]));
   const ids = new Set(items.map((item) => item.id));
   const children = new Map();
   for (const item of items) {
@@ -12,7 +13,7 @@ export function specificationOutline(items = []) {
     if (!children.has(parent)) children.set(parent, []);
     children.get(parent).push(item);
   }
-  for (const rows of children.values()) rows.sort(compare);
+  for (const rows of children.values()) rows.sort((a, b) => (rank.get(a.id) ?? Infinity) - (rank.get(b.id) ?? Infinity) || compare(a, b));
   const result = [], seen = new Set();
   const stack = (children.get(null) ?? []).map((item, index) => ({ item, path: `${index + 1}`, depth: 0 })).reverse();
   while (stack.length) {
@@ -32,6 +33,23 @@ export function itemDescendants(items, id) {
   let count;
   do { count = ids.size; for (const item of items) if (ids.has(item.parent_id)) ids.add(item.id); } while (count !== ids.size);
   return ids;
+}
+
+export function specificationLevel(outline, itemId = null) {
+  const byId = new Map(outline.map((item) => [item.id, item]));
+  const point = itemId === null ? null : byId.get(itemId) ?? null;
+  const ancestors = [], seen = new Set(point ? [point.id] : []);
+  let parent = point?.parent_id;
+  while (byId.has(parent) && !seen.has(parent)) {
+    const item = byId.get(parent);
+    ancestors.push(item);
+    seen.add(item.id);
+    parent = item.parent_id;
+  }
+  const children = point
+    ? outline.filter((item) => item.parent_id === point.id && !seen.has(item.id))
+    : outline.filter((item) => !byId.has(item.parent_id));
+  return { point, ancestors: ancestors.reverse(), children, missing: itemId !== null && !point };
 }
 
 export function moveSpecificationItem(items, id, offset) {

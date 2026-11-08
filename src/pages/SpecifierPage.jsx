@@ -1,14 +1,16 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { IconArrowDown, IconArrowLeft, IconArrowUp, IconCheck, IconCopy, IconEdit, IconFileDescription, IconHistory, IconListDetails, IconPlus, IconSettings, IconTrash, IconX } from '@tabler/icons-react';
+import { IconArrowLeft, IconCheck, IconEdit, IconFileDescription, IconHistory, IconListDetails, IconPlus, IconSettings, IconTrash, IconX } from '@tabler/icons-react';
 import { useWorkspace } from '../app/workspace';
 import { useAuth } from '../auth';
 import { specifierApi } from '../entities/specifier/api';
-import { acceptanceStates, agreementStates, changedSpecificationFields, implementationStates, itemDescendants, itemKinds, moveSpecificationItem, specificationDraftKey, specificationItemLink, specificationOutline } from '../entities/specifier/model';
+import { acceptanceStates, agreementStates, changedSpecificationFields, implementationStates, itemDescendants, itemKinds, specificationDraftKey, specificationItemLink, specificationLevel, specificationOutline } from '../entities/specifier/model';
+import { documentBlocks, specificationBlockTypes, specificationPlacementOrder } from '../entities/specifier/composition';
+import { PointBlockStructure, SpecificationBlockFields, StructureBlockList } from './SpecificationStructure';
+import { SpecificationReader } from './SpecificationReader';
 import BaseMarkdownEditor from '../shared/ui/CompactMarkdownEditor';
 import MarkdownRenderer from '../shared/ui/MarkdownRenderer';
-import { AvatarImage } from '../shared/ui/AvatarImage';
 import { CommentAuthor } from '../shared/ui/CommentAuthor';
 import { EditorSaveBar } from '../shared/ui/EditorSaveBar';
 import { useSaveForm } from '../shared/ui/useSaveForm';
@@ -35,32 +37,63 @@ function SpecifierWorkspace({ scope, id }) {
   const [params, setParams] = useSearchParams();
   const [filters, setFilters] = useState({ q: '', project_id: '', status: '', page: 1 });
   const [dialog, setDialog] = useState(null);
+  const pageTop = useRef(null);
+  const outlinePanel = useRef(null);
   const [outlineOpen, setOutlineOpen] = useState(() => window.innerWidth > 700);
   const [inspectorOpen, setInspectorOpen] = useState(() => window.innerWidth > 1100);
-  const [tab, setTab] = useState('properties');
+  const [tab, setTab] = useState('structure');
   const options = useQuery({ queryKey: ['specifier-options', scope.id], queryFn: () => specifierApi.options(scope.id) });
   const library = useQuery({ queryKey: ['specifications', scope.id, filters], queryFn: ({ signal }) => specifierApi.list(scope.id, filters, signal), enabled: !id });
   const document = useQuery({ queryKey: ['specification', scope.id, id], queryFn: () => specifierApi.show(scope.id, id), enabled: Boolean(id), refetchInterval: 15000 });
   const record = document.data;
-  const outline = useMemo(() => specificationOutline(record?.items), [record?.items]);
-  const selected = params.has('item') ? outline.find((row) => row.id === params.get('item')) : outline[0];
-  const linkedItemId = params.get('item');
-  const selectedItemId = selected?.id;
-  useEffect(() => {
-    if (linkedItemId && selectedItemId) window.document.getElementById(`sp-item-${selectedItemId}`)?.scrollIntoView({ block: 'nearest' });
-  }, [linkedItemId, selectedItemId]);
   const accept = (value) => { client.setQueryData(['specification', scope.id, value.id], value); client.invalidateQueries({ queryKey: ['specifications', scope.id] }); };
+  const compositionInitial = useMemo(() => ({ revision: record?.revision, blocks: documentBlocks(record, record?.items) }), [record]);
+  const canCompose = record?.can_write && record.status === 'draft';
+  const linkedItemId = params.get('item');
+  const showStructure = tab === 'structure' || linkedItemId === null;
+  const composition = useSaveForm({ initial: compositionInitial, key: specificationDraftKey, label: 'Структура документа',
+    active: Boolean(canCompose && inspectorOpen && linkedItemId === null && !dialog),
+    persist: async (draft, baseline) => {
+      const value = await specifierApi.composition(scope.id, id, baseline.revision, draft.blocks);
+      accept(value);
+      return { revision: value.revision, blocks: value.composition };
+    } });
+  const blocks = composition.dirty ? composition.draft.blocks : compositionInitial.blocks;
+  const outline = useMemo(() => specificationOutline(record?.items, specificationPlacementOrder(record?.items, blocks)), [record?.items, blocks]);
+  const level = useMemo(() => specificationLevel(outline, linkedItemId), [outline, linkedItemId]);
+  const selected = level.point;
+  const childrenById = useMemo(() => new Map(level.children.map((item) => [item.id, item])), [level.children]);
+  useEffect(() => {
+    if (id) pageTop.current?.scrollIntoView({ block: 'start' });
+  }, [id, linkedItemId]);
+  useEffect(() => {
+    const panel = outlinePanel.current;
+    const active = panel?.querySelector('[aria-current="location"]');
+    if (!active) return;
+    const viewport = panel.getBoundingClientRect();
+    const row = active.getBoundingClientRect();
+    if (row.top < viewport.top) panel.scrollTop += row.top - viewport.top;
+    else if (row.bottom > viewport.bottom) panel.scrollTop += row.bottom - viewport.bottom;
+  }, [outlineOpen, linkedItemId, selected?.id]);
   const update = useMutation({ mutationFn: async (operation) => { const value = await operation(); accept(value); return value; } });
-  const select = (itemId) => guard(() => {
-    setParams({ item: itemId }, { replace: true });
-    requestAnimationFrame(() => window.document.getElementById(`sp-item-${itemId}`)?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
-  });
+  const select = (itemId) => {
+    if (itemId === linkedItemId) return;
+    guard(() => {
+      setTab('structure');
+      setParams((previous) => {
+        const next = new URLSearchParams(previous);
+        if (itemId === null) next.delete('item');
+        else next.set('item', itemId);
+        return next;
+      }, { preventScrollReset: true });
+    });
+  };
   const open = (value) => guard(() => setDialog(value));
-  const move = (item, offset) => { const rows = moveSpecificationItem(record.items, item.id, offset); if (rows) guard(() => update.mutate(() => specifierApi.outline(scope.id, id, record.revision, rows))); };
   const refresh = () => { document.refetch(); options.refetch(); };
-  return <main className="sp-page">
-    <header className="sp-heading"><div><small>{scope.name} · {record?.code || 'Требования и проверяемые результаты'}</small><h1>{record?.title || 'Specifier'}</h1></div>
-      {id ? <div className="sp-actions"><Link to="/specifications"><IconArrowLeft size={16}/>Все документы</Link><button onClick={() => setOutlineOpen(!outlineOpen)} aria-pressed={outlineOpen}><IconListDetails size={16}/>Оглавление</button><button onClick={() => guard(() => setInspectorOpen(!inspectorOpen))} aria-pressed={inspectorOpen}><IconSettings size={16}/>Пункт</button>{record?.can_write && <button onClick={() => open({ type: 'document' })}><IconSettings size={16}/>Свойства</button>}</div>
+  const canEditLevel = record?.status === 'draft' && (selected ? selected.can_write : record?.can_write);
+  return <main className="sp-page" ref={pageTop}>
+    <header className="sp-heading"><div><small>{scope.name} · {record?.code || 'Требования и проверяемые результаты'}</small><h1>{selected?.title || record?.title || 'Specifier'}</h1></div>
+      {id ? <div className="sp-actions"><Link to="/specifications"><IconArrowLeft size={16}/>Все документы</Link><button onClick={() => setOutlineOpen(!outlineOpen)} aria-pressed={outlineOpen}><IconListDetails size={16}/>Оглавление</button><button onClick={() => guard(() => setInspectorOpen(!inspectorOpen))} aria-pressed={inspectorOpen}><IconSettings size={16}/>Панель</button>{record?.can_write && linkedItemId === null && <button onClick={() => open({ type: 'document' })}><IconSettings size={16}/>Свойства</button>}</div>
         : options.data?.can_create && <button className="sp-primary" onClick={() => open({ type: 'document' })}><IconPlus size={16}/>Новая спецификация</button>}
     </header>
     {(options.error || library.error || document.error || update.error) && <p className="sp-error" role="alert">{options.error?.message || library.error?.message || document.error?.message || update.error?.message} <button onClick={() => id ? refresh() : library.refetch()}>Обновить данные</button></p>}
@@ -74,30 +107,45 @@ function SpecifierWorkspace({ scope, id }) {
     </>}
     {id && document.isPending && <p role="status">Загружаю документ…</p>}
     {id && record && <>
-      <div className="sp-document-bar"><span className={`sp-document-state ${record.status}`}>{record.status === 'approved' ? 'Утверждённая редакция · контент защищён' : 'Рабочий черновик'}</span><span>Принято {record.summary.accepted} из {record.summary.requirements} требований</span><div className="sp-actions">{record.can_write && record.status === 'draft' && <button className="sp-primary" onClick={() => open({ type: 'item', parent_id: selected?.id ?? null })}><IconPlus size={15}/>Новый пункт</button>}{record.can_approve && <button disabled={update.isPending} onClick={() => guard(() => { if (window.confirm(record.status === 'approved' ? 'Открыть рабочую редакцию? Утверждённый снимок останется неизменным.' : 'Зафиксировать и утвердить текущее содержимое всего документа?')) update.mutate(() => specifierApi.approve(scope.id, id, record.revision, record.status === 'approved')); })}><IconCheck size={15}/>{record.status === 'approved' ? 'Новая редакция' : 'Утвердить редакцию'}</button>}</div></div>
+      <div className="sp-document-bar"><span className={`sp-document-state ${record.status}`}>{record.status === 'approved' ? 'Утверждённая редакция · контент защищён' : 'Рабочий черновик'}</span><span>Принято {record.summary.accepted} из {record.summary.requirements} требований</span>
+        <SpecificationExportActions key={record.id} scope={scope} specification={record}/>
+        <div className="sp-actions">{record.can_write && record.status === 'draft' && <button className="sp-primary" onClick={() => open({ type: 'item', parent_id: selected?.id ?? null })}><IconPlus size={15}/>Новый пункт</button>}{record.can_approve && <button disabled={update.isPending} onClick={() => guard(() => { if (window.confirm(record.status === 'approved' ? 'Открыть рабочую редакцию? Утверждённый снимок останется неизменным.' : 'Зафиксировать и утвердить текущее содержимое всего документа?')) update.mutate(() => specifierApi.approve(scope.id, id, record.revision, record.status === 'approved')); })}><IconCheck size={15}/>{record.status === 'approved' ? 'Новая редакция' : 'Утвердить редакцию'}</button>}</div>
+      </div>
       <div className={`sp-document-layout ${outlineOpen ? 'has-outline' : ''} ${inspectorOpen ? 'has-inspector' : ''}`}>
-        {outlineOpen && <aside className="sp-outline"><header><strong>Оглавление</strong><small>{outline.length} пунктов</small></header><nav aria-label="Оглавление спецификации">{outline.map((item) => <button key={item.id} style={{ '--sp-depth': Math.min(item.depth, 6) }} className={selected?.id === item.id ? 'active' : ''} onClick={() => select(item.id)}><span>{item.outline}</span><strong>{item.title}</strong><i className={`sp-dot ${item.acceptance_status}`}/></button>)}</nav>{!outline.length && <p>Добавьте первый пункт.</p>}<div className="sp-versions"><strong><IconHistory size={14}/>Утверждённые версии</strong>{record.revisions.map((version) => <button key={version.id} onClick={() => open({ type: 'version', version })}>Версия {version.version} · {new Date(version.created_at).toLocaleDateString()}</button>)}{!record.revisions.length && <p>Снимков пока нет.</p>}</div></aside>}
-        <article className="sp-document"><header><small>{record.code}</small><h2>{record.title}</h2>{record.description && <MarkdownRenderer>{record.description}</MarkdownRenderer>}</header>
-          {params.has('item') && !selected && <p className="sp-error">Указанный пункт удалён или недоступен.</p>}
-          {!outline.length && <div className="sp-empty"><h2>Начните с раздела или требования</h2><p>Пункты сохранят свои идентификаторы при переносе и перенумерации.</p></div>}
-          {outline.map((item) => <section id={`sp-item-${item.id}`} key={item.id} className={`sp-item ${selected?.id === item.id ? 'selected' : ''}`} style={{ '--sp-depth': Math.min(item.depth, 4) }} onClick={() => { if (selected?.id !== item.id) select(item.id); }}>
-            <header><h3><span>{item.outline}</span>{item.title}</h3><div className="sp-actions"><button title="Скопировать постоянную ссылку на пункт" aria-label={`Скопировать ссылку P-${item.number}`} onClick={(event) => { event.stopPropagation(); void navigator.clipboard.writeText(new URL(specificationItemLink(scope.id, id, item.id), window.location.origin).href); }}><IconCopy size={14}/></button>{record.status === 'draft' && item.can_write && <button aria-label={`Редактировать P-${item.number}`} onClick={(event) => { event.stopPropagation(); open({ type: 'item', item }); }}><IconEdit size={15}/></button>}</div></header>
-            <div className="sp-item-meta"><span>P-{item.number} · {itemKinds[item.kind]}</span><span>{implementationStates[item.implementation_status]}</span><span className={`sp-acceptance ${item.acceptance_status}`}>{acceptanceStates[item.acceptance_status]}</span>{item.responsible && <span><AvatarImage avatar={item.responsible.avatar} name={item.responsible.name} size={20}/>{item.responsible.name}{item.responsible.type === 'agent' ? ' · агент' : ''}</span>}</div>
-            {item.content && <MarkdownRenderer>{item.content}</MarkdownRenderer>}
-            {Boolean(item.acceptance_criteria?.length) && <div className="sp-criteria"><strong>Критерии приёмки</strong><ul>{item.acceptance_criteria.map((criterion, index) => <li key={index}>{criterion}</li>)}</ul></div>}
-            {item.tasks.length > 0 && <div className="sp-task-chips">{item.tasks.map((task) => <Link key={task.id} to={`/tasks/${task.id}/edit`} onClick={(event) => event.stopPropagation()}>{task.task_key || 'Задача'}{task.status === 'done' && <IconCheck size={12}/>}</Link>)}</div>}
-          </section>)}
-        </article>
-        {inspectorOpen && <aside className="sp-inspector"><header><div><small>{selected ? `${record.code} · P-${selected.number}` : 'Выберите пункт'}</small><strong>{selected?.title || 'Свойства пункта'}</strong></div><button aria-label="Скрыть панель пункта" onClick={() => guard(() => setInspectorOpen(false))}><IconX size={17}/></button></header>
-          {selected && <><nav className="sp-inspector-tabs">{[['properties', 'Свойства'], ['tasks', `Задачи (${selected.tasks.length})`], ['comments', 'Обсуждение']].map(([value, title]) => <button key={value} className={tab === value ? 'active' : ''} onClick={() => guard(() => setTab(value))}>{title}</button>)}</nav>
-            {tab === 'properties' && <PointProperties key={selected.id} scope={scope} document={record} item={selected} options={options.data} onChanged={accept} active={!dialog} onEdit={() => open({ type: 'item', item: selected })} onMove={(offset) => move(selected, offset)} onDelete={() => guard(() => { if (window.confirm('Удалить пункт и его дочерние пункты? Задачи и утверждённые снимки останутся.')) update.mutate(() => specifierApi.removeItem(scope.id, id, selected.id, record.revision)); })}/>}
+        {outlineOpen && <aside className="sp-outline" ref={outlinePanel}><header><strong>Дерево спецификации</strong><small>{outline.length}</small></header>
+          <nav aria-label="Дерево спецификации">
+            <button type="button" className="sp-outline-root" aria-current={linkedItemId === null ? 'location' : undefined} onClick={() => select(null)}><IconFileDescription size={15}/><strong>{record.title}</strong></button>
+            {outline.map((item) => <button type="button" key={item.id} style={{ '--sp-depth': Math.min(item.depth, 6) }} aria-current={selected?.id === item.id ? 'location' : undefined} onClick={() => select(item.id)}><span>{item.outline}</span><strong>{item.title}</strong><i className={`sp-dot ${item.acceptance_status}`}/></button>)}
+          </nav>
+          {!outline.length && <p>Добавьте первый пункт.</p>}
+          <div className="sp-versions"><strong><IconHistory size={14}/>Утверждённые версии</strong>{record.revisions.map((version) => <button key={version.id} onClick={() => open({ type: 'version', version })}>Версия {version.version} · {new Date(version.created_at).toLocaleDateString()}</button>)}{!record.revisions.length && <p>Снимков пока нет.</p>}</div>
+        </aside>}
+        <SpecificationReader document={record} level={level} blocks={blocks} onNavigate={select}
+          onEditBlock={canEditLevel && !level.missing ? (blockId) => open({ type: 'block', itemId: selected?.id, blockId }) : undefined}
+          onEditPoint={canEditLevel && selected ? (item) => open({ type: 'item', item }) : undefined}
+          onCopyPoint={(itemId) => void navigator.clipboard.writeText(new URL(specificationItemLink(scope.id, id, itemId), window.location.origin).href)}/>
+        {inspectorOpen && !level.missing && <aside className="sp-inspector"><header><div><small>{selected ? `${record.code} · P-${selected.number}` : record.code}</small><strong>{selected?.title || 'Документ'}</strong></div><button aria-label="Скрыть панель" onClick={() => guard(() => setInspectorOpen(false))}><IconX size={17}/></button></header>
+          <nav className="sp-inspector-tabs">{[['structure', 'Структура'], ...(selected ? [['properties', 'Свойства'], ['tasks', `Задачи (${selected.tasks.length})`], ['comments', 'Обсуждение']] : [])].map(([value, title]) => <button key={value} className={tab === value || (!selected && value === 'structure') ? 'active' : ''} onClick={() => { if (value !== tab) guard(() => setTab(value)); }}>{title}</button>)}</nav>
+          {showStructure && selected && <PointBlockStructure key={selected.id} scope={scope} document={record} item={selected} childrenById={childrenById} onSelect={select}
+            onAddPoint={(subpointsGroupId) => open({ type: 'item', subpointsGroupId, parent_id: selected.id })} active={!dialog} onPersisted={accept}/>}
+          {showStructure && !selected && <>
+            <StructureBlockList key="root" blocks={blocks} editable={Boolean(canCompose && !composition.busy)} itemsById={childrenById} onSelect={select}
+              onChange={(next) => composition.change((old) => ({ ...old, blocks: next }))}
+              onAddPoint={(masterId) => open({ type: 'item', masterId, parent_id: null })}
+              savedGroupIds={new Set(compositionInitial.blocks.filter(({ type }) => type === 'master').map(({ id: masterId }) => masterId))}/>
+            {composition.error && <p className="sp-error" role="alert">{composition.error}</p>}
+            {canCompose && <EditorSaveBar {...composition} onSave={composition.save}/>}
+          </>}
+          {selected && <>
+            {tab === 'properties' && <PointProperties key={selected.id} scope={scope} document={record} item={selected} options={options.data} onChanged={accept} active={!dialog} onEdit={() => open({ type: 'item', item: selected })} onDelete={() => guard(() => { if (window.confirm('Удалить пункт и его дочерние пункты? Задачи и утверждённые снимки останутся.')) update.mutate(() => specifierApi.removeItem(scope.id, id, selected.id, record.revision)); })}/>}
             {tab === 'tasks' && <div className="sp-item-tasks"><p className="sp-hint">Задачи описывают работу. Их завершение не меняет приёмку пункта.</p>{selected.can_write && <div className="sp-actions">{record.can_derive_tasks && <button onClick={() => open({ type: 'task', item: selected })}><IconPlus size={15}/>Создать задачу</button>}{record.can_link_tasks && <button onClick={() => open({ type: 'link', item: selected })}>Привязать</button>}</div>}{selected.tasks.map((task) => <Link key={task.id} to={`/tasks/${task.id}/edit`}><small>{task.task_key} · {task.status}</small><strong>{task.title}</strong></Link>)}{!selected.tasks.length && <p className="sp-hint">Связанных доступных задач пока нет.</p>}</div>}
             {tab === 'comments' && <PointComments key={selected.id} scope={scope} document={record} item={selected} active={!dialog} onChanged={accept}/>}</>}
         </aside>}
       </div>
     </>}
     {dialog?.type === 'document' && <SpecificationForm scope={scope} document={record} options={options.data} onPersisted={accept} onClose={() => setDialog(null)} onSaved={(value) => { setDialog(null); if (!id) navigate(`/specifications/${scope.id}/${value.id}`); }} onDeleted={() => { client.invalidateQueries({ queryKey: ['specifications', scope.id] }); navigate('/specifications'); }}/>} 
-    {dialog?.type === 'item' && record && <PointEditor scope={scope} document={record} item={dialog.item} parentId={dialog.parent_id} options={options.data} onPersisted={accept} onClose={() => setDialog(null)} onSaved={() => setDialog(null)}/>} 
+    {dialog?.type === 'item' && record && <PointEditor scope={scope} document={record} item={dialog.item} parentId={dialog.parent_id} masterId={dialog.masterId} subpointsGroupId={dialog.subpointsGroupId} options={options.data} onPersisted={accept} onClose={() => setDialog(null)} onSaved={() => setDialog(null)}/>}
+    {dialog?.type === 'block' && record && <SpecificationBlockEditor scope={scope} document={record} itemId={dialog.itemId} blockId={dialog.blockId} onPersisted={accept} onClose={() => setDialog(null)}/>}
     {dialog?.type === 'task' && <DerivedTaskForm scope={scope} document={record} item={dialog.item} onClose={() => setDialog(null)} onPersisted={(value) => { accept(value.specification); ['tasks', 'task-assignable', 'planner'].forEach((key) => client.invalidateQueries({ queryKey: [key, scope.id] })); }} onSaved={() => setDialog(null)}/>} 
     {dialog?.type === 'link' && <TaskLinkPicker scope={scope} document={record} item={dialog.item} onClose={() => setDialog(null)} onSaved={(value) => { accept(value); setDialog(null); }}/>} 
     {dialog?.type === 'version' && <SpecificationVersion scope={scope} document={record} version={dialog.version} onClose={() => setDialog(null)}/>} 
@@ -105,7 +153,7 @@ function SpecifierWorkspace({ scope, id }) {
 }
 
 const pointProperties = (document, item) => ({ revision: document.revision, responsible_id: item.responsible_id ?? '', agreement_status: item.agreement_status, implementation_status: item.implementation_status, acceptance_status: item.acceptance_status, acceptance_note: item.acceptance_note ?? '' });
-function PointProperties({ scope, document, item, options, onChanged, active, onEdit, onMove, onDelete }) {
+function PointProperties({ scope, document, item, options, onChanged, active, onEdit, onDelete }) {
   const initial = useMemo(() => pointProperties(document, item), [document, item]);
   const form = useSaveForm({ initial, key: specificationDraftKey, label: 'Свойства пункта', active: active && (item.can_write || document.can_review), persist: async (draft, baseline) => {
     const changed = changedSpecificationFields(draft, baseline);
@@ -121,14 +169,57 @@ function PointProperties({ scope, document, item, options, onChanged, active, on
     {item.accepted_revision && <p className="sp-hint">Принята редакция содержимого {item.accepted_revision}. Сейчас — {item.content_revision}.</p>}
     {form.error && <p role="alert" className="sp-error">{form.error}</p>}{(item.can_write || document.can_review) && <EditorSaveBar {...form} onSave={form.save}/>}
     {document.status === 'draft' && item.can_write && <button className="sp-wide" onClick={onEdit}><IconEdit size={15}/>Редактировать содержимое</button>}
-    {document.status === 'draft' && document.can_write && <div className="sp-actions"><button title="Выше среди соседних пунктов" onClick={() => onMove(-1)}><IconArrowUp size={15}/></button><button title="Ниже среди соседних пунктов" onClick={() => onMove(1)}><IconArrowDown size={15}/></button><button className="sp-danger" onClick={onDelete}><IconTrash size={15}/>Удалить ветку</button></div>}
+    {document.status === 'draft' && document.can_write && <div className="sp-actions"><button className="sp-danger" onClick={onDelete}><IconTrash size={15}/>Удалить ветку</button></div>}
   </div>;
 }
 
-function SpecifierModal({ title, onClose, children, wide = false }) {
+function SpecifierModal({ title, onClose, children, wide = false, markdown = false }) {
   const [element, setElement] = useState(null);
   useEffect(() => { if (!element) return; element.showModal(); element.querySelector('input:not([disabled]), textarea:not([disabled])')?.focus(); return () => element.close(); }, [element]);
-  return <dialog ref={setElement} className={`sp-dialog ${wide ? 'sp-dialog--wide' : ''}`} aria-labelledby="sp-dialog-title" onCancel={(event) => { event.preventDefault(); onClose(); }}><header><h2 id="sp-dialog-title">{title}</h2><button type="button" aria-label="Закрыть" onClick={onClose}><IconX size={19}/></button></header><SpecifierOverlayContext.Provider value={element}>{children}</SpecifierOverlayContext.Provider></dialog>;
+  return <dialog ref={setElement} className={`sp-dialog ${wide ? 'sp-dialog--wide' : ''} ${markdown ? 'sp-dialog--markdown' : ''}`} aria-labelledby="sp-dialog-title" onCancel={(event) => { event.preventDefault(); onClose(); }}><header><h2 id="sp-dialog-title">{title}</h2><button type="button" aria-label="Закрыть" onClick={onClose}><IconX size={19}/></button></header><SpecifierOverlayContext.Provider value={element}>{children}</SpecifierOverlayContext.Provider></dialog>;
+}
+
+function SpecificationBlockEditor({ scope, document, itemId, blockId, onPersisted, onClose }) {
+  const ref = useRef(null);
+  const [controlsContainer, setControlsContainer] = useState(null);
+  const [initial] = useState(() => {
+    const item = itemId ? document.items.find(({ id }) => id === itemId) : null;
+    const blocks = itemId ? (item?.blocks ?? []) : documentBlocks(document, document.items);
+    const lead = itemId ? item?.content : document.description;
+    return {
+      revision: document.revision,
+      blocks,
+      block: itemId && !item ? null : blockId === null ? { type: 'markdown', text: lead ?? '' } : blocks.find(({ id }) => id === blockId) ?? null,
+    };
+  });
+  const label = blockId === null ? (itemId ? 'Основной текст' : 'Введение') : specificationBlockTypes[initial.block?.type];
+  const form = useSaveForm({ initial, key: specificationDraftKey, label: label || 'Блок', active: Boolean(initial.block),
+    validate: () => Boolean(ref.current?.reportValidity()),
+    persist: async (draft, baseline) => {
+      const nextBlocks = baseline.blocks.map((block) => block.id === blockId ? draft.block : block);
+      const value = itemId
+        ? await specifierApi.item(scope.id, document.id, itemId, { revision: baseline.revision, ...(blockId === null ? { content: draft.block.text } : { blocks: nextBlocks }) })
+        : blockId === null
+          ? await specifierApi.update(scope.id, document.id, { revision: baseline.revision, description: draft.block.text })
+          : await specifierApi.composition(scope.id, document.id, baseline.revision, nextBlocks);
+      onPersisted(value);
+      return { ...draft, revision: value.revision, blocks: nextBlocks };
+    },
+    onSubmitted: onClose,
+  });
+  if (!initial.block) return <SpecifierModal title="Блок недоступен" onClose={onClose}><p>Блок удалён или не был сохранён.</p></SpecifierModal>;
+  const change = (patch) => form.change((draft) => ({ ...draft, block: { ...draft.block, ...patch } }));
+  const isMarkdown = ['markdown', 'callout'].includes(initial.block.type);
+  const markdown = isMarkdown && <div className="sp-markdown">
+    {controlsContainer && <CompactMarkdownEditor value={initial.block.text} onChange={(text) => change({ text })} onSave={() => Promise.resolve()} controlsContainer={controlsContainer} toolbarInitiallyOpen hideToolbarTrigger variant="full" placeholder="Текст блока…"/>}
+  </div>;
+  return <SpecifierModal title={`Редактировать блок: ${label}`} onClose={() => form.leave(onClose)} wide={isMarkdown || ['code', 'svg'].includes(initial.block.type)} markdown={isMarkdown}>
+    <form ref={ref} onSubmit={(event) => { event.preventDefault(); void form.save(); }}>
+      <fieldset disabled={form.busy}><SpecificationBlockFields block={form.draft.block} lead={blockId === null} onChange={change} markdown={markdown} markdownControlsRef={isMarkdown ? setControlsContainer : undefined}/></fieldset>
+      {form.error && <p className="sp-error" role="alert">{form.error}</p>}
+      <EditorSaveBar {...form} onSave={form.save}/>
+    </form>
+  </SpecifierModal>;
 }
 
 function SpecificationForm({ scope, document, options, onClose, onSaved, onPersisted, onDeleted }) {
@@ -147,7 +238,7 @@ function SpecificationForm({ scope, document, options, onClose, onSaved, onPersi
   </fieldset>{document?.status === 'approved' && <p className="sp-hint">Для изменения содержимого откройте новую редакцию.</p>}{(form.error || remove.error) && <p className="sp-error" role="alert">{form.error || remove.error.message}</p>}<footer>{document?.can_delete && <button type="button" className="sp-danger" disabled={form.dirty || form.busy || remove.isPending} onClick={() => window.confirm('Удалить спецификацию? Задачи и исторические данные не будут удалены.') && remove.mutate()}><IconTrash size={15}/>Удалить</button>}<EditorSaveBar {...form} disabled={document?.status === 'approved'} onSave={form.save}/></footer></form></SpecifierModal>;
 }
 
-function PointEditor({ scope, document, item, parentId, options, onClose, onSaved, onPersisted }) {
+function PointEditor({ scope, document, item, parentId, masterId, subpointsGroupId, options, onClose, onSaved, onPersisted }) {
   const ref = useRef(null);
   const savedDocument = useRef(null);
   const initial = useMemo(() => ({ revision: document.revision, title: item?.title ?? '', kind: item?.kind ?? 'requirement', parent_id: item?.parent_id ?? parentId ?? '', content: item?.content ?? '', acceptance_criteria_text: (item?.acceptance_criteria ?? []).join('\n'), responsible_id: item?.responsible_id ?? '' }), [document.revision, item, parentId]);
@@ -156,11 +247,12 @@ function PointEditor({ scope, document, item, parentId, options, onClose, onSave
     const fields = item ? changedSpecificationFields(draft, baseline) : { ...draft };
     if ('acceptance_criteria_text' in fields) { fields.acceptance_criteria = fields.acceptance_criteria_text.split('\n').map((line) => line.trim()).filter(Boolean); delete fields.acceptance_criteria_text; }
     for (const key of ['parent_id', 'responsible_id']) if (key in fields) fields[key] ||= null;
-    const value = await specifierApi.item(scope.id, document.id, item?.id, { ...fields, revision: baseline.revision });
+    const placement = item ? {} : subpointsGroupId ? { subpoints_group_id: subpointsGroupId } : masterId ? { master_id: masterId } : {};
+    const value = await specifierApi.item(scope.id, document.id, item?.id, { ...fields, ...placement, revision: baseline.revision });
     savedDocument.current = value; onPersisted(value); return { ...draft, revision: value.revision };
   }, onSubmitted: () => { if (savedDocument.current) onSaved(savedDocument.current); } });
   const set = (key) => (event) => form.change((old) => ({ ...old, [key]: event.target.value }));
-  return <SpecifierModal title={item ? `Редактировать P-${item.number}` : 'Новый пункт'} onClose={() => form.leave(onClose)} wide><form ref={ref} onSubmit={(event) => { event.preventDefault(); void form.save(); }}><div className="sp-modal-save"><EditorSaveBar {...form} onSave={form.save}/></div><fieldset disabled={form.busy}><label>Название<input autoFocus required maxLength={255} value={form.draft.title} onChange={set('title')}/></label><div className="sp-form-row"><label>Тип<select value={form.draft.kind} onChange={set('kind')}>{Object.entries(itemKinds).map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select></label><label>Родитель<select disabled={!document.can_write} value={form.draft.parent_id} onChange={set('parent_id')}><option value="">В корне</option>{specificationOutline(document.items).filter((row) => !forbidden.has(row.id)).map((row) => <option key={row.id} value={row.id}>{row.outline} · {row.title}</option>)}</select></label></div><label>Ответственный<select disabled={!document.can_write} value={form.draft.responsible_id} onChange={set('responsible_id')}><option value="">Не назначен</option>{options?.people.map((row) => <option key={row.id} value={row.id}>{row.name}{row.type === 'agent' ? ' · агент' : ''}</option>)}</select></label></fieldset><div className="sp-markdown"><CompactMarkdownEditor value={initial.content} onChange={(content) => form.change((old) => ({ ...old, content }))} onSave={() => Promise.resolve()} toolbarInitiallyOpen hideToolbarTrigger variant="full" placeholder="Суть пункта, ограничения, примеры, ссылки на схемы…"/></div><label>Критерии приёмки · по одному на строку<textarea rows={4} maxLength={100000} value={form.draft.acceptance_criteria_text} onChange={set('acceptance_criteria_text')}/></label>{form.error && <p className="sp-error" role="alert">{form.error}</p>}<p className="sp-hint">Изменение определения пункта сбрасывает согласование и приёмку, но сохраняет историю и связи с задачами.</p></form></SpecifierModal>;
+  return <SpecifierModal title={item ? `Редактировать P-${item.number}` : subpointsGroupId ? 'Новый подпункт' : 'Новый пункт'} onClose={() => form.leave(onClose)} wide><form ref={ref} onSubmit={(event) => { event.preventDefault(); void form.save(); }}><div className="sp-modal-save"><EditorSaveBar {...form} onSave={form.save}/></div><fieldset disabled={form.busy}><label>Название<input autoFocus required maxLength={255} value={form.draft.title} onChange={set('title')}/></label><div className="sp-form-row"><label>Тип<select value={form.draft.kind} onChange={set('kind')}>{Object.entries(itemKinds).map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select></label><label>Родитель<select disabled={!document.can_write || Boolean(subpointsGroupId)} value={form.draft.parent_id} onChange={set('parent_id')}><option value="">В корне</option>{specificationOutline(document.items).filter((row) => !forbidden.has(row.id)).map((row) => <option key={row.id} value={row.id}>{row.outline} · {row.title}</option>)}</select></label></div><label>Ответственный<select disabled={!document.can_write} value={form.draft.responsible_id} onChange={set('responsible_id')}><option value="">Не назначен</option>{options?.people.map((row) => <option key={row.id} value={row.id}>{row.name}{row.type === 'agent' ? ' · агент' : ''}</option>)}</select></label></fieldset><div className="sp-markdown"><CompactMarkdownEditor value={initial.content} onChange={(content) => form.change((old) => ({ ...old, content }))} onSave={() => Promise.resolve()} toolbarInitiallyOpen hideToolbarTrigger variant="full" placeholder="Суть пункта, ограничения, примеры, ссылки на схемы…"/></div><label>Критерии приёмки · по одному на строку<textarea rows={4} maxLength={100000} value={form.draft.acceptance_criteria_text} onChange={set('acceptance_criteria_text')}/></label>{form.error && <p className="sp-error" role="alert">{form.error}</p>}<p className="sp-hint">Изменение определения пункта сбрасывает согласование и приёмку, но сохраняет историю и связи с задачами.</p></form></SpecifierModal>;
 }
 
 function DerivedTaskForm({ scope, document, item, onClose, onSaved, onPersisted }) {
@@ -213,7 +305,38 @@ function PointComments({ scope, document, item, active, onChanged }) {
   </div>;
 }
 
+function SpecificationExportActions({ scope, specification, version }) {
+  const download = useMutation({ mutationFn: async (format) => {
+    const response = await specifierApi.download(scope.id, specification.id, format, version?.id);
+    const filename = response.headers.get('Content-Disposition')?.match(/filename="?([\w.-]+)"?/i)?.[1];
+    const url = URL.createObjectURL(await response.blob());
+    const link = window.document.createElement('a');
+    link.href = url;
+    link.download = filename ?? `${specification.code}.${format}`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } });
+  return <div className="sp-export" role="group" aria-label="Экспорт всей спецификации">
+    <span>Экспорт</span>
+    <button type="button" disabled={download.isPending} onClick={() => download.mutate('docx')} title="Скачать всё дерево в Word">Word</button>
+    <button type="button" disabled={download.isPending} onClick={() => download.mutate('pdf')} title="Скачать всё дерево в PDF">PDF</button>
+    {download.isPending && <span role="status">Готовлю файл…</span>}
+    {download.error && <span className="sp-export-error" role="alert">{download.error.message}</span>}
+  </div>;
+}
+
 function SpecificationVersion({ scope, document, version, onClose }) {
+  const [itemId, setItemId] = useState(null);
   const query = useQuery({ queryKey: ['specification-version', scope.id, document.id, version.id], queryFn: () => specifierApi.version(scope.id, document.id, version.id) });
-  return <SpecifierModal title={`Утверждённая версия ${version.version}`} onClose={onClose} wide>{query.isPending && <p>Загружаю снимок…</p>}{query.error && <p role="alert" className="sp-error">{query.error.message}</p>}{query.data && <article className="sp-version-reader"><p className="sp-hint">Неизменяемый снимок · {new Date(query.data.created_at).toLocaleString()} · SHA-256 {query.data.content_hash.slice(0, 12)}…</p><h2>{query.data.snapshot.document.title}</h2>{query.data.snapshot.document.description && <MarkdownRenderer>{query.data.snapshot.document.description}</MarkdownRenderer>}{specificationOutline(query.data.snapshot.items).map((item) => <section key={item.id}><h3>{item.outline} · {item.title} <small>P-{item.number}</small></h3><MarkdownRenderer>{item.content || ''}</MarkdownRenderer>{item.acceptance_criteria?.length > 0 && <ul>{item.acceptance_criteria.map((text, index) => <li key={index}>{text}</li>)}</ul>}</section>)}</article>}</SpecifierModal>;
+  const snapshot = query.data?.snapshot;
+  const blocks = documentBlocks(snapshot ? { ...snapshot.document, composition: snapshot.composition } : null, snapshot?.items);
+  const level = specificationLevel(specificationOutline(snapshot?.items, specificationPlacementOrder(snapshot?.items, blocks)), itemId);
+  return <SpecifierModal title={`Утверждённая версия ${version.version}`} onClose={onClose} wide>
+    {query.isPending && <p>Загружаю снимок…</p>}{query.error && <p role="alert" className="sp-error">{query.error.message}</p>}
+    {snapshot && <>
+      <p className="sp-hint">Неизменяемый снимок · {new Date(query.data.created_at).toLocaleString()} · SHA-256 {query.data.content_hash.slice(0, 12)}…</p>
+      <SpecificationExportActions scope={scope} specification={document} version={version}/>
+      <SpecificationReader document={{ ...snapshot.document, code: document.code }} level={level} blocks={blocks} onNavigate={setItemId} snapshot/>
+    </>}
+  </SpecifierModal>;
 }

@@ -22,6 +22,7 @@ export async function apiRequest(path, init = {}) {
     if (response.status === 204)
         return undefined;
     if (init.responseType === 'blob') return response.blob();
+    if (init.responseType === 'response') return response;
     return response.json();
 }
 export const authApi = {
